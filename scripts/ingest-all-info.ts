@@ -31,14 +31,10 @@ async function extractDocx(buf: Buffer): Promise<Extracted> {
 }
 
 async function extractPdf(buf: Buffer): Promise<Extracted> {
-  const { PDFParse } = await import('pdf-parse')
-  const parser = new PDFParse({ data: new Uint8Array(buf) })
-  try {
-    const r = await parser.getText()
-    return { text: r.text ?? '', warnings: [] }
-  } finally {
-    await parser.destroy().catch(() => undefined)
-  }
+  const { extractText, getDocumentProxy } = await import('unpdf')
+  const pdf = await getDocumentProxy(new Uint8Array(buf))
+  const { text } = await extractText(pdf, { mergePages: true })
+  return { text: text ?? '', warnings: [] }
 }
 
 function extractXlsx(buf: Buffer): Extracted {
