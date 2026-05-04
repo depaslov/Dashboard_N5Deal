@@ -156,7 +156,14 @@ OUTPUT REQUIREMENTS (do not deviate):
 - Format: Markdown — one H1, multiple H2 sections (most in question form), occasional H3
 - Tone: professional, factual, founder-empowering. Plain English; minimal jargon.
 - Write in prose paragraphs by default. Use bullet lists only for enumerable items (max 2–3 lists per page). Do not turn the page into a checklist.
-- Bold ('**term**') each main keyword on first appearance and where it reads naturally
+- Keywords are MANDATORY (page fails review without them):
+  • The primary keyword MUST appear verbatim in the H1.
+  • The primary keyword MUST appear in the opening paragraph (first 100 words).
+  • The primary keyword MUST appear at least the minimum number of times specified in the user prompt across the body — count includes the H1 and opening paragraph.
+  • Each primary/secondary keyword MUST be bolded ('**term**') on its first appearance and on every other natural occurrence.
+  • Inflected forms count toward frequency for highly-inflected languages (Ukrainian, Russian, Polish), but at least one occurrence MUST be the exact lemma.
+  • LSI keywords MUST appear naturally where context allows — at least 60% of the provided list.
+  • If a keyword block is provided in the user prompt, ignoring it is a review failure. Do not skip them under any circumstance, even if it makes a sentence slightly less elegant.
 - Internal links: HARD LIMIT — maximum 3 internal links across the entire page (no exceptions). Pick the 3 highest-priority MUST links most relevant to the page topic; ignore the rest. Insert each chosen link inline as Markdown '[anchor](url)' at a contextually relevant moment. Use the suggested anchor or a listed alt. Never invent a link not defined in the user prompt.
 - Red Flags list: NEVER use any word or phrase from it. No exceptions. When in doubt, omit.
 - Ground every fact in the uploaded reference brief or Knowledge Base. If a number, jurisdiction rule, or timeline is not sourced — omit it or write "depends on the project".
@@ -199,13 +206,20 @@ The primary audience leads every section. The secondary perspective only appears
 {{sectionOutline}}
 If an outline is provided, follow it instead of the generic system flow.{{/if}}
 {{#if primaryKeyword}}
-# Primary keyword (use in H1, in the opening paragraph, and bold every natural appearance)
-- {{primaryKeyword}}{{/if}}
+# Primary keyword — MANDATORY (page fails review if any of these are missed)
+- {{primaryKeyword}}
+- MUST appear verbatim in the H1.
+- MUST appear in the opening paragraph (first 100 words).
+- MUST hit the minimum count specified above across the full body (H1 + opening paragraph + sections).
+- Bold ('**term**') on first appearance and on every other natural occurrence.
+- Inflected forms count toward frequency in Ukrainian/Russian/Polish, but at least one occurrence MUST be the exact lemma.{{/if}}
 {{#if secondaryKeywords}}
-# Secondary keywords with frequencies (bold first appearance, meet min counts)
-{{secondaryKeywords}}{{/if}}
+# Secondary keywords — MANDATORY (each must appear at least its min count)
+{{secondaryKeywords}}
+- Bold each secondary keyword on first appearance.
+- Each listed term MUST hit the listed minimum count, otherwise the page fails review.{{/if}}
 {{#if lsiKeywords}}
-# LSI keywords (use most of these naturally; inflected forms allowed)
+# LSI keywords — at least 60% MUST appear naturally
 {{lsiKeywords}}{{/if}}
 {{#if internalLinks}}
 # Internal links to embed naturally (Markdown inline anchors)
