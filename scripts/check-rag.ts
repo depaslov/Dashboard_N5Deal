@@ -6,7 +6,7 @@ async function main() {
 
   if (total > 0) {
     const byScope: Array<{ scope: string; count: number; keys: number }> =
-      await prisma.$queryRaw`SELECT scope, COUNT(*)::int as count, COUNT(DISTINCT key)::int as keys FROM "EmbeddingChunk" GROUP BY scope ORDER BY count DESC`
+      await prisma.$queryRaw`SELECT scope, COUNT(*)::int as count, COUNT(DISTINCT key)::int as keys FROM public."EmbeddingChunk" GROUP BY scope ORDER BY count DESC`
     console.log('\nBy scope:')
     byScope.forEach((r) =>
       console.log(' -', r.scope.padEnd(40), 'chunks:', String(r.count).padStart(5), '| keys:', r.keys),

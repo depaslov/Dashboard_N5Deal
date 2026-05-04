@@ -51,3 +51,7 @@ logs
 
 # OS
 Thumbs.db
+
+# DB dumps
+*.sql.gz
+rag_embeddings.sql
