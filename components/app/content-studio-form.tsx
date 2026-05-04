@@ -222,40 +222,66 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
     setBulkResults(bulkItems.map((topic) => ({ topic, output: '', status: 'pending' })))
     setBulkProgress({ current: 0, total: bulkItems.length })
 
+    const MAX_ATTEMPTS = 3
+    let okCount = 0
+    let failCount = 0
     for (let i = 0; i < bulkItems.length; i++) {
       const itemTopic = bulkItems[i]
-      setBulkResults((prev) => prev.map((r, idx) => idx === i ? { ...r, status: 'running' } : r))
+      setBulkResults((prev) => prev.map((r, idx) => idx === i ? { ...r, status: 'running', output: '', error: undefined } : r))
       setBulkProgress({ current: i + 1, total: bulkItems.length })
-      try {
-        const r = await fetch('/api/content/assemble-prompt', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contentType, topic: itemTopic, targetAudience: audience, keyMessages, language,
-            icpIds, platformId: platformId || null,
-            sourceUrl: features.sourceUrl ? sourceUrl : '',
-            documentText: features.document ? documentText : '',
-            mainKeywords: features.seo ? mainKeywords : [],
-            wordCountMin: features.seo && wordCountMin !== '' ? Number(wordCountMin) : undefined,
-            wordCountMax: features.seo && wordCountMax !== '' ? Number(wordCountMax) : undefined,
-            secondaryAudience: features.seo ? secondaryAudience : '',
-            sectionOutline: features.seo ? sectionOutline : [],
-          }),
-        })
-        const a = await r.json()
-        if (!r.ok) throw new Error(a?.error ?? 'Assemble failed')
-        const full = await streamOneGeneration(a.systemPrompt, a.userPrompt, (delta) => {
-          setBulkResults((prev) => prev.map((row, idx) => idx === i ? { ...row, output: delta } : row))
-        })
-        setBulkResults((prev) => prev.map((row, idx) => idx === i ? { ...row, output: full, status: 'done' } : row))
-      } catch (err: any) {
+
+      let full = ''
+      let lastErr: any = null
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+          const r = await fetch('/api/content/assemble-prompt', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contentType, topic: itemTopic, targetAudience: audience, keyMessages, language,
+              icpIds, platformId: platformId || null,
+              sourceUrl: features.sourceUrl ? sourceUrl : '',
+              documentText: features.document ? documentText : '',
+              mainKeywords: features.seo ? mainKeywords : [],
+              wordCountMin: features.seo && wordCountMin !== '' ? Number(wordCountMin) : undefined,
+              wordCountMax: features.seo && wordCountMax !== '' ? Number(wordCountMax) : undefined,
+              secondaryAudience: features.seo ? secondaryAudience : '',
+              sectionOutline: features.seo ? sectionOutline : [],
+            }),
+          })
+          const a = await r.json()
+          if (!r.ok) throw new Error(a?.error ?? 'Assemble failed')
+          full = await streamOneGeneration(a.systemPrompt, a.userPrompt, (delta) => {
+            setBulkResults((prev) => prev.map((row, idx) => idx === i ? { ...row, output: delta } : row))
+          })
+          if (!full.trim()) throw new Error('LLM returned empty response')
+          lastErr = null
+          break
+        } catch (err: any) {
+          lastErr = err
+          full = ''
+          if (attempt < MAX_ATTEMPTS) {
+            setBulkResults((prev) => prev.map((row, idx) =>
+              idx === i ? { ...row, output: '', error: `Retry ${attempt}/${MAX_ATTEMPTS - 1}: ${err?.message ?? 'failed'}` } : row,
+            ))
+            await new Promise((resolve) => setTimeout(resolve, 1500 * attempt))
+          }
+        }
+      }
+
+      if (lastErr || !full.trim()) {
+        failCount++
         setBulkResults((prev) => prev.map((row, idx) =>
-          idx === i ? { ...row, status: 'error', error: err?.message ?? 'failed' } : row,
+          idx === i ? { ...row, status: 'error', output: '', error: lastErr?.message ?? 'Empty response after 3 attempts' } : row,
         ))
-        toast.error(`"${itemTopic}": ${err?.message ?? 'failed'}`)
+        toast.error(`"${itemTopic}": ${lastErr?.message ?? 'failed after retries'}`)
+      } else {
+        okCount++
+        setBulkResults((prev) => prev.map((row, idx) => idx === i ? { ...row, output: full, status: 'done', error: undefined } : row))
       }
     }
     setGenerating(false)
-    toast.success(`Generated ${bulkItems.length} pages`)
+    if (failCount > 0) toast.error(`${failCount} of ${bulkItems.length} pages failed — check the list`)
+    else toast.success(`Generated ${okCount} pages`)
   }
 
   const handleSave = async () => {

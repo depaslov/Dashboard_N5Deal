@@ -4,7 +4,9 @@ import { authOptions } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-export const maxDuration = 60
+// Vercel caps this at 60s on Hobby plans and 300s on Pro. Setting 300 means
+// we use the full budget on Pro and the platform clamps to 60 on Hobby.
+export const maxDuration = 300
 
 // TT §4.2 step 6: stream LLM completion for a pre-assembled prompt. Marketer
 // has already reviewed/edited the system+user prompts in the textarea.
@@ -33,6 +35,11 @@ export async function POST(req: Request) {
       const send = (obj: any) =>
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`))
       let heartbeat: any = null
+      const upstreamAbort = new AbortController()
+      // Hard cap on the upstream call (slightly less than maxDuration to leave
+      // room for the final flush). If the LLM hangs we abort and surface an
+      // error instead of returning empty content.
+      const upstreamTimeout = setTimeout(() => upstreamAbort.abort(), 280_000)
       try {
         const upstream = await fetch('https://apps.abacus.ai/v1/chat/completions', {
           method: 'POST',
@@ -49,6 +56,7 @@ export async function POST(req: Request) {
             stream: true,
             max_tokens: 3500,
           }),
+          signal: upstreamAbort.signal,
         })
 
         if (!upstream.ok || !upstream.body) {
@@ -88,11 +96,19 @@ export async function POST(req: Request) {
             } catch {}
           }
         }
-        send({ status: 'completed', result: fullText })
+        if (!fullText.trim()) {
+          send({ status: 'error', message: 'LLM returned empty content (rate limit or upstream filter)' })
+        } else {
+          send({ status: 'completed', result: fullText })
+        }
         controller.enqueue(encoder.encode(`data: [DONE]\n\n`))
       } catch (err: any) {
-        try { send({ status: 'error', message: err?.message ?? 'Generation failed' }) } catch {}
+        const msg = err?.name === 'AbortError'
+          ? 'Generation timed out after 280s — the model took too long to respond'
+          : err?.message ?? 'Generation failed'
+        try { send({ status: 'error', message: msg }) } catch {}
       } finally {
+        clearTimeout(upstreamTimeout)
         if (heartbeat) clearInterval(heartbeat)
         try { controller.close() } catch {}
       }

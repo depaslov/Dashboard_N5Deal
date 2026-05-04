@@ -96,7 +96,10 @@ async function main() {
   let genCount = 0
   for (const g of generated) {
     try {
-      await neon.generatedContent.create({ data: { ...g, userId: andriy.id } })
+      const { briefData, ...rest } = g
+      await neon.generatedContent.create({
+        data: { ...rest, createdById: andriy.id, briefData: briefData ?? undefined },
+      })
       genCount++
     } catch (e: any) {
       console.log(`    skip generated content ${g.id}: ${e.message?.slice(0, 80)}`)
