@@ -1,0 +1,264 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  name          String
+  role          String    @default("user")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  ownedProjects Project[]         @relation("ProjectOwner")
+  memberships   ProjectMember[]
+  contents      GeneratedContent[]
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  companyName String
+  description String?
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner         User              @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members       ProjectMember[]
+  icps          ICP[]
+  contents      GeneratedContent[]
+  redFlagWords  RedFlagWord[]
+  internalLinks InternalLink[]
+  obsidianVaultPath String?
+  tags            Tag[]
+  platforms       Platform[]
+  promptTemplates PromptTemplate[]
+
+  @@index([ownerId])
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  role      String   @default("member") // member | admin
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+}
+
+model ICP {
+  id              String   @id @default(cuid())
+  projectId       String
+  name            String
+  industry        String
+  companySize     String
+  painPoints      String[] // array of pain points
+  goals           String[] // array of goals
+  demographics    String
+  budgetRange     String
+  decisionProcess String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project  Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tags     ICPTag[]
+  contents GeneratedContentICP[]
+
+  @@index([projectId])
+}
+
+// Project-scoped directory of publishing platforms (Medium, LinkedIn, Reddit,
+// N5 site, etc.). Each platform carries its own format constraints and a
+// prompt fragment that Content Studio injects when this platform is picked
+// for a piece of content. Per TT Section 5.
+model Platform {
+  id             String   @id @default(cuid())
+  projectId      String
+  name           String                 // "Medium", "LinkedIn", "Reddit"
+  slug           String                 // "medium", "linkedin" — used as a stable id
+  formatType     String                 // article | post | newsletter | thread | other
+  minLength      Int?                   // null = no lower bound
+  maxLength      Int?                   // null = no upper bound
+  lengthUnit     String   @default("chars")   // "chars" | "words"
+  tone           String?  @db.Text
+  hashtagRules   String?  @db.Text
+  disclaimers    String?  @db.Text
+  promptFragment String?  @db.Text      // platform-specific text appended to LLM prompt
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  project   Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  templates PromptTemplate[]
+
+  @@unique([projectId, slug])
+  @@index([projectId])
+}
+
+// Reusable prompt templates per content type, optionally specialized per
+// platform. Content Studio's "Assemble prompt" step picks the most-specific
+// template (contentType + platform > contentType only) and renders it with
+// dynamic context. Per TT §4.2 + §4.4 — marketers should never write prompts
+// from scratch.
+model PromptTemplate {
+  id              String   @id @default(cuid())
+  projectId       String
+  name            String
+  contentType     String   // 'articles' | 'market-news' | 'newsletter' | 'social' | 'link-building' | (legacy: 'article' | 'catalog' | 'linkedin' | 'telegram')
+  platformId      String?  // null = applies to any platform of this contentType
+  systemTemplate  String   @db.Text
+  userTemplate    String   @db.Text
+  variables       String[] // documentation of supported placeholders, e.g. ["topic", "icp", "platform.tone"]
+  isDefault       Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  platform Platform? @relation(fields: [platformId], references: [id], onDelete: SetNull)
+
+  @@unique([projectId, name])
+  @@index([projectId, contentType])
+  @@index([platformId])
+}
+
+// Project-scoped reusable tag. Same tag can be applied to multiple ICPs in the project.
+model Tag {
+  id        String   @id @default(cuid())
+  projectId String
+  name      String
+  color     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  icps    ICPTag[]
+
+  @@unique([projectId, name])
+  @@index([projectId])
+}
+
+model ICPTag {
+  icpId     String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  icp ICP @relation(fields: [icpId], references: [id], onDelete: Cascade)
+  tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([icpId, tagId])
+  @@index([icpId])
+  @@index([tagId])
+}
+
+model GeneratedContent {
+  id             String   @id @default(cuid())
+  projectId      String
+  createdById    String
+  contentType    String   // article | catalog | linkedin | telegram
+  topic          String
+  targetAudience String
+  keyMessages    String
+  tone           String
+  generatedBrief String   @db.Text
+  briefData      Json?    // Structured SEO brief spec (TZ-style): pageUrl, wordCount, structure[], mainKeywords[], lsiKeywords[], redFlags[], language, uniqueness, etc.
+  createdAt      DateTime @default(now())
+
+  project   Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy User                 @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  icps      GeneratedContentICP[]
+
+  @@index([projectId])
+  @@index([createdById])
+  @@index([contentType])
+}
+
+// Many-to-many: a piece of generated content can target multiple ICPs.
+// Mirrors how a marketing article often serves several personas at once.
+model GeneratedContentICP {
+  generatedContentId String
+  icpId              String
+  createdAt          DateTime @default(now())
+
+  generatedContent GeneratedContent @relation(fields: [generatedContentId], references: [id], onDelete: Cascade)
+  icp              ICP              @relation(fields: [icpId], references: [id], onDelete: Cascade)
+
+  @@id([generatedContentId, icpId])
+  @@index([generatedContentId])
+  @@index([icpId])
+}
+
+// Project-level dictionary of "red flag" words/phrases to avoid in generated content.
+// Examples: AI-cliches ("delve", "у сучасному світі"), forbidden brand terms, compliance traps.
+model RedFlagWord {
+  id        String   @id @default(cuid())
+  projectId String
+  word      String
+  category  String   @default("ai") // ai | brand | compliance | competitor | other
+  severity  String   @default("warn") // warn | block
+  reason    String?  // short explanation why it's flagged
+  language  String   @default("any") // any | en | uk | ru
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, word, language])
+  @@index([projectId])
+  @@index([category])
+}
+
+// Cached chunk embeddings for incremental sync (Obsidian vaults, user docs,
+// project data). `scope` is a namespace like "project:<id>:obsidian" or
+// "userdoc:<userId>". `key` identifies the source item (e.g. relative file
+// path, ICP id, or uploaded fileName). `fileHash` lets sync skip unchanged
+// items without re-calling the embeddings API.
+model EmbeddingChunk {
+  id          String   @id @default(cuid())
+  scope       String
+  key         String   @default("")
+  fileHash    String
+  chunkIndex  Int      @default(0)
+  content     String   @db.Text
+  embedding   Float[]
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([scope])
+  @@index([scope, key])
+}
+
+// Project-level library of internal links the AI should insert where natural.
+// Content Studio merges these with per-brief overrides and injects into the prompt.
+model InternalLink {
+  id         String   @id @default(cuid())
+  projectId  String
+  url        String   // /buyer OR https://n5deal.com/buyer
+  anchor     String   // primary anchor phrase (suggested display text)
+  anchorAlts String[] // optional alternative anchor phrasings the AI may choose from
+  context    String?  // when / where to insert this link (hint for AI)
+  category   String?  // optional grouping tag: product | blog | landing | resource
+  priority   String   @default("nice") // must | nice
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, url])
+  @@index([projectId])
+}

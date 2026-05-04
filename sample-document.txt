@@ -1,0 +1,23 @@
+Sample Document for RAG Testing
+
+This is a sample text document to demonstrate the RAG (Retrieval-Augmented Generation) functionality.
+
+Key Topics:
+1. Artificial Intelligence
+2. Machine Learning
+3. Natural Language Processing
+4. Document Analysis
+
+Artificial Intelligence (AI) refers to the simulation of human intelligence in machines that are programmed to think like humans and mimic their actions.
+
+Machine Learning is a subset of AI that provides systems the ability to automatically learn and improve from experience without being explicitly programmed.
+
+Natural Language Processing (NLP) is a field of AI that focuses on the interaction between computers and humans through natural language.
+
+Document Analysis involves extracting meaningful information from documents using various techniques including text mining and pattern recognition.
+
+This document can be used to test questions like:
+- What is AI?
+- Explain machine learning
+- How does NLP work?
+- What are the key topics covered?

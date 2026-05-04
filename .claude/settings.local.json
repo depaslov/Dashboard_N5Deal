@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx prisma *)",
+      "Bash(npx tsc *)",
+      "Bash(npm install *)",
+      "Bash(PGPASSWORD=n5deal_dev_2026 psql -U n5deal -h localhost -d n5deal_dashboard -c \"\\\\\\\\dt\")",
+      "Bash(PGPASSWORD=n5deal_dev_2026 psql -U n5deal -h localhost -d n5deal_dashboard -c \"SELECT COUNT\\(*\\) FROM \\\\\"EmbeddingChunk\\\\\";\")",
+      "Bash(PGPASSWORD=n5deal_dev_2026 psql -U n5deal -h localhost -d n5deal_dashboard -c \"SELECT id, name, \\\\\"obsidianVaultPath\\\\\" FROM \\\\\"Project\\\\\";\")",
+      "Bash(PGPASSWORD=n5deal_dev_2026 psql -U n5deal -h localhost -d n5deal_dashboard -c \"SELECT COUNT\\(*\\) AS users FROM \\\\\"User\\\\\"; SELECT COUNT\\(*\\) AS contents FROM \\\\\"GeneratedContent\\\\\";\")",
+      "Bash(mv \"/Users/andriykrechkivsky/Documents/MyVault \" \"/Users/andriykrechkivsky/Documents/MyVault\")",
+      "Bash(PGPASSWORD=n5deal_dev_2026 psql -h localhost -U n5deal -d n5deal_dashboard -c \"SELECT id, name, \\\\\"companyName\\\\\", \\\\\"obsidianVaultPath\\\\\" FROM \\\\\"Project\\\\\";\" -c \"SELECT 'icps' as t, COUNT\\(*\\) FROM \\\\\"ICP\\\\\" UNION ALL SELECT 'contents', COUNT\\(*\\) FROM \\\\\"GeneratedContent\\\\\" UNION ALL SELECT 'redFlags', COUNT\\(*\\) FROM \\\\\"RedFlagWord\\\\\" UNION ALL SELECT 'internalLinks', COUNT\\(*\\) FROM \\\\\"InternalLink\\\\\" UNION ALL SELECT 'embeddings', COUNT\\(*\\) FROM \\\\\"EmbeddingChunk\\\\\";\")",
+      "Bash(npx tsx *)",
+      "Bash(PGPASSWORD=n5deal_dev_2026 psql *)",
+      "Bash(curl -s -o /dev/null -w \"GET /tags \\(no auth\\): %{http_code}\\\\n\" http://localhost:3000/tags)",
+      "Bash(curl -s -o /dev/null -w \"GET /api/tags \\(no auth\\): %{http_code}\\\\n\" http://localhost:3000/api/tags)",
+      "Bash(curl -s -o /dev/null -w \"GET /api/icps/seed-icp-fintech-founder/tags \\(no auth\\): %{http_code}\\\\n\" http://localhost:3000/api/icps/seed-icp-fintech-founder/tags)",
+      "Bash(curl -s -L -c /tmp/cookies.txt -b /tmp/cookies.txt -o /tmp/tags-html.txt -w \"Final URL: %{url_effective}\\\\nHTTP: %{http_code}\\\\nSize: %{size_download} bytes\\\\n\" http://localhost:3000/tags)",
+      "Read(//tmp/**)",
+      "Bash(curl -s -o /dev/null -w \"GET /content/new \\(no auth\\): %{http_code}\\\\n\" http://localhost:3000/content/new)",
+      "Bash(kill 15850 15851)",
+      "Bash(nohup npm *)",
+      "Bash(echo \"Started PID: $!\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/api/tags)",
+      "Bash(curl -s -o /dev/null -w \"POST /api/content/generate \\(no auth\\): %{http_code}\\\\n\" -X POST -H \"Content-Type: application/json\" -d '{\"contentType\":\"article\",\"topic\":\"test\",\"targetAudience\":\"test\"}' http://localhost:3000/api/content/generate)",
+      "Bash(pkill -f \"next dev|next-server\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/api/auth/session)",
+      "Bash(echo \"PID: $!\")",
+      "Bash(curl -s -o /dev/null -w \"GET /content: %{http_code}\\\\n\" http://localhost:3000/content)",
+      "Bash(curl -s -o /dev/null -w \"GET /content/articles: %{http_code}\\\\n\" http://localhost:3000/content/articles)",
+      "Bash(curl -s -o /dev/null -w \"GET /content/market-news: %{http_code}\\\\n\" http://localhost:3000/content/market-news)",
+      "Bash(curl -s -o /dev/null -w \"GET /content/newsletter: %{http_code}\\\\n\" http://localhost:3000/content/newsletter)",
+      "Bash(curl -s -o /dev/null -w \"GET /content/social: %{http_code}\\\\n\" http://localhost:3000/content/social)",
+      "Bash(curl -s -o /dev/null -w \"GET /content/pages: %{http_code}\\\\n\" http://localhost:3000/content/pages)",
+      "Bash(curl -s -o /dev/null -w \"GET /content \\(hub\\): %{http_code}\\\\n\" http://localhost:3000/content)",
+      "Bash(git config *)",
+      "Bash(git ls-remote *)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(grep -E \"\\\\.env$|\\\\.env\\\\.local\")"
+    ]
+  }
+}
