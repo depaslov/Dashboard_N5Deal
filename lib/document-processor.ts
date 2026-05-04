@@ -15,14 +15,10 @@ export function userDocScope(userId: string): string {
 async function extractText(file: File): Promise<string> {
   const buffer = await file.arrayBuffer()
   if (file.type === 'application/pdf') {
-    const { PDFParse } = await import('pdf-parse')
-    const parser = new PDFParse({ data: new Uint8Array(buffer) })
-    try {
-      const result = await parser.getText()
-      return result.text ?? ''
-    } finally {
-      await parser.destroy().catch(() => undefined)
-    }
+    const { extractText: unpdfExtractText, getDocumentProxy } = await import('unpdf')
+    const pdf = await getDocumentProxy(new Uint8Array(buffer))
+    const { text } = await unpdfExtractText(pdf, { mergePages: true })
+    return text ?? ''
   }
   if (
     file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
