@@ -1,46 +1,26 @@
 import { prisma } from '@/lib/db'
 
+// Single-tenant deployment: everyone shares this project.
+export const SHARED_PROJECT_ID = 'seed-project-n5deal'
+
 /**
- * Returns the first project the user owns or is a member of.
- * If user has no projects, creates a default one.
+ * Returns the shared project. If the user isn't a member yet, joins them.
  */
 export async function getOrCreateCurrentProject(userId: string) {
-  // Try membership first
-  const membership = await prisma.projectMember.findFirst({
-    where: { userId },
-    include: { project: true },
-    orderBy: { createdAt: 'asc' },
-  })
-  if (membership?.project) return membership.project
-
-  const owned = await prisma.project.findFirst({
-    where: { ownerId: userId },
-    orderBy: { createdAt: 'asc' },
-  })
-  if (owned) {
-    // ensure membership row
-    await prisma.projectMember.upsert({
-      where: { projectId_userId: { projectId: owned.id, userId } },
-      update: {},
-      create: { projectId: owned.id, userId, role: 'admin' },
-    })
-    return owned
+  const shared = await prisma.project.findUnique({ where: { id: SHARED_PROJECT_ID } })
+  if (!shared) {
+    throw new Error(
+      `Shared project "${SHARED_PROJECT_ID}" not found — run scripts/safe-seed.ts to create it.`,
+    )
   }
 
-  // Create a default workspace
-  const user = await prisma.user.findUnique({ where: { id: userId } })
-  const project = await prisma.project.create({
-    data: {
-      name: `${user?.name ?? 'My'} Workspace`,
-      companyName: 'My Company',
-      description: 'Default workspace',
-      ownerId: userId,
-    },
+  await prisma.projectMember.upsert({
+    where: { projectId_userId: { projectId: SHARED_PROJECT_ID, userId } },
+    update: {},
+    create: { projectId: SHARED_PROJECT_ID, userId, role: 'member' },
   })
-  await prisma.projectMember.create({
-    data: { projectId: project.id, userId, role: 'admin' },
-  })
-  return project
+
+  return shared
 }
 
 export async function getUserProjects(userId: string) {

@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 import { prisma } from '@/lib/db'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
+import { SHARED_PROJECT_ID } from '@/lib/project'
 
 export const dynamic = 'force-dynamic'
 
@@ -71,16 +72,10 @@ export async function POST(req: Request) {
       data: { email, passwordHash, name, role: 'user' },
     })
 
-    const project = await prisma.project.create({
-      data: {
-        name: `${name}'s Workspace`,
-        companyName: 'My Company',
-        description: 'Default workspace',
-        ownerId: user.id,
-      },
-    })
+    // Single-tenant: every user joins the shared workspace and sees the same
+    // ICPs, platforms, red flags, tags, prompts, and RAG knowledge base.
     await prisma.projectMember.create({
-      data: { projectId: project.id, userId: user.id, role: 'admin' },
+      data: { projectId: SHARED_PROJECT_ID, userId: user.id, role: 'member' },
     })
 
     return NextResponse.json({ ok: true })
