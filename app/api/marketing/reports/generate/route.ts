@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { getOrCreateCurrentProject } from '@/lib/project'
-import { callAnthropic, MissingAnthropicKey, type MessageContent } from '@/lib/marketing/anthropic'
+import { callLLM, MissingLLMKey, imageBlock, textBlock } from '@/lib/marketing/llm'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -48,12 +48,6 @@ Use null (not "null", not 0, not "—") for any metric you cannot extract from t
 
 Report generated: ${today}`
 
-function parseDataUrl(dataUrl: string): { mediaType: string; data: string } {
-  const m = dataUrl.match(/^data:(image\/(?:png|jpe?g|webp));base64,(.+)$/)
-  if (!m) throw new Error('Invalid data URL')
-  return { mediaType: m[1], data: m[2] }
-}
-
 function splitResult(text: string): { html: string; metrics: Record<string, unknown> } {
   const idx = text.indexOf('---JSON---')
   if (idx < 0) return { html: text, metrics: {} }
@@ -61,7 +55,6 @@ function splitResult(text: string): { html: string; metrics: Record<string, unkn
   const jsonPart = text.slice(idx + '---JSON---'.length).trim()
   let metrics: Record<string, unknown> = {}
   try {
-    // Strip code fences if Claude wrapped the JSON
     const cleaned = jsonPart.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim()
     metrics = JSON.parse(cleaned)
   } catch {
@@ -93,20 +86,25 @@ export async function POST(req: Request) {
   const periodLabel = parsed.data.periodLabel ?? today
   const title = parsed.data.title ?? `Marketing Report — ${today}`
 
-  // Build content array: images first, then instruction text
-  const content: MessageContent[] = parsed.data.screenshots.map((s) => {
-    const { mediaType, data } = parseDataUrl(s)
-    return { type: 'image' as const, source: { type: 'base64' as const, media_type: mediaType, data } }
-  })
-  content.push({ type: 'text' as const, text: USER_INSTRUCTION(today) })
+  // OpenAI-style content array: images first, instruction text last
+  const userContent = [
+    ...parsed.data.screenshots.map((dataUrl) => imageBlock(dataUrl)),
+    textBlock(USER_INSTRUCTION(today)),
+  ]
 
   let raw: string
   try {
-    raw = await callAnthropic([{ role: 'user', content }], { system: SYSTEM_PROMPT, maxTokens: 4096 })
+    raw = await callLLM(
+      [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: userContent },
+      ],
+      { maxTokens: 4096 },
+    )
   } catch (err) {
-    if (err instanceof MissingAnthropicKey) {
+    if (err instanceof MissingLLMKey) {
       return NextResponse.json(
-        { error: 'AI report generation is not configured. Add ANTHROPIC_API_KEY to the server environment.' },
+        { error: 'AI report generation is not configured. Add ABACUSAI_API_KEY to the server environment.' },
         { status: 503 },
       )
     }
