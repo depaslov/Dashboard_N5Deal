@@ -164,7 +164,7 @@ OUTPUT REQUIREMENTS (do not deviate):
   • Inflected forms count toward frequency for highly-inflected languages (Ukrainian, Russian, Polish), but at least one occurrence MUST be the exact lemma.
   • LSI keywords MUST appear naturally where context allows — at least 60% of the provided list.
   • If a keyword block is provided in the user prompt, ignoring it is a review failure. Do not skip them under any circumstance, even if it makes a sentence slightly less elegant.
-- Internal links: HARD LIMIT — maximum 3 internal links across the entire page (no exceptions). Pick the 3 highest-priority MUST links most relevant to the page topic; ignore the rest. Insert each chosen link inline as Markdown '[anchor](url)' at a contextually relevant moment. Use the suggested anchor or a listed alt. Never invent a link not defined in the user prompt.
+- Internal links: STRICT RANGE — exactly 2 or 3 internal links across the entire page (never fewer than 2, never more than 3, no exceptions). Pick the 2-3 highest-priority MUST links most relevant to the page topic; ignore the rest. If only 1 link is provided, use that one + skip the second slot (do not invent a second). Insert each chosen link inline as Markdown '[anchor](url)' at a contextually relevant moment, spaced across different sections (not all in one paragraph). Use the suggested anchor or a listed alt. Never invent a link not defined in the user prompt.
 - Red Flags list: NEVER use any word or phrase from it. No exceptions. When in doubt, omit.
 - Ground every fact in the uploaded reference brief or Knowledge Base. If a number, jurisdiction rule, or timeline is not sourced — omit it or write "depends on the project".
 - Do NOT include a Summary block or bullet list immediately after the H1. Open with a prose paragraph instead.
@@ -224,7 +224,7 @@ If an outline is provided, follow it instead of the generic system flow.{{/if}}
 {{#if internalLinks}}
 # Internal links to embed naturally (Markdown inline anchors)
 {{internalLinks}}
-HARD LIMIT: maximum 3 internal links across the entire page. If more MUST links are listed above, choose only the 3 most contextually relevant to this page topic and ignore the rest.{{/if}}
+STRICT RANGE: exactly 2 or 3 internal links across the entire page (never fewer than 2, never more than 3). If more MUST links are listed above, choose only the 2-3 most contextually relevant to this page topic. If only 1 link is listed, use that one — do not invent a second. Spread the chosen links across different sections, not stacked in one paragraph.{{/if}}
 {{#if platform.name}}
 # Output platform
 - Platform: {{platform.name}} ({{platform.formatType}})
@@ -273,7 +273,7 @@ Hard rules:
 - Output language: {{language}}.
 - Never invent facts. If a claim is not supported by the Knowledge Base or the user input, omit it.
 - Strictly avoid every word in the Red Flags list AND every term/phrase from the COMPLIANCE BLOCK.
-- Insert internal links naturally where context fits — maximum 3 internal links across the article.
+- Internal links: STRICT RANGE — exactly 2 or 3 internal links across the entire article (never fewer than 2, never more than 3). Insert each as Markdown '[anchor](url)' at a contextually relevant moment, spread across different sections (not all in one paragraph). Pick from the user-provided list only; never invent a link. If only 1 is provided, use just that one — do not invent a second.
 - End the article with the mandatory disclaimer from the COMPLIANCE BLOCK.{{#if platform.promptFragment}}
 - Platform-specific instructions: {{platform.promptFragment}}{{/if}}`,
     userTemplate: `# Topic
