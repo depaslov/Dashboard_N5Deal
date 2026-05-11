@@ -9,9 +9,9 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, FileText, BookOpen, Linkedin, Send, Clock, Globe, Target, ShieldAlert, Link2, Star, ExternalLink } from 'lucide-react'
 import { ContentActions } from './content-actions'
+import { ContentEditor } from './content-editor'
 import { format } from 'date-fns'
 import type { BriefData } from '@/lib/content-brief'
-import { renderMarkdown } from '@/lib/markdown'
 
 export const dynamic = 'force-dynamic'
 
@@ -186,11 +186,7 @@ export default async function ContentDetailPage({ params }: { params: { id: stri
         </aside>
 
         <section className="md:col-span-2 bg-card border border-border shadow-sm p-6">
-          <h2 className="font-display font-semibold text-lg tracking-tight">Generated content</h2>
-          <article
-            className="markdown-output mt-4"
-            dangerouslySetInnerHTML={{ __html: renderMarkdown(content.generatedBrief) }}
-          />
+          <ContentEditor id={content.id} initialBrief={content.generatedBrief} />
         </section>
       </div>
     </div>
