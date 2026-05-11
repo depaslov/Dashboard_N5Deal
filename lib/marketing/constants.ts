@@ -74,6 +74,7 @@ export const ACCOUNT_BADGE: Record<AccountSlug, string> = {
 export const MARKETING_NAV = [
   { slug: 'home', label: 'Home', href: '/marketing' },
   { slug: 'calendar', label: 'Calendar', href: '/marketing/calendar' },
+  { slug: 'analytics', label: 'Analytics', href: '/marketing/analytics' },
   { slug: 'reports', label: 'Reports', href: '/marketing/reports' },
   { slug: 'strategy', label: 'Strategy', href: '/marketing/strategy' },
   { slug: 'brands', label: 'Brands', href: '/marketing/brands' },
