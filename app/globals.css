@@ -171,3 +171,34 @@
 .markdown-output table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 0.6rem 0; }
 .markdown-output th, .markdown-output td { border: 1px solid hsl(var(--border)); padding: 0.4rem 0.6rem; text-align: left; }
 .markdown-output th { background: hsl(var(--secondary)); font-weight: 600; }
+
+/* ============================================================================ */
+/* Marketing OS — AI-generated report HTML                                       */
+/* Anthropic produces HTML using these specific class names.                     */
+/* ============================================================================ */
+.report-html .rv { font-size: 0.9rem; line-height: 1.6; }
+.report-html h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.25rem; }
+.report-html .rp { font-size: 0.75rem; color: hsl(var(--muted-foreground)); font-weight: 500; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid hsl(var(--border)); }
+.report-html h2 { font-size: 1.15rem; font-weight: 700; margin: 1.5rem 0 0.75rem; letter-spacing: -0.01em; }
+.report-html h3 { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: hsl(var(--muted-foreground)); margin: 0.85rem 0 0.4rem; }
+.report-html .mg { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.5rem; margin: 0.5rem 0 1rem; }
+.report-html .mc { background: hsl(var(--secondary)); border: 1px solid hsl(var(--border)); border-radius: 0.5rem; padding: 0.75rem; text-align: center; }
+.report-html .mv { font-size: 1.4rem; font-weight: 700; line-height: 1.1; }
+.report-html .ml { font-size: 0.65rem; color: hsl(var(--muted-foreground)); font-weight: 600; margin-top: 0.15rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.report-html .md { font-size: 0.7rem; font-weight: 600; margin-top: 0.25rem; }
+.report-html .md.up { color: hsl(160 79% 32%); }
+.report-html .md.dn { color: hsl(0 84% 60%); }
+.report-html .ins { background: hsla(217, 91%, 51%, 0.08); border-left: 3px solid hsl(var(--primary)); padding: 0.6rem 0.9rem; border-radius: 0 0.5rem 0.5rem 0; font-size: 0.8rem; color: hsl(var(--foreground)); margin: 0.6rem 0; line-height: 1.55; }
+.report-html table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 0.5rem 0 1rem; }
+.report-html th { text-align: left; padding: 0.4rem 0.6rem; background: hsl(var(--secondary)); border-bottom: 1px solid hsl(var(--border)); font-size: 0.65rem; font-weight: 700; color: hsl(var(--muted-foreground)); text-transform: uppercase; letter-spacing: 0.04em; }
+.report-html td { padding: 0.4rem 0.6rem; border-bottom: 1px solid hsl(var(--border)); }
+.report-html tr:last-child td { border-bottom: none; }
+.report-html .fnr { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); margin: 0.75rem 0; }
+.report-html .fns { background: hsl(var(--secondary)); border: 1px solid hsl(var(--border)); padding: 0.55rem 0.45rem; text-align: center; border-right: 0; }
+.report-html .fns:first-child { border-radius: 0.5rem 0 0 0.5rem; }
+.report-html .fns:last-child { border-radius: 0 0.5rem 0.5rem 0; border-right: 1px solid hsl(var(--border)); }
+.report-html .fnv { font-size: 1.05rem; font-weight: 700; color: hsl(var(--primary)); }
+.report-html .fnl { font-size: 0.65rem; color: hsl(var(--muted-foreground)); margin-top: 0.15rem; }
+.report-html .fns2 { font-size: 0.6rem; color: hsl(var(--muted-foreground)); opacity: 0.7; margin-top: 0.1rem; }
+.report-html strong { font-weight: 700; }
+.report-html ul { list-style: disc; padding-left: 1.1rem; font-size: 0.85rem; margin: 0.5rem 0; }

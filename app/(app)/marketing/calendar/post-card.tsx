@@ -1,6 +1,9 @@
 'use client'
 
-import { Image as ImageIcon } from 'lucide-react'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
+import { Image as ImageIcon, CheckCircle2 } from 'lucide-react'
 import { ACCOUNT_ACCENT, ACCOUNT_BADGE, type AccountSlug } from '@/lib/marketing/constants'
 import { cn } from '@/lib/utils'
 import type { CalPost } from './types'
@@ -16,14 +19,35 @@ export function PostCard({
   onClick: () => void
   compact?: boolean
 }) {
+  const router = useRouter()
+  const [toggling, setToggling] = useState(false)
   const isArticle = post.type === 'Article'
   const isPublished = post.status === 'pub'
+
+  async function togglePublished(e: React.MouseEvent) {
+    e.stopPropagation()
+    setToggling(true)
+    try {
+      const res = await fetch(`/api/marketing/posts/${post.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: isPublished ? 'idea' : 'pub' }),
+      })
+      if (!res.ok) { toast.error('Failed'); return }
+      router.refresh()
+    } finally {
+      setToggling(false)
+    }
+  }
+
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter') onClick() }}
       className={cn(
-        'w-full text-left bg-card hover:bg-accent/50 border border-border border-l-2 rounded p-1.5 transition-colors relative',
+        'group/post w-full text-left bg-card hover:bg-accent/50 border border-border border-l-2 rounded p-1.5 transition-colors relative cursor-pointer',
         isArticle ? 'border-l-amber-600' : ACCOUNT_ACCENT[slug],
         isPublished && 'opacity-60',
       )}
@@ -65,6 +89,21 @@ export function PostCard({
           ))}
         </div>
       ) : null}
-    </button>
+      <button
+        type="button"
+        onClick={togglePublished}
+        disabled={toggling}
+        title={isPublished ? 'Unmark as posted' : 'Mark as posted'}
+        className={cn(
+          'absolute -bottom-1 -right-1 h-5 w-5 inline-flex items-center justify-center rounded-full border shadow-sm transition-all',
+          isPublished
+            ? 'opacity-100 bg-amber-500 text-white border-amber-600 hover:bg-amber-600'
+            : 'opacity-0 group-hover/post:opacity-100 bg-card border-border text-muted-foreground hover:text-emerald-600 hover:border-emerald-600',
+        )}
+        aria-label={isPublished ? 'Unmark as posted' : 'Mark as posted'}
+      >
+        <CheckCircle2 className="h-3 w-3" />
+      </button>
+    </div>
   )
 }

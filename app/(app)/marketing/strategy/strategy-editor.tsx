@@ -1,0 +1,258 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
+import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
+
+export type BudgetData = Record<string, Record<string, { min: number; max: number; actual: number; purpose: string }>>
+export type GoalsData = Record<string, Record<string, { baseline: number; target: number; actual: number; unit?: string; label?: string }>>
+type Directives = Record<string, { title: string; color: string; body: string }>
+
+const CHANNEL_COLORS: Record<string, string> = {
+  linkBuilding: 'bg-emerald-500',
+  linkedin: 'bg-blue-600',
+  instagram: 'bg-pink-500',
+  pr: 'bg-violet-600',
+  free: 'bg-slate-400',
+}
+const CHANNEL_LABELS: Record<string, string> = {
+  linkBuilding: 'Link Building',
+  linkedin: 'LinkedIn',
+  instagram: 'Instagram',
+  pr: 'PR',
+  free: 'Free Sources',
+}
+const MONTHS: ('april' | 'may' | 'june')[] = ['april', 'may', 'june']
+const MONTH_LABEL = { april: 'April', may: 'May', june: 'June' } as const
+
+export function StrategyEditor({
+  initial,
+}: {
+  initial: { activeBudgetMonth: 'april' | 'may' | 'june'; budget: BudgetData; goals: GoalsData; channelDirectives: Directives }
+}) {
+  const router = useRouter()
+  const [activeMonth, setActiveMonth] = useState(initial.activeBudgetMonth)
+  const [budget, setBudget] = useState<BudgetData>(initial.budget)
+  const [goals, setGoals] = useState<GoalsData>(initial.goals)
+  const [saving, setSaving] = useState(false)
+
+  async function save(updates: Partial<{ activeBudgetMonth: typeof activeMonth; budget: BudgetData; goals: GoalsData }>) {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/marketing/strategy', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        toast.error(data?.error ?? 'Save failed')
+        return
+      }
+      router.refresh()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function changeMonth(m: typeof activeMonth) {
+    setActiveMonth(m)
+    save({ activeBudgetMonth: m })
+  }
+
+  function updateBudgetActual(month: string, ch: string, val: number) {
+    const next: BudgetData = JSON.parse(JSON.stringify(budget))
+    if (next[month]?.[ch]) {
+      next[month][ch].actual = val
+      setBudget(next)
+      save({ budget: next })
+    }
+  }
+
+  function updateGoalActual(cat: string, metric: string, val: number) {
+    const next: GoalsData = JSON.parse(JSON.stringify(goals))
+    if (next[cat]?.[metric]) {
+      next[cat][metric].actual = val
+      setGoals(next)
+      save({ goals: next })
+    }
+  }
+
+  const monthBudget = budget[activeMonth] ?? {}
+  let totalActual = 0
+  let totalMax = 0
+  for (const ch of Object.values(monthBudget)) {
+    totalActual += ch.actual
+    totalMax += ch.max
+  }
+  const overallPct = totalMax > 0 ? Math.round((totalActual / totalMax) * 100) : 0
+
+  return (
+    <div className="space-y-6">
+      {/* Budget editor */}
+      <section className="bg-card border border-border rounded-lg shadow-sm">
+        <header className="px-5 py-3.5 border-b border-border flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h3 className="font-semibold">Budget — {MONTH_LABEL[activeMonth]} 2026</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Edit the actual spend column inline · auto-saves on blur.</p>
+          </div>
+          <div className="inline-flex p-0.5 bg-muted rounded-md border border-border">
+            {MONTHS.map((m) => (
+              <button
+                key={m}
+                onClick={() => changeMonth(m)}
+                className={cn(
+                  'px-2.5 py-1 text-xs font-semibold rounded-sm transition-colors',
+                  activeMonth === m ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {MONTH_LABEL[m]}
+              </button>
+            ))}
+          </div>
+        </header>
+
+        <div className="px-5 py-3 grid grid-cols-3 gap-3 border-b border-border bg-muted/20">
+          <KpiCell label="Spent" value={`$${totalActual.toLocaleString()}`} />
+          <KpiCell label="Planned ceiling" value={`$${totalMax.toLocaleString()}`} />
+          <KpiCell
+            label="Of ceiling"
+            value={`${overallPct}%`}
+            accent={overallPct > 100 ? 'text-red-600' : overallPct >= 70 ? 'text-emerald-600' : 'text-blue-600'}
+          />
+        </div>
+
+        <div className="p-5 space-y-4">
+          {Object.entries(monthBudget).map(([ch, data]) => {
+            const fillPct = data.max > 0 ? Math.min(100, (data.actual / data.max) * 100) : 0
+            const isOver = data.actual > data.max && data.max > 0
+            const range = data.min === data.max ? `$${data.max.toLocaleString()}` : `$${data.min.toLocaleString()}–${data.max.toLocaleString()}`
+            return (
+              <div key={ch}>
+                <div className="flex items-center justify-between gap-3 mb-1.5">
+                  <span className="font-medium text-sm flex items-center gap-2">
+                    <span className={cn('inline-block w-2 h-2 rounded-full', CHANNEL_COLORS[ch] ?? 'bg-muted')} />
+                    {CHANNEL_LABELS[ch] ?? ch}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-muted-foreground tabular-nums">of {range}</span>
+                    <span className="text-[11px] text-muted-foreground">$</span>
+                    <Input
+                      type="number"
+                      defaultValue={data.actual}
+                      onBlur={(e) => {
+                        const v = parseFloat(e.target.value) || 0
+                        if (v !== data.actual) updateBudgetActual(activeMonth, ch, v)
+                      }}
+                      className="h-7 w-24 text-right text-xs"
+                      step="10"
+                      min="0"
+                    />
+                  </div>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className={cn('h-full rounded-full transition-all', isOver ? 'bg-red-500' : CHANNEL_COLORS[ch] ?? 'bg-primary')}
+                    style={{ width: `${fillPct}%` }}
+                  />
+                </div>
+                {data.purpose ? <p className="text-[11px] text-muted-foreground mt-1.5">{data.purpose}</p> : null}
+              </div>
+            )
+          })}
+        </div>
+      </section>
+
+      {/* Goals editor */}
+      <section className="bg-card border border-border rounded-lg shadow-sm">
+        <header className="px-5 py-3.5 border-b border-border">
+          <h3 className="font-semibold">Channel Goals</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">Update the actual column as new data comes in. Auto-saves on blur.</p>
+        </header>
+        <div className="divide-y divide-border">
+          {Object.entries(goals).map(([cat, metrics]) => (
+            <div key={cat} className="p-5">
+              <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">{cat}</div>
+              <div className="space-y-2.5">
+                {Object.entries(metrics).map(([k, g]) => {
+                  const range = g.target - g.baseline
+                  const progress = range === 0 ? 100 : ((g.actual - g.baseline) / range) * 100
+                  const pct = Math.max(0, Math.min(100, progress))
+                  let badge: string, statusCls: string
+                  if (g.actual >= g.target) { badge = '✓ Hit'; statusCls = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' }
+                  else if (progress >= 70) { badge = 'Close'; statusCls = 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' }
+                  else if (progress >= 20) { badge = 'Moving'; statusCls = 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' }
+                  else if (g.actual < g.baseline) { badge = 'Below'; statusCls = 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300' }
+                  else { badge = 'Baseline'; statusCls = 'bg-muted text-muted-foreground' }
+                  return (
+                    <div key={k} className="grid items-center gap-3" style={{ gridTemplateColumns: '1fr 100px 110px 1fr 70px' }}>
+                      <div className="text-sm font-medium">{g.label ?? k}</div>
+                      <div className="text-center text-xs">
+                        <div className="font-semibold tabular-nums">{g.baseline}{g.unit ?? ''}</div>
+                        <div className="text-[9px] uppercase tracking-widest text-muted-foreground">baseline</div>
+                      </div>
+                      <div>
+                        <Input
+                          type="number"
+                          step="any"
+                          defaultValue={g.actual}
+                          onBlur={(e) => {
+                            const v = parseFloat(e.target.value) || 0
+                            if (v !== g.actual) updateGoalActual(cat, k, v)
+                          }}
+                          className="h-7 text-center text-xs"
+                        />
+                        <div className="text-[9px] uppercase tracking-widest text-muted-foreground text-center mt-0.5">actual{g.unit ? ` (${g.unit})` : ''}</div>
+                      </div>
+                      <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+                        <div className="absolute inset-y-0 left-0 bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
+                      </div>
+                      <div className="text-center">
+                        <span className={cn('inline-block px-2 py-0.5 rounded text-[10px] font-bold', statusCls)}>{badge}</span>
+                        <div className="text-[10px] text-muted-foreground tabular-nums mt-1">→ {g.target}{g.unit ?? ''}</div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {Object.keys(initial.channelDirectives ?? {}).length ? (
+        <section className="bg-card border border-border rounded-lg shadow-sm">
+          <header className="px-5 py-3.5 border-b border-border">
+            <h3 className="font-semibold">Channel Directives</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Q2 strategy reference per channel.</p>
+          </header>
+          <div className="p-5 grid gap-2.5 sm:grid-cols-2">
+            {Object.values(initial.channelDirectives).map((d) => (
+              <div key={d.title} className="bg-muted/30 border-l-4 rounded p-3 text-sm leading-relaxed" style={{ borderLeftColor: d.color }}>
+                <div className="text-[10px] uppercase tracking-widest font-semibold mb-1" style={{ color: d.color }}>{d.title}</div>
+                {d.body}
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {saving ? (
+        <div className="fixed bottom-4 right-4 bg-card border border-border rounded-md px-3 py-1.5 text-xs shadow-md">
+          Saving…
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function KpiCell({ label, value, accent }: { label: string; value: string; accent?: string }) {
+  return (
+    <div className="text-center">
+      <div className={cn('text-lg font-bold tabular-nums', accent)}>{value}</div>
+      <div className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground mt-0.5">{label}</div>
+    </div>
+  )
+}
