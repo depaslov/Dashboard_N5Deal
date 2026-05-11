@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 export default async function MarketingCalendarPage({
   searchParams,
 }: {
-  searchParams: { week?: string; view?: string }
+  searchParams: { week?: string; view?: string; accounts?: string }
 }) {
   const session = await getServerSession(authOptions)
   const userId = session?.user?.id as string
@@ -29,20 +29,31 @@ export default async function MarketingCalendarPage({
   windowStart.setDate(windowStart.getDate() - 14)
   windowEnd.setDate(windowEnd.getDate() + 14)
 
-  const [accounts, posts] = await Promise.all([
-    prisma.socialAccount.findMany({
-      where: { projectId: project.id },
-      orderBy: { sortOrder: 'asc' },
-    }),
-    prisma.socialPost.findMany({
-      where: {
-        projectId: project.id,
-        scheduledFor: { gte: windowStart, lte: windowEnd },
-      },
-      include: { account: true },
-      orderBy: { scheduledFor: 'asc' },
-    }),
-  ])
+  // Account filter pills — comma-separated list of slugs in the URL.
+  // Empty/missing param means "show all accounts".
+  const accountFilterSlugs = (searchParams.accounts ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+
+  const allAccounts = await prisma.socialAccount.findMany({
+    where: { projectId: project.id },
+    orderBy: { sortOrder: 'asc' },
+  })
+  const enabledAccountIds = accountFilterSlugs.length
+    ? allAccounts.filter((a) => accountFilterSlugs.includes(a.slug)).map((a) => a.id)
+    : allAccounts.map((a) => a.id)
+
+  const posts = await prisma.socialPost.findMany({
+    where: {
+      projectId: project.id,
+      scheduledFor: { gte: windowStart, lte: windowEnd },
+      ...(enabledAccountIds.length ? { accountId: { in: enabledAccountIds } } : {}),
+    },
+    include: { account: true },
+    orderBy: { scheduledFor: 'asc' },
+  })
+  const accounts = allAccounts
 
   return (
     <CalendarBoard
@@ -64,6 +75,7 @@ export default async function MarketingCalendarPage({
       weekStartISO={startOfWeek(anchor, { weekStartsOn: 1 }).toISOString()}
       anchorISO={anchor.toISOString()}
       initialView={(searchParams.view as 'week' | 'month' | 'list' | 'board') ?? 'week'}
+      activeAccountSlugs={accountFilterSlugs}
     />
   )
 }

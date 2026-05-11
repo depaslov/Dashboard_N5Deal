@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
-import { Upload, Sparkles, X, Trash2, BarChart3, FileText, Loader2 } from 'lucide-react'
+import { Upload, Sparkles, X, Trash2, BarChart3, FileText, Loader2, Download, ArrowLeftRight, TrendingUp, TrendingDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -36,7 +36,16 @@ const CHANNELS: { k: string; label: string }[] = [
   { k: 'youtube', label: 'YouTube' },
   { k: 'linkedin', label: 'LinkedIn' },
   { k: 'website', label: 'Website' },
+  { k: 'compare', label: 'Compare ↔' },
 ]
+
+interface PreviousReport {
+  id: string
+  title: string
+  periodLabel: string
+  metrics: Record<string, Record<string, number | null>>
+  createdAt: string
+}
 
 const CHANNEL_FIELDS: Record<string, { k: string; label: string; prefix?: string; suffix?: string }[]> = {
   instagram: [
@@ -84,9 +93,11 @@ const CHANNEL_FIELDS: Record<string, { k: string; label: string; prefix?: string
 export function ReportsBoard({
   reports,
   selected,
+  previous,
 }: {
   reports: ReportListItem[]
   selected: ReportDetail | null
+  previous: PreviousReport | null
 }) {
   const router = useRouter()
   const params = useSearchParams()
@@ -276,7 +287,7 @@ export function ReportsBoard({
       {/* Main detail */}
       <section className="bg-card border border-border rounded-lg shadow-sm min-h-[400px]">
         {selected ? (
-          <ReportDetailView report={selected} tab={tab} setTab={setTab} />
+          <ReportDetailView report={selected} previous={previous} tab={tab} setTab={setTab} />
         ) : (
           <div className="flex flex-col items-center justify-center text-center py-16 px-6 h-full">
             <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-4">
@@ -296,10 +307,12 @@ export function ReportsBoard({
 
 function ReportDetailView({
   report,
+  previous,
   tab,
   setTab,
 }: {
   report: ReportDetail
+  previous: PreviousReport | null
   tab: string
   setTab: (t: string) => void
 }) {
@@ -324,21 +337,55 @@ function ReportDetailView({
     }
   }
 
+  function downloadHtml() {
+    const stylesheet = `
+      body { font-family: 'Inter', system-ui, sans-serif; max-width: 880px; margin: 2rem auto; padding: 0 2rem; color: #111827; background: #F4F5F7; }
+      .rv { background: #fff; border-radius: 12px; padding: 2rem; box-shadow: 0 2px 16px rgba(0,0,0,.08); }
+      h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: .25rem; }
+      .rp { font-size: .75rem; color: #6B7280; font-weight: 500; margin-bottom: 1rem; padding-bottom: .75rem; border-bottom: 1px solid #E5E7EB; }
+      h2 { font-size: 1.15rem; font-weight: 700; margin: 1.5rem 0 .75rem; }
+      h3 { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #6B7280; margin: .85rem 0 .4rem; }
+      .mg { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .5rem; margin: .5rem 0 1rem; }
+      .mc { background: #F4F5F7; border: 1px solid #E5E7EB; border-radius: .5rem; padding: .75rem; text-align: center; }
+      .mv { font-size: 1.4rem; font-weight: 700; }
+      .ml { font-size: .65rem; color: #6B7280; font-weight: 600; margin-top: .15rem; text-transform: uppercase; letter-spacing: .04em; }
+      .md.up { color: #059669; font-size: .7rem; font-weight: 600; margin-top: .25rem; }
+      .md.dn { color: #DC2626; font-size: .7rem; font-weight: 600; margin-top: .25rem; }
+      .ins { background: hsla(217,91%,51%,.08); border-left: 3px solid #2563EB; padding: .6rem .9rem; border-radius: 0 .5rem .5rem 0; font-size: .85rem; margin: .6rem 0; line-height: 1.55; }
+      table { width: 100%; border-collapse: collapse; font-size: .8rem; margin: .5rem 0 1rem; }
+      th { text-align: left; padding: .4rem .6rem; background: #F4F5F7; border-bottom: 1px solid #E5E7EB; font-size: .65rem; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: .04em; }
+      td { padding: .4rem .6rem; border-bottom: 1px solid #E5E7EB; }
+    `
+    const fullDoc = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${report.title.replace(/[<>]/g, '')}</title><style>${stylesheet}</style></head><body>${report.html}</body></html>`
+    const blob = new Blob([fullDoc], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${report.periodLabel.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-report.html`
+    document.body.appendChild(a); a.click(); a.remove()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <>
-      <header className="px-6 py-4 border-b border-border">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{report.periodLabel}</p>
-        <h1 className="font-display text-xl font-semibold tracking-tight mt-0.5">{report.title}</h1>
-        <p className="text-xs text-muted-foreground mt-1">Generated {format(new Date(report.createdAt), 'd LLL yyyy, HH:mm')}</p>
+      <header className="px-6 py-4 border-b border-border flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{report.periodLabel}</p>
+          <h1 className="font-display text-xl font-semibold tracking-tight mt-0.5">{report.title}</h1>
+          <p className="text-xs text-muted-foreground mt-1">Generated {format(new Date(report.createdAt), 'd LLL yyyy, HH:mm')}</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={downloadHtml} className="gap-1.5 shrink-0">
+          <Download className="h-3.5 w-3.5" /> Download
+        </Button>
       </header>
-      <nav className="flex gap-1 px-6 pt-3 border-b border-border" aria-label="Channels">
+      <nav className="flex gap-1 px-6 pt-3 border-b border-border overflow-x-auto" aria-label="Channels">
         {CHANNELS.map((c) => (
           <button
             type="button"
             key={c.k}
             onClick={() => setTab(c.k)}
             className={cn(
-              'px-3 py-2 text-xs font-semibold rounded-t border-b-2 -mb-px transition-colors',
+              'px-3 py-2 text-xs font-semibold rounded-t border-b-2 -mb-px transition-colors whitespace-nowrap',
               tab === c.k ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
             )}
           >
@@ -348,25 +395,232 @@ function ReportDetailView({
       </nav>
       <div className="p-6 max-h-[75vh] overflow-y-auto">
         {tab === 'overview' ? (
-          <div className="report-html" dangerouslySetInnerHTML={{ __html: report.html }} />
+          <>
+            <div className="report-html" dangerouslySetInnerHTML={{ __html: report.html }} />
+            <div className="mt-6 pt-4 border-t border-border">
+              <Label htmlFor="overall-notes" className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Overall notes</Label>
+              <Textarea
+                id="overall-notes"
+                defaultValue={report.notes}
+                onBlur={(e) => saveNotes(e.target.value)}
+                rows={3}
+                placeholder="Action items, summary, what to test next..."
+                className="mt-1.5"
+              />
+            </div>
+          </>
+        ) : tab === 'compare' ? (
+          <CompareTab report={report} previous={previous} />
         ) : (
           <ChannelTab channel={tab} report={report} onSaveNotes={(v) => saveNotes(v, tab)} saving={savingNotes} />
         )}
-        {tab === 'overview' ? (
-          <div className="mt-6 pt-4 border-t border-border">
-            <Label htmlFor="overall-notes" className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Overall notes</Label>
-            <Textarea
-              id="overall-notes"
-              defaultValue={report.notes}
-              onBlur={(e) => saveNotes(e.target.value)}
-              rows={3}
-              placeholder="Action items, summary, what to test next..."
-              className="mt-1.5"
-            />
-          </div>
-        ) : null}
       </div>
     </>
+  )
+}
+
+// ============================================================================
+// Compare ↔ tab — current vs previous report, deltas across all channels
+// ============================================================================
+
+const COMPARE_CHANNELS: { k: string; label: string; color: string; fields: { k: string; label: string; prefix?: string; suffix?: string }[] }[] = [
+  {
+    k: 'instagram', label: 'Instagram', color: '#E1306C',
+    fields: [
+      { k: 'followers', label: 'Followers' },
+      { k: 'reach', label: 'Reach' },
+      { k: 'impressions', label: 'Impressions' },
+      { k: 'engagement', label: 'Engagement' },
+      { k: 'adSpend', label: 'Ad Spend', prefix: '$' },
+      { k: 'ctr', label: 'CTR', suffix: '%' },
+    ],
+  },
+  {
+    k: 'youtube', label: 'YouTube', color: '#FF0000',
+    fields: [
+      { k: 'views', label: 'Views' },
+      { k: 'watchTime', label: 'Watch Time', suffix: 'h' },
+      { k: 'retention', label: 'Retention', suffix: '%' },
+      { k: 'videoViews', label: 'Long-form Views' },
+    ],
+  },
+  {
+    k: 'linkedin', label: 'LinkedIn', color: '#0A66C2',
+    fields: [
+      { k: 'impressions', label: 'Impressions' },
+      { k: 'clicks', label: 'Clicks' },
+      { k: 'reactions', label: 'Reactions' },
+      { k: 'engRate', label: 'Eng. Rate', suffix: '%' },
+    ],
+  },
+  {
+    k: 'website', label: 'Website', color: '#E37400',
+    fields: [
+      { k: 'sessions', label: 'Sessions' },
+      { k: 'engagedSessions', label: 'Engaged Sessions' },
+      { k: 'engagementRate', label: 'Eng. Rate', suffix: '%' },
+      { k: 'avgEngagementTime', label: 'Avg Time', suffix: 's' },
+    ],
+  },
+]
+
+function fmtVal(v: number | null | undefined, prefix?: string, suffix?: string): string {
+  if (v === null || v === undefined) return '—'
+  return (prefix ?? '') + Number(v).toLocaleString() + (suffix ?? '')
+}
+
+function fmtAbsDelta(n: number): string {
+  const a = Math.abs(n)
+  if (a >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
+  if (a >= 1_000) return (n / 1_000).toFixed(1) + 'k'
+  return Number.isInteger(n) ? n.toLocaleString() : n.toFixed(1)
+}
+
+function CompareTab({ report, previous }: { report: ReportDetail; previous: PreviousReport | null }) {
+  if (!previous) {
+    return (
+      <div className="text-center py-12 text-sm text-muted-foreground">
+        <ArrowLeftRight className="h-10 w-10 mx-auto mb-3 opacity-40" />
+        <p className="font-medium">Only one report saved</p>
+        <p className="mt-1 text-xs max-w-md mx-auto">
+          Upload a second report and this tab will show a side-by-side "what went up / what went down"
+          summary across all channels — automatically.
+        </p>
+      </div>
+    )
+  }
+
+  // Build wins / concerns lists
+  const wins: { channel: string; color: string; label: string; prev: string; curr: string; pct: number }[] = []
+  const concerns: typeof wins = []
+
+  for (const ch of COMPARE_CHANNELS) {
+    for (const f of ch.fields) {
+      const cv = report.metrics?.[ch.k]?.[f.k]
+      const pv = previous.metrics?.[ch.k]?.[f.k]
+      if (typeof cv !== 'number' || typeof pv !== 'number' || pv === 0) continue
+      const diff = cv - pv
+      const pct = Math.round((diff / pv) * 100)
+      if (Math.abs(pct) < 1) continue
+      const row = {
+        channel: ch.label, color: ch.color, label: f.label,
+        prev: fmtVal(pv, f.prefix, f.suffix), curr: fmtVal(cv, f.prefix, f.suffix), pct,
+      }
+      if (diff > 0) wins.push(row); else concerns.push(row)
+    }
+  }
+  wins.sort((a, b) => b.pct - a.pct)
+  concerns.sort((a, b) => a.pct - b.pct)
+
+  return (
+    <div className="space-y-6">
+      <div className="text-xs text-muted-foreground">
+        Comparing <strong className="text-foreground">{previous.periodLabel}</strong> → <strong className="text-foreground">{report.periodLabel}</strong>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 border-l-4 border-l-emerald-600 rounded-lg p-4">
+          <h3 className="text-sm font-bold mb-3 flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+            <TrendingUp className="h-4 w-4" /> What went up
+            <span className="ml-auto text-[10px] bg-emerald-100 dark:bg-emerald-900 px-1.5 py-0.5 rounded">{wins.length}</span>
+          </h3>
+          {wins.length === 0 ? (
+            <p className="text-xs italic text-muted-foreground">— nothing here —</p>
+          ) : (
+            <ul className="space-y-1.5 text-xs">
+              {wins.map((r, i) => (
+                <li key={i} className="flex items-center justify-between gap-2 border-b border-emerald-200/50 dark:border-emerald-900/50 last:border-0 pb-1.5 last:pb-0">
+                  <span className="flex items-center gap-1.5 min-w-0">
+                    <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: r.color }} />
+                    <span className="truncate"><strong>{r.channel}</strong> · {r.label}</span>
+                  </span>
+                  <span className="font-bold text-emerald-700 dark:text-emerald-300 shrink-0 tabular-nums">+{r.pct}%</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 border-l-4 border-l-red-600 rounded-lg p-4">
+          <h3 className="text-sm font-bold mb-3 flex items-center gap-2 text-red-700 dark:text-red-300">
+            <TrendingDown className="h-4 w-4" /> What went down
+            <span className="ml-auto text-[10px] bg-red-100 dark:bg-red-900 px-1.5 py-0.5 rounded">{concerns.length}</span>
+          </h3>
+          {concerns.length === 0 ? (
+            <p className="text-xs italic text-muted-foreground">— nothing here —</p>
+          ) : (
+            <ul className="space-y-1.5 text-xs">
+              {concerns.map((r, i) => (
+                <li key={i} className="flex items-center justify-between gap-2 border-b border-red-200/50 dark:border-red-900/50 last:border-0 pb-1.5 last:pb-0">
+                  <span className="flex items-center gap-1.5 min-w-0">
+                    <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: r.color }} />
+                    <span className="truncate"><strong>{r.channel}</strong> · {r.label}</span>
+                  </span>
+                  <span className="font-bold text-red-700 dark:text-red-300 shrink-0 tabular-nums">{r.pct}%</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {/* Per-channel detail tables */}
+      {COMPARE_CHANNELS.map((ch) => {
+        const hasAny = ch.fields.some(
+          (f) => report.metrics?.[ch.k]?.[f.k] !== undefined || previous.metrics?.[ch.k]?.[f.k] !== undefined,
+        )
+        if (!hasAny) return null
+        return (
+          <div key={ch.k}>
+            <h3 className="text-sm font-bold mb-2 flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full" style={{ background: ch.color }} />
+              {ch.label}
+            </h3>
+            <div className="border border-border rounded-lg overflow-hidden">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-muted/50 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    <th className="text-left px-3 py-2">Metric</th>
+                    <th className="text-right px-3 py-2">{previous.periodLabel}</th>
+                    <th className="text-right px-3 py-2">{report.periodLabel}</th>
+                    <th className="text-right px-3 py-2">Change</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ch.fields.map((f) => {
+                    const cv = report.metrics?.[ch.k]?.[f.k]
+                    const pv = previous.metrics?.[ch.k]?.[f.k]
+                    if ((cv === null || cv === undefined) && (pv === null || pv === undefined)) return null
+                    let changeNode: React.ReactNode = '—'
+                    if (typeof cv === 'number' && typeof pv === 'number' && pv !== 0) {
+                      const d = cv - pv
+                      const p = Math.round((d / pv) * 100)
+                      const cls = d > 0 ? 'text-emerald-600' : d < 0 ? 'text-red-600' : 'text-muted-foreground'
+                      const arrow = d > 0 ? '▲' : d < 0 ? '▼' : '—'
+                      const sign = d > 0 ? '+' : ''
+                      changeNode = (
+                        <span className={cn('font-bold tabular-nums', cls)}>
+                          {arrow} {sign}{p}%
+                          <span className="opacity-60 font-medium text-[10px] ml-1">({sign}{fmtAbsDelta(d)})</span>
+                        </span>
+                      )
+                    }
+                    return (
+                      <tr key={f.k} className="border-t border-border">
+                        <td className="px-3 py-2">{f.label}</td>
+                        <td className="text-right px-3 py-2 tabular-nums text-muted-foreground">{fmtVal(pv, f.prefix, f.suffix)}</td>
+                        <td className="text-right px-3 py-2 tabular-nums font-semibold">{fmtVal(cv, f.prefix, f.suffix)}</td>
+                        <td className="text-right px-3 py-2">{changeNode}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 

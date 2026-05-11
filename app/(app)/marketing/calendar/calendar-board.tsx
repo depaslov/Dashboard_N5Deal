@@ -34,12 +34,14 @@ export function CalendarBoard({
   weekStartISO,
   anchorISO,
   initialView,
+  activeAccountSlugs,
 }: {
   accounts: CalAccount[]
   posts: CalPost[]
   weekStartISO: string
   anchorISO: string
   initialView: View
+  activeAccountSlugs: string[]
 }) {
   const router = useRouter()
   const params = useSearchParams()
@@ -61,6 +63,20 @@ export function CalendarBoard({
   function changeView(v: View) {
     setView(v)
     pushQuery({ view: v })
+  }
+
+  // Active set = either the URL-provided list, or "all" (= empty filter).
+  // Toggling a pill mutates this set and writes back to the URL.
+  const activeSet = new Set(activeAccountSlugs.length ? activeAccountSlugs : accounts.map((a) => a.slug))
+  function toggleAccount(slug: string) {
+    const next = new Set(activeSet)
+    if (next.has(slug)) {
+      if (next.size > 1) next.delete(slug)
+    } else {
+      next.add(slug)
+    }
+    const arr = [...next]
+    pushQuery({ accounts: arr.length === accounts.length ? undefined : arr.join(',') })
   }
 
   function shift(deltaDays: number) {
@@ -108,6 +124,9 @@ export function CalendarBoard({
 
   const shiftBy = view === 'week' ? 7 : 30
 
+  // Only render rows/columns for the currently-active accounts
+  const visibleAccounts = accounts.filter((a) => activeSet.has(a.slug))
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 flex-wrap">
@@ -148,13 +167,46 @@ export function CalendarBoard({
         </div>
       </div>
 
+      {/* Account filter pills */}
+      {accounts.length > 0 ? (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mr-1">Accounts:</span>
+          {accounts.map((a) => {
+            const isOn = activeSet.has(a.slug)
+            return (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => toggleAccount(a.slug)}
+                className={cn(
+                  'text-xs font-semibold px-2.5 py-1 rounded-full border transition-all',
+                  isOn ? 'border-transparent text-white' : 'border-border bg-card text-muted-foreground hover:bg-accent',
+                )}
+                style={isOn ? { backgroundColor: a.color } : {}}
+              >
+                {a.name}
+              </button>
+            )
+          })}
+          {activeSet.size < accounts.length ? (
+            <button
+              type="button"
+              onClick={() => pushQuery({ accounts: undefined })}
+              className="text-xs text-muted-foreground hover:text-foreground underline ml-1"
+            >
+              Show all
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       {accounts.length === 0 ? (
         <EmptyAccounts />
       ) : (
         <>
           {view === 'week' && (
             <WeekView
-              accounts={accounts}
+              accounts={visibleAccounts}
               posts={posts}
               weekStart={startOfWeek(anchor, { weekStartsOn: 1 })}
               onCellClick={(dateISO, accountId) => openCreate(dateISO, accountId)}
@@ -164,7 +216,7 @@ export function CalendarBoard({
           )}
           {view === 'month' && (
             <MonthView
-              accounts={accounts}
+              accounts={visibleAccounts}
               posts={posts}
               anchor={anchor}
               onCellClick={(dateISO) => openCreate(dateISO)}
@@ -172,9 +224,9 @@ export function CalendarBoard({
               onReschedule={reschedulePost}
             />
           )}
-          {view === 'list' && <ListView accounts={accounts} posts={posts} onPostClick={openEdit} />}
+          {view === 'list' && <ListView accounts={visibleAccounts} posts={posts} onPostClick={openEdit} />}
           {view === 'board' && (
-            <BoardView accounts={accounts} posts={posts} onPostClick={openEdit} />
+            <BoardView accounts={visibleAccounts} posts={posts} onPostClick={openEdit} />
           )}
         </>
       )}

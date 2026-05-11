@@ -33,6 +33,19 @@ export default async function MarketingReportsPage({ searchParams }: { searchPar
   // Make sure the requested report actually belongs to this project
   const selectedSafe = selected && selected.projectId === project.id ? selected : null
 
+  // For the "Compare" tab we need the report immediately preceding the
+  // currently selected one (by createdAt). Skip the DB hit when there's
+  // nothing to compare.
+  const previous = selectedSafe
+    ? await prisma.marketingReport.findFirst({
+        where: {
+          projectId: project.id,
+          createdAt: { lt: selectedSafe.createdAt },
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    : null
+
   return (
     <ReportsBoard
       reports={reports.map((r) => ({
@@ -53,6 +66,17 @@ export default async function MarketingReportsPage({ searchParams }: { searchPar
               notesByChannel: (selectedSafe.notesByChannel as Record<string, string> | null) ?? {},
               metrics: (selectedSafe.metrics as Record<string, Record<string, number | null>> | null) ?? {},
               createdAt: selectedSafe.createdAt.toISOString(),
+            }
+          : null
+      }
+      previous={
+        previous
+          ? {
+              id: previous.id,
+              title: previous.title,
+              periodLabel: previous.periodLabel,
+              metrics: (previous.metrics as Record<string, Record<string, number | null>> | null) ?? {},
+              createdAt: previous.createdAt.toISOString(),
             }
           : null
       }

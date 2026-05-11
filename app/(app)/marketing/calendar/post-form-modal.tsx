@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Download } from 'lucide-react'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -169,6 +169,34 @@ export function PostFormModal({ accounts, mode, onClose }: Props) {
     }
   }
 
+  function exportMarkdown() {
+    const accName = accounts.find((a) => a.id === accountId)?.name ?? '—'
+    const md = [
+      `# ${title}`,
+      '',
+      `**Account:** ${accName}  `,
+      `**Type:** ${type}  `,
+      `**Scheduled:** ${date}  `,
+      `**Status:** ${POST_STATUS_LABEL[status as keyof typeof POST_STATUS_LABEL] ?? status}  `,
+      platforms.length ? `**Platforms:** ${platforms.join(', ')}` : null,
+      postUrl ? `**Live URL:** ${postUrl}` : null,
+      '',
+      content ? '## Content\n\n' + content : null,
+      notes ? '## Notes\n\n' + notes : null,
+    ]
+      .filter(Boolean)
+      .join('\n')
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    const safe = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60) || 'post'
+    a.href = url
+    a.download = `${safe}.md`
+    document.body.appendChild(a); a.click(); a.remove()
+    URL.revokeObjectURL(url)
+    toast.success('Downloaded')
+  }
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
@@ -318,12 +346,17 @@ export function PostFormModal({ accounts, mode, onClose }: Props) {
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-2">
+        <DialogFooter className="gap-2 sm:gap-2 flex-wrap">
           {isEdit ? (
-            <Button variant="destructive" onClick={remove} disabled={saving || deleting} className="mr-auto gap-1.5">
-              <Trash2 className="h-3.5 w-3.5" />
-              {deleting ? 'Deleting…' : 'Delete'}
-            </Button>
+            <>
+              <Button variant="destructive" onClick={remove} disabled={saving || deleting} className="mr-auto gap-1.5">
+                <Trash2 className="h-3.5 w-3.5" />
+                {deleting ? 'Deleting…' : 'Delete'}
+              </Button>
+              <Button variant="outline" onClick={exportMarkdown} disabled={saving || deleting} className="gap-1.5">
+                <Download className="h-3.5 w-3.5" /> Export .md
+              </Button>
+            </>
           ) : null}
           <Button variant="outline" onClick={onClose} disabled={saving || deleting}>
             Cancel
