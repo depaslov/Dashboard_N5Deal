@@ -19,6 +19,7 @@ model User {
   ownedProjects Project[]         @relation("ProjectOwner")
   memberships   ProjectMember[]
   contents      GeneratedContent[]
+  socialPosts   SocialPost[]      @relation("SocialPostAuthor")
 }
 
 model Project {
@@ -41,7 +42,110 @@ model Project {
   platforms       Platform[]
   promptTemplates PromptTemplate[]
 
+  // Marketing OS module
+  socialAccounts    SocialAccount[]
+  socialPosts       SocialPost[]
+  marketingReports  MarketingReport[]
+  marketingStrategy MarketingStrategy?
+  brands            Brand[]
+
   @@index([ownerId])
+}
+
+// =============================================================================
+// MARKETING OS — content calendar, reports, strategy, brand cards
+// Ported from the standalone Alina Marketing OS prototype.
+// =============================================================================
+
+model SocialAccount {
+  id          String   @id @default(cuid())
+  projectId   String
+  slug        String   // n5 | bk | ih | db
+  name        String
+  color       String   // CSS color value (hex or var)
+  description String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  project Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  posts   SocialPost[]
+
+  @@unique([projectId, slug])
+  @@index([projectId])
+}
+
+model SocialPost {
+  id           String   @id @default(cuid())
+  projectId    String
+  accountId    String
+  type         String   // Article | Company Post | Founder Post | Reel | Thread | Carousel | Text Post | Repost | Story
+  title        String
+  content      String?  @db.Text
+  platforms    String[] // LI Company, LI Founder, Instagram, X/Twitter, Threads, YouTube, Medium, Newsletter, Reddit, Telegram, Website, LinkedIn
+  scheduledFor DateTime
+  status       String   @default("idea") // idea | wip | done | pub | skip
+  postUrl      String?
+  notes        String?  @db.Text
+  images       Json?    // array of base64 data URLs or asset URLs
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdById  String?
+
+  project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  account   SocialAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdBy User?         @relation("SocialPostAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([projectId, scheduledFor])
+  @@index([accountId])
+}
+
+model MarketingReport {
+  id             String   @id @default(cuid())
+  projectId      String
+  title          String
+  periodLabel    String   // "April 2026"
+  html           String?  @db.Text
+  notes          String?  @db.Text
+  notesByChannel Json?    // { instagram, youtube, linkedin, website }
+  metrics        Json?    // raw metric numbers per channel
+  imgCount       Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+}
+
+model MarketingStrategy {
+  id                String   @id @default(cuid())
+  projectId         String   @unique
+  activeBudgetMonth String   @default("april")
+  budget            Json?    // { april: { channel: { min, max, actual, purpose } }, ... }
+  goals             Json?    // { channel: { metric: { baseline, target, actual, unit, label } } }
+  channelDirectives Json?
+  updatedAt         DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Brand {
+  id           String   @id @default(cuid())
+  projectId    String
+  slug         String   // n5 | bs | ma
+  name         String
+  tagline      String?
+  pitch        String?  @db.Text
+  notes        String?  @db.Text
+  features     Json?    // string[]
+  deliverables Json?    // { id, text, status, priority }[]
+  people       Json?    // { id, name, role }[] — global for the workspace
+  sortOrder    Int      @default(0)
+  updatedAt    DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, slug])
+  @@index([projectId])
 }
 
 model ProjectMember {
