@@ -13,11 +13,13 @@ export function PostCard({
   slug,
   onClick,
   compact,
+  draggable,
 }: {
   post: CalPost
   slug: AccountSlug
   onClick: () => void
   compact?: boolean
+  draggable?: boolean
 }) {
   const router = useRouter()
   const [toggling, setToggling] = useState(false)
@@ -46,6 +48,15 @@ export function PostCard({
       tabIndex={0}
       onClick={onClick}
       onKeyDown={(e) => { if (e.key === 'Enter') onClick() }}
+      draggable={draggable ? true : undefined}
+      onDragStart={
+        draggable
+          ? (e) => {
+              e.dataTransfer.effectAllowed = 'move'
+              e.dataTransfer.setData('text/post-id', post.id)
+            }
+          : undefined
+      }
       className={cn(
         'group/post w-full text-left bg-card hover:bg-accent/50 border border-border border-l-2 rounded p-1.5 transition-colors relative cursor-pointer',
         isArticle ? 'border-l-amber-600' : ACCOUNT_ACCENT[slug],

@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { endOfMonth, isSameDay, isSameMonth, startOfMonth } from 'date-fns'
 import { Plus } from 'lucide-react'
 import { ACCOUNT_BADGE, type AccountSlug } from '@/lib/marketing/constants'
@@ -15,13 +16,16 @@ export function MonthView({
   anchor,
   onCellClick,
   onPostClick,
+  onReschedule,
 }: {
   accounts: CalAccount[]
   posts: CalPost[]
   anchor: Date
   onCellClick: (dateISO: string) => void
   onPostClick: (post: CalPost) => void
+  onReschedule: (postId: string, dateISO: string) => void
 }) {
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null)
   const today = new Date(); today.setHours(0, 0, 0, 0)
   const monthStart = startOfMonth(anchor)
   const monthEnd = endOfMonth(anchor)
@@ -61,14 +65,29 @@ export function MonthView({
           const inMonth = isSameMonth(d, anchor)
           const isTod = isSameDay(d, today)
           const dayPosts = postsForDay(d)
+          const cellKey = d.toISOString().slice(0, 10)
+          const isDropTarget = dragOverKey === cellKey
           return (
             <div
               key={i}
               onClick={() => onCellClick(d.toISOString())}
+              onDragOver={(e) => {
+                e.preventDefault()
+                e.dataTransfer.dropEffect = 'move'
+                if (dragOverKey !== cellKey) setDragOverKey(cellKey)
+              }}
+              onDragLeave={() => setDragOverKey((k) => (k === cellKey ? null : k))}
+              onDrop={(e) => {
+                e.preventDefault()
+                setDragOverKey(null)
+                const id = e.dataTransfer.getData('text/post-id')
+                if (id) onReschedule(id, d.toISOString())
+              }}
               className={cn(
-                'min-h-[110px] p-1.5 border-r border-b border-border last:border-r-0 cursor-pointer group/cell relative',
+                'min-h-[110px] p-1.5 border-r border-b border-border last:border-r-0 cursor-pointer group/cell relative transition-colors',
                 !inMonth && 'bg-muted/30 text-muted-foreground/60',
                 isTod && 'bg-primary/5',
+                isDropTarget && 'bg-primary/10 ring-1 ring-inset ring-primary',
                 (i + 1) % 7 === 0 && 'border-r-0',
                 i >= cells.length - 7 && 'border-b-0',
               )}
@@ -95,8 +114,14 @@ export function MonthView({
                         e.stopPropagation()
                         onPostClick(p)
                       }}
+                      draggable
+                      onDragStart={(e) => {
+                        e.stopPropagation()
+                        e.dataTransfer.effectAllowed = 'move'
+                        e.dataTransfer.setData('text/post-id', p.id)
+                      }}
                       className={cn(
-                        'block w-full text-left text-[10px] font-medium px-1.5 py-0.5 rounded truncate',
+                        'block w-full text-left text-[10px] font-medium px-1.5 py-0.5 rounded truncate cursor-grab active:cursor-grabbing',
                         p.type === 'Article'
                           ? 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300'
                           : ACCOUNT_BADGE[slug],

@@ -19,6 +19,7 @@ import {
   type AccountSlug,
 } from '@/lib/marketing/constants'
 import { cn } from '@/lib/utils'
+import { ImageUploader } from './image-uploader'
 import type { CalAccount, CalPost } from './types'
 
 type Mode =
@@ -46,6 +47,8 @@ export function PostFormModal({ accounts, mode, onClose }: Props) {
   const [status, setStatus] = useState('idea')
   const [notes, setNotes] = useState('')
   const [postUrl, setPostUrl] = useState('')
+  const [images, setImages] = useState<string[]>([])
+  const [imagesLoading, setImagesLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -63,6 +66,19 @@ export function PostFormModal({ accounts, mode, onClose }: Props) {
       setStatus(p.status)
       setNotes(p.notes)
       setPostUrl(p.postUrl)
+      // Server-rendered card only has imageCount, not the base64 blobs —
+      // fetch them lazily so the modal stays light on listing pages.
+      if (p.imageCount > 0) {
+        setImagesLoading(true)
+        setImages([])
+        fetch(`/api/marketing/posts/${p.id}`)
+          .then((r) => r.json())
+          .then((d) => setImages((d.post?.images as string[] | undefined) ?? []))
+          .catch(() => setImages([]))
+          .finally(() => setImagesLoading(false))
+      } else {
+        setImages([])
+      }
     } else {
       const acc = mode.defaultAccountId ?? accounts[0]?.id ?? ''
       const accSlug = (accounts.find((a) => a.id === acc)?.slug ?? 'n5') as AccountSlug
@@ -76,6 +92,7 @@ export function PostFormModal({ accounts, mode, onClose }: Props) {
       setStatus('idea')
       setNotes('')
       setPostUrl('')
+      setImages([])
     }
   }, [mode, accounts])
 
@@ -112,6 +129,7 @@ export function PostFormModal({ accounts, mode, onClose }: Props) {
         status,
         notes: notes || undefined,
         postUrl: postUrl || '',
+        images,
       }
       const url = isEdit ? `/api/marketing/posts/${mode!.post.id}` : '/api/marketing/posts'
       const method = isEdit ? 'PATCH' : 'POST'
@@ -264,6 +282,15 @@ export function PostFormModal({ accounts, mode, onClose }: Props) {
                 )
               })}
             </div>
+          </div>
+
+          <div>
+            <Label>Image(s)</Label>
+            {imagesLoading ? (
+              <div className="text-xs text-muted-foreground italic py-2">Loading attached images…</div>
+            ) : (
+              <ImageUploader type={type} images={images} onChange={setImages} />
+            )}
           </div>
 
           <div>

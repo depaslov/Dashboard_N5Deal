@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { addDays, isSameDay } from 'date-fns'
 import { Plus } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -16,15 +17,18 @@ export function WeekView({
   weekStart,
   onCellClick,
   onPostClick,
+  onReschedule,
 }: {
   accounts: CalAccount[]
   posts: CalPost[]
   weekStart: Date
   onCellClick: (dateISO: string, accountId: string) => void
   onPostClick: (post: CalPost) => void
+  onReschedule: (postId: string, dateISO: string) => void
 }) {
   const today = new Date(); today.setHours(0, 0, 0, 0)
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null)
 
   function postsForCell(accountId: string, day: Date) {
     return posts.filter(
@@ -74,13 +78,28 @@ export function WeekView({
               {days.map((d, i) => {
                 const cellPosts = postsForCell(a.id, d)
                 const isLastCol = i === 6
+                const cellKey = `${a.id}-${d.toISOString().slice(0, 10)}`
+                const isDropTarget = dragOverKey === cellKey
                 return (
                   <div
                     key={i}
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      e.dataTransfer.dropEffect = 'move'
+                      if (dragOverKey !== cellKey) setDragOverKey(cellKey)
+                    }}
+                    onDragLeave={() => setDragOverKey((k) => (k === cellKey ? null : k))}
+                    onDrop={(e) => {
+                      e.preventDefault()
+                      setDragOverKey(null)
+                      const id = e.dataTransfer.getData('text/post-id')
+                      if (id) onReschedule(id, d.toISOString())
+                    }}
                     className={cn(
-                      'p-1.5 min-h-[90px] space-y-1 group/cell relative',
+                      'p-1.5 min-h-[90px] space-y-1 group/cell relative transition-colors',
                       !isLast && 'border-b border-border',
                       !isLastCol && 'border-r border-border',
+                      isDropTarget && 'bg-primary/10 ring-1 ring-inset ring-primary',
                     )}
                   >
                     {cellPosts.map((p) => (
@@ -89,6 +108,7 @@ export function WeekView({
                         post={p}
                         slug={a.slug as AccountSlug}
                         onClick={() => onPostClick(p)}
+                        draggable
                       />
                     ))}
                     <button

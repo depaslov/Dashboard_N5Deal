@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { addDays, format, startOfWeek } from 'date-fns'
+import { toast } from 'sonner'
 import { ChevronLeft, ChevronRight, CalendarDays, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -79,6 +80,25 @@ export function CalendarBoard({
     setMode({ kind: 'edit', post })
   }
 
+  async function reschedulePost(postId: string, newDateISO: string) {
+    // Optimistically toast then PATCH. Keep noon-local time so it lands in
+    // the day cell cleanly (matches the form modal behaviour).
+    const dt = new Date(newDateISO)
+    dt.setHours(12, 0, 0, 0)
+    const res = await fetch(`/api/marketing/posts/${postId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scheduledFor: dt.toISOString() }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      toast.error(data?.error ?? 'Reschedule failed')
+      return
+    }
+    toast.success('Rescheduled')
+    router.refresh()
+  }
+
   const headerLabel =
     view === 'week'
       ? `${format(weekStart, 'd LLL')} – ${format(addDays(weekStart, 6), 'd LLL yyyy')}`
@@ -139,6 +159,7 @@ export function CalendarBoard({
               weekStart={startOfWeek(anchor, { weekStartsOn: 1 })}
               onCellClick={(dateISO, accountId) => openCreate(dateISO, accountId)}
               onPostClick={openEdit}
+              onReschedule={reschedulePost}
             />
           )}
           {view === 'month' && (
@@ -148,6 +169,7 @@ export function CalendarBoard({
               anchor={anchor}
               onCellClick={(dateISO) => openCreate(dateISO)}
               onPostClick={openEdit}
+              onReschedule={reschedulePost}
             />
           )}
           {view === 'list' && <ListView accounts={accounts} posts={posts} onPostClick={openEdit} />}
