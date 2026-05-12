@@ -16,10 +16,11 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  ownedProjects Project[]         @relation("ProjectOwner")
-  memberships   ProjectMember[]
-  contents      GeneratedContent[]
-  socialPosts   SocialPost[]      @relation("SocialPostAuthor")
+  ownedProjects     Project[]          @relation("ProjectOwner")
+  memberships       ProjectMember[]
+  contents          GeneratedContent[]
+  socialPosts       SocialPost[]       @relation("SocialPostAuthor")
+  linkBuildingItems LinkBuildingItem[] @relation("LinkBuildingAuthor")
 }
 
 model Project {
@@ -48,6 +49,7 @@ model Project {
   marketingReports  MarketingReport[]
   marketingStrategy MarketingStrategy?
   brands            Brand[]
+  linkBuildingItems LinkBuildingItem[]
 
   @@index([ownerId])
 }
@@ -365,4 +367,36 @@ model InternalLink {
 
   @@unique([projectId, url])
   @@index([projectId])
+}
+
+// =============================================================================
+// LINK BUILDING TRACKER — outreach + placements calendar
+// =============================================================================
+
+model LinkBuildingItem {
+  id             String    @id @default(cuid())
+  projectId      String
+  title          String    // Short label / topic
+  targetSite     String?   // Domain or full site name we are pitching
+  contactName    String?
+  contactEmail   String?
+  anchorText     String?
+  destinationUrl String?   // The page on n5deal.com we want linked
+  type           String    @default("outreach") // outreach | guest_post | resource | partner | directory | hari | other
+  status         String    @default("planned")  // planned | in_progress | published | declined | followup
+  scheduledFor   DateTime  // When this activity is planned / executed
+  publishedDate  DateTime?
+  liveUrl        String?   // Final URL where the link appears
+  dr             Int?      // Domain Rating (Ahrefs / similar)
+  cost           Float?    // Money spent on this placement
+  notes          String?   @db.Text
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  createdById    String?
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy User?   @relation("LinkBuildingAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([projectId, scheduledFor])
+  @@index([projectId, status])
 }

@@ -74,8 +74,41 @@ export const ACCOUNT_BADGE: Record<AccountSlug, string> = {
 export const MARKETING_NAV = [
   { slug: 'home', label: 'Home', href: '/marketing' },
   { slug: 'calendar', label: 'Calendar', href: '/marketing/calendar' },
+  { slug: 'linkbuilding', label: 'Link Building', href: '/marketing/linkbuilding' },
   { slug: 'analytics', label: 'Analytics', href: '/marketing/analytics' },
   { slug: 'reports', label: 'Reports', href: '/marketing/reports' },
   { slug: 'strategy', label: 'Strategy', href: '/marketing/strategy' },
   { slug: 'brands', label: 'Brands', href: '/marketing/brands' },
 ] as const
+
+// =============================================================================
+// LINK BUILDING — types, statuses, colors
+// =============================================================================
+
+export const LB_TYPES = [
+  { k: 'outreach', label: 'Cold outreach' },
+  { k: 'guest_post', label: 'Guest post' },
+  { k: 'resource', label: 'Resource page' },
+  { k: 'partner', label: 'Partner backlink' },
+  { k: 'directory', label: 'Directory listing' },
+  { k: 'hari', label: 'HARO / press' },
+  { k: 'other', label: 'Other' },
+] as const
+export type LBType = (typeof LB_TYPES)[number]['k']
+
+export const LB_STATUSES = [
+  { k: 'planned', label: 'Planned', dot: 'bg-slate-400' },
+  { k: 'in_progress', label: 'In Progress', dot: 'bg-blue-500' },
+  { k: 'followup', label: 'Follow-up', dot: 'bg-amber-500' },
+  { k: 'published', label: 'Published', dot: 'bg-emerald-500' },
+  { k: 'declined', label: 'Declined', dot: 'bg-red-500' },
+] as const
+export type LBStatus = (typeof LB_STATUSES)[number]['k']
+
+export const LB_STATUS_BADGE: Record<LBStatus, string> = {
+  planned: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+  in_progress: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
+  followup: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
+  published: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+  declined: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
+}
