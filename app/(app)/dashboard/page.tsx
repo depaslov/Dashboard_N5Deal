@@ -7,7 +7,6 @@ import { PageHeader } from '@/components/app/page-header'
 import { StatCard } from '@/components/app/stat-card'
 import { Button } from '@/components/ui/button'
 import {
-  Users,
   Sparkles,
   Plus,
   ArrowRight,
@@ -16,6 +15,7 @@ import {
   FileText,
   BookOpen,
   Clock,
+  Layout,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -33,20 +33,13 @@ export default async function DashboardPage() {
   const userId = session?.user?.id as string
   const project = await getOrCreateCurrentProject(userId)
 
-  const [icpCount, contentCount, projectCount, recentContents, recentIcps] = await Promise.all([
-    prisma.iCP.count({ where: { projectId: project.id } }),
+  const [contentCount, recentContents] = await Promise.all([
     prisma.generatedContent.count({ where: { projectId: project.id } }),
-    prisma.projectMember.count({ where: { userId } }),
     prisma.generatedContent.findMany({
       where: { projectId: project.id },
       orderBy: { createdAt: 'desc' },
       take: 5,
       include: { createdBy: true },
-    }),
-    prisma.iCP.findMany({
-      where: { projectId: project.id },
-      orderBy: { createdAt: 'desc' },
-      take: 4,
     }),
   ])
 
@@ -54,7 +47,7 @@ export default async function DashboardPage() {
     <div className="max-w-[1200px] mx-auto">
       <PageHeader
         title={`Welcome back, ${(session?.user?.name ?? 'there').split(' ')[0]}`}
-        description={`Overview of ${project?.name ?? 'your workspace'} — ICPs, content and recent activity.`}
+        description={`Overview of ${project?.name ?? 'your workspace'} — recent content and quick actions.`}
         actions={
           <>
             <Button asChild variant="outline">
@@ -73,9 +66,15 @@ export default async function DashboardPage() {
 
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard label="Total ICPs" value={icpCount} iconName="users" accent="default" hint="Ideal customer profiles saved" />
-        <StatCard label="Content Generated" value={contentCount} iconName="sparkles" accent="accent" hint="Briefs created by AI" />
-        <StatCard label="Active Projects" value={projectCount} iconName="folder" accent="success" hint="Workspaces you belong to" />
+        <Link href="/content" className="block">
+          <StatCard
+            label="Content Generated"
+            value={contentCount}
+            iconName="sparkles"
+            accent="accent"
+            hint="Click to browse all briefs"
+          />
+        </Link>
       </div>
 
       {/* Recent activity + Quick actions */}
@@ -146,8 +145,13 @@ export default async function DashboardPage() {
             </div>
             <div className="p-4 space-y-2">
               <Button asChild variant="outline" className="w-full justify-start">
-                <Link href="/icps/new" className="gap-2">
-                  <Users className="h-4 w-4" /> Create a new ICP
+                <Link href="/content/new?type=article" className="gap-2">
+                  <FileText className="h-4 w-4" /> Article brief
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full justify-start">
+                <Link href="/content/new?type=pages" className="gap-2">
+                  <Layout className="h-4 w-4" /> Page generation
                 </Link>
               </Button>
               <Button asChild variant="outline" className="w-full justify-start">
@@ -156,43 +160,11 @@ export default async function DashboardPage() {
                 </Link>
               </Button>
               <Button asChild variant="outline" className="w-full justify-start">
-                <Link href="/content/new?type=article" className="gap-2">
-                  <FileText className="h-4 w-4" /> Article brief
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full justify-start">
                 <Link href="/content/new?type=telegram" className="gap-2">
                   <Send className="h-4 w-4" /> Telegram post brief
                 </Link>
               </Button>
             </div>
-          </div>
-
-          <div className="bg-card border border-border shadow-sm">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-              <h2 className="font-display font-semibold text-lg tracking-tight">Recent ICPs</h2>
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/icps">All</Link>
-              </Button>
-            </div>
-            <ul className="divide-y divide-border">
-              {(recentIcps ?? []).map((icp: any) => (
-                <li key={icp?.id}>
-                  <Link href={`/icps/${icp?.id}`} className="flex items-start gap-3 px-6 py-3 hover:bg-secondary/60 transition-colors">
-                    <div className="flex h-8 w-8 items-center justify-center bg-secondary shrink-0">
-                      <Users className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm truncate">{icp?.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{icp?.industry}</p>
-                    </div>
-                  </Link>
-                </li>
-              ))}
-              {(recentIcps ?? []).length === 0 ? (
-                <li className="p-6 text-center text-sm text-muted-foreground">No ICPs yet.</li>
-              ) : null}
-            </ul>
           </div>
         </div>
       </div>
