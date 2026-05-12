@@ -75,6 +75,7 @@ export const MARKETING_NAV = [
   { slug: 'home', label: 'Home', href: '/marketing' },
   { slug: 'calendar', label: 'Calendar', href: '/marketing/calendar' },
   { slug: 'linkbuilding', label: 'Link Building', href: '/marketing/linkbuilding' },
+  { slug: 'seo', label: 'SEO Tracker', href: '/marketing/seo' },
   { slug: 'analytics', label: 'Analytics', href: '/marketing/analytics' },
   { slug: 'reports', label: 'Reports', href: '/marketing/reports' },
   { slug: 'strategy', label: 'Strategy', href: '/marketing/strategy' },
@@ -111,4 +112,38 @@ export const LB_STATUS_BADGE: Record<LBStatus, string> = {
   followup: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
   published: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
   declined: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
+}
+
+// =============================================================================
+// SEO TRACKER — intent / locale / cluster defaults
+// =============================================================================
+
+export const SEO_INTENTS = [
+  { k: 'informational', label: 'Informational' },
+  { k: 'commercial', label: 'Commercial' },
+  { k: 'transactional', label: 'Transactional' },
+  { k: 'navigational', label: 'Navigational' },
+] as const
+export type SeoIntent = (typeof SEO_INTENTS)[number]['k']
+
+export const SEO_LOCALES = [
+  { k: 'global', label: 'Global' },
+  { k: 'uk', label: 'UK' },
+  { k: 'us', label: 'US' },
+  { k: 'eu', label: 'EU' },
+  { k: 'ua', label: 'Ukraine' },
+] as const
+
+// Suggested clusters seeded from the project's 8 SEO clusters (Project.md).
+// Free-text — users can add their own.
+export const SEO_CLUSTERS_SUGGESTED = [
+  'EMI', 'PSP', 'MSB', 'VASP', 'Crypto', 'Fintech', 'Banking', 'M&A',
+] as const
+
+export function seoPositionBadge(position: number | null | undefined): string {
+  if (position === null || position === undefined) return 'bg-muted text-muted-foreground'
+  if (position <= 3) return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+  if (position <= 10) return 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
+  if (position <= 30) return 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
+  return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
 }

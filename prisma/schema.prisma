@@ -21,6 +21,7 @@ model User {
   contents          GeneratedContent[]
   socialPosts       SocialPost[]       @relation("SocialPostAuthor")
   linkBuildingItems LinkBuildingItem[] @relation("LinkBuildingAuthor")
+  seoKeywords       SeoKeyword[]       @relation("SeoKeywordAuthor")
 }
 
 model Project {
@@ -50,6 +51,7 @@ model Project {
   marketingStrategy MarketingStrategy?
   brands            Brand[]
   linkBuildingItems LinkBuildingItem[]
+  seoKeywords       SeoKeyword[]
 
   @@index([ownerId])
 }
@@ -399,4 +401,38 @@ model LinkBuildingItem {
 
   @@index([projectId, scheduledFor])
   @@index([projectId, status])
+}
+
+// =============================================================================
+// SEO TRACKER — keyword position tracking
+// =============================================================================
+
+model SeoKeyword {
+  id               String    @id @default(cuid())
+  projectId        String
+  keyword          String    // The search query being tracked
+  targetUrl        String?   // The page on n5deal.com targeting this keyword
+  currentUrl       String?   // The page actually ranking (may differ from target)
+  position         Int?      // Current SERP position; null = not in top 100 / unknown
+  previousPosition Int?      // Previous position (for delta calculation)
+  impressions      Int?      // Latest impressions (e.g., from GSC)
+  clicks           Int?      // Latest clicks
+  volume           Int?      // Monthly search volume estimate
+  difficulty       Int?      // Keyword difficulty 0-100
+  cluster          String?   // Topic grouping: EMI, PSP, Crypto, Fintech, etc.
+  intent           String    @default("informational") // informational | commercial | transactional | navigational
+  locale           String    @default("global")        // global | uk | us | eu | etc.
+  isActive         Boolean   @default(true)
+  notes            String?   @db.Text
+  lastChecked      DateTime? // When position was last measured
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  createdById      String?
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy User?   @relation("SeoKeywordAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([projectId, keyword])
+  @@index([projectId, cluster])
+  @@index([projectId, position])
 }
