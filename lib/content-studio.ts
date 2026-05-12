@@ -32,6 +32,9 @@ export interface AssembleInput {
   wordCountMax?: number
   secondaryAudience?: string
   sectionOutline?: string[]
+  // New SEO-aware fields used by the v2 Pages/Articles templates
+  primaryGoal?: string
+  externalSources?: string
 }
 
 export interface AssembleResult {
@@ -205,8 +208,19 @@ export async function assembleStudioPrompt(input: AssembleInput): Promise<Assemb
       const k = (input.mainKeywords ?? [])[0]
       return k ? `"${k.term}" — bold every natural appearance, target min ${k.minCount}× across the body` : ''
     })(),
+    // Raw primary keyword + count for templates that compose their own copy
+    // around the term (new SEO-aware Pages/Articles prompts use these).
+    primaryKeywordRaw: (input.mainKeywords ?? [])[0]?.term ?? '',
+    primaryKeywordMinCount: (input.mainKeywords ?? [])[0]?.minCount ?? '',
+    primaryKeywordMin: (input.mainKeywords ?? [])[0]?.minCount ?? '',
+    primaryKeywordMax: (() => {
+      const k = (input.mainKeywords ?? [])[0]
+      return k ? Math.max(k.minCount * 2, k.minCount + 3) : ''
+    })(),
     secondaryKeywords: renderMainKeywordsBlock((input.mainKeywords ?? []).slice(1)),
     lsiKeywords: input.lsiKeywords ?? [],
+    primaryGoal: input.primaryGoal ?? input.keyMessages ?? '',
+    externalSources: input.externalSources ?? '',
     internalLinks: renderInternalLinksBlock(internalLinks),
     internalLinkCount: internalLinks.length,
     wordCountMin: input.wordCountMin ?? '',
