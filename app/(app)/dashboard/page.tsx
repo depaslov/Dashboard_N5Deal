@@ -33,7 +33,7 @@ export default async function DashboardPage() {
   const userId = session?.user?.id as string
   const project = await getOrCreateCurrentProject(userId)
 
-  const [contentCount, recentContents] = await Promise.all([
+  const [contentCount, recentContents, socialPostsCount, redFlagsCount] = await Promise.all([
     prisma.generatedContent.count({ where: { projectId: project.id } }),
     prisma.generatedContent.findMany({
       where: { projectId: project.id },
@@ -41,6 +41,8 @@ export default async function DashboardPage() {
       take: 5,
       include: { createdBy: true },
     }),
+    prisma.socialPost.count({ where: { projectId: project.id } }),
+    prisma.redFlagWord.count({ where: { projectId: project.id } }),
   ])
 
   return (
@@ -73,6 +75,24 @@ export default async function DashboardPage() {
             iconName="sparkles"
             accent="accent"
             hint="Click to browse all briefs"
+          />
+        </Link>
+        <Link href="/marketing/calendar" className="block">
+          <StatCard
+            label="Marketing Posts"
+            value={socialPostsCount}
+            iconName="folder"
+            accent="default"
+            hint="Scheduled across all accounts"
+          />
+        </Link>
+        <Link href="/red-flags" className="block">
+          <StatCard
+            label="Red Flags"
+            value={redFlagsCount}
+            iconName="file"
+            accent="warning"
+            hint="Compliance terms in dictionary"
           />
         </Link>
       </div>
