@@ -21,6 +21,7 @@ import {
   Tag as TagIcon,
   Layers,
   Megaphone,
+  Building,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -55,6 +56,7 @@ const NAV_ITEMS = [
   { label: 'Internal Links', href: '/internal-links', icon: Link2 },
   { label: 'Tags', href: '/tags', icon: TagIcon },
   { label: 'Red Flags', href: '/red-flags', icon: ShieldAlert },
+  { label: 'Company', href: '/company', icon: Building },
   { label: 'Marketing OS', href: '/marketing', icon: Megaphone },
   { label: 'Settings', href: '/settings', icon: Settings },
 ]

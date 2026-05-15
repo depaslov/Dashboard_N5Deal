@@ -52,6 +52,7 @@ model Project {
   brands            Brand[]
   linkBuildingItems LinkBuildingItem[]
   seoKeywords       SeoKeyword[]
+  companyInfoSections CompanyInfoSection[]
 
   @@index([ownerId])
 }
@@ -435,4 +436,28 @@ model SeoKeyword {
   @@unique([projectId, keyword])
   @@index([projectId, cluster])
   @@index([projectId, position])
+}
+
+// =============================================================================
+// COMPANY INFO — structured-but-flexible workspace for everything a marketer
+// needs to know about the company: about, team, products, key facts, links,
+// press, timeline, plus anything pulled from the Obsidian vault.
+// =============================================================================
+
+model CompanyInfoSection {
+  id          String   @id @default(cuid())
+  projectId   String
+  title       String
+  type        String   @default("about") // about | team | products | facts | links | press | timeline | mission | values | other
+  content     String   @db.Text   // markdown
+  sortOrder   Int      @default(0)
+  isPublished Boolean  @default(false)
+  source      String   @default("manual") // manual | obsidian | imported
+  sourcePath  String?  // EmbeddingChunk.key when source = obsidian
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, sortOrder])
 }
