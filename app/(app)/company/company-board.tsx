@@ -206,7 +206,7 @@ function SectionCard({
   onRemove: () => void
   onTogglePublish: () => void
 }) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(true)
   const meta = typeMeta(section.type)
   const Icon = meta.icon
   return (

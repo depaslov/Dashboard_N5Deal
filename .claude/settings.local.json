@@ -42,7 +42,23 @@
       "Bash(git remote *)",
       "Bash(git push *)",
       "Bash(vercel --version)",
-      "Bash(gh repo *)"
+      "Bash(gh repo *)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_pdGQT80LIZSW@ep-summer-wildflower-aqmf7hp3-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx tsx --require dotenv/config scripts/check-rag.ts)",
+      "Bash(npm uninstall *)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_pdGQT80LIZSW@ep-summer-wildflower-aqmf7hp3-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx tsx --require dotenv/config scripts/check-counts.ts)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_pdGQT80LIZSW@ep-summer-wildflower-aqmf7hp3-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx tsx --require dotenv/config scripts/check-projects.ts)",
+      "Bash(NEON_DB_URL=\"postgresql://neondb_owner:npg_pdGQT80LIZSW@ep-summer-wildflower-aqmf7hp3-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx tsx scripts/check-andriy-state.ts)",
+      "Bash(NEON_DB_URL=\"postgresql://neondb_owner:npg_pdGQT80LIZSW@ep-summer-wildflower-aqmf7hp3-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx tsx scripts/migrate-to-shared-workspace.ts)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_pdGQT80LIZSW@ep-summer-wildflower-aqmf7hp3-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx tsx --require dotenv/config scripts/seed-prompt-templates.ts)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_pdGQT80LIZSW@ep-summer-wildflower-aqmf7hp3-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx tsx --require dotenv/config scripts/seed-compliance-red-flags.ts)",
+      "WebFetch(domain:n5deal.com)",
+      "Bash(DATABASE_URL='postgresql://neondb_owner:npg_pdGQT80LIZSW@ep-summer-wildflower-aqmf7hp3-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require' npx tsx -e ' *)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_pdGQT80LIZSW@ep-summer-wildflower-aqmf7hp3-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx tsx --require dotenv/config scripts/trim-internal-links.ts)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_pdGQT80LIZSW@ep-summer-wildflower-aqmf7hp3-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx prisma db push --skip-generate)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_pdGQT80LIZSW@ep-summer-wildflower-aqmf7hp3-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx tsx --require dotenv/config scripts/seed-marketing-os.ts)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_pdGQT80LIZSW@ep-summer-wildflower-aqmf7hp3-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx tsx --require dotenv/config scripts/import-gsc-keywords.ts)",
+      "Bash(grep -n \"^=\\\\{73\\\\}\\\\`$\\\\|^const TEMPLATES\" /Users/andriykrechkivsky/Downloads/n5deal_export_v3/scripts/seed-prompt-templates.ts)",
+      "Bash(curl -s -L \"https://n5deal.com/\")"
     ]
   }
 }
