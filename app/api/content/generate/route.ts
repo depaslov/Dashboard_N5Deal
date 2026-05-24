@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { getOrCreateCurrentProject } from '@/lib/project'
 import { buildBriefPrompt, type BriefData, type BriefInternalLink, type BriefRedFlag, type ContentType } from '@/lib/content-brief'
-import { PAGE_SYSTEM_PROMPT_V3 } from '@/lib/prompts/page-system-v3'
+import { PAGE_SYSTEM_PROMPT_V3, buildPageUserPrompt } from '@/lib/prompts/page-system-v3'
 import { findSimilarGeneratedContent } from '@/lib/rag'
 import { embeddingsAvailable } from '@/lib/embeddings'
 import { loadVectorStoreForScopes } from '@/lib/embedding-store'
@@ -256,57 +256,60 @@ export async function POST(req: Request) {
     }
   }
 
-  const { system: _legacySystem, user: userPrompt } = buildBriefPrompt({
-    contentType,
-    topic,
-    targetAudience,
-    keyMessages,
-    brief,
-    icpContext,
-    mergedRedFlags,
-    mergedInternalLinks,
-    documentContext,
-    knowledgeBaseContext,
-  })
-
   // For page-style content (article / catalog) use the comprehensive PAGE
-  // SYSTEM PROMPT V3 with HARD GATES so quality is stable across runs.
+  // SYSTEM PROMPT V3 + structured user prompt with hard-gate tables.
   // Other content types (linkedin / telegram) keep the lightweight legacy
-  // system prompt since those formats have different requirements.
+  // path since those formats have different requirements.
   const usePageSystem = contentType === 'article' || contentType === 'catalog'
-  const systemPrompt = usePageSystem ? PAGE_SYSTEM_PROMPT_V3 : _legacySystem
 
-  // For pages, append a final reminder at the very end of the user prompt so
-  // the model sees the most-failed rules right before it starts generating
-  // (the system prompt is at the top — too far away from where output begins).
-  const finalReminder = usePageSystem
-    ? `
+  let systemPrompt: string
+  let finalUserPrompt: string
 
----
-
-# CRITICAL — FINAL REMINDER (re-read before writing first token)
-
-Your output MUST literally begin with these three lines, exactly:
-\`\`\`
-**Word Count:** N words
-*Reading Time: X minutes*
-*Tags: tag1, tag2, tag3, tag4, tag5*
-\`\`\`
-Then a blank line, then the H1. Skipping the Tags or Reading Time lines = output rejected (GATE A).
-
-Primary keyword in headings: H1 + AT MOST 1 other H2/H3. All remaining H2/H3 must use "the license" or rephrase. Putting the primary keyword in every H2 = output rejected (GATE C.1).
-
-First sentence after H1: must follow "A/The [primary keyword] is..." or "[primary keyword] grants...". Starting with "In [year]", "Founders comparing...", "Most...", "Under [framework]..." = output rejected (GATE D).
-
-The page MUST contain an H3 "What [License] doesn't cover" with a concrete excluded-activity example (GATE E) AND a global-analogue paragraph naming another country + regulator (GATE F). Both have been missing from prior generations — do not skip them.
-
-End the page with the SEO METADATA + KEYWORD VERIFICATION + INTERNAL LINKS PLACED + PRE-OUTPUT CHECKLIST blocks from PART 13.`
-    : ''
-  const finalUserPrompt = userPrompt + finalReminder
+  if (usePageSystem) {
+    systemPrompt = PAGE_SYSTEM_PROMPT_V3
+    finalUserPrompt = buildPageUserPrompt({
+      topic,
+      targetAudience,
+      keyMessages,
+      language: brief.language,
+      wordCountMin: brief.wordCountMin,
+      wordCountMax: brief.wordCountMax,
+      mainKeywords: brief.mainKeywords,
+      lsiKeywords: brief.lsiKeywords,
+      internalLinks: mergedInternalLinks.map((l) => ({
+        url: l.url,
+        anchor: l.anchor,
+        anchorAlts: l.anchorAlts,
+        priority: l.priority,
+        context: l.context,
+      })),
+      structure: brief.structure?.map((b) => ({ heading: b.heading, subtopics: b.subtopics })),
+      knowledgeBaseContext,
+      documentContext,
+      icpContext,
+      redFlags: mergedRedFlags,
+      notes: brief.notes,
+    })
+  } else {
+    const { system: legacySystem, user: legacyUser } = buildBriefPrompt({
+      contentType,
+      topic,
+      targetAudience,
+      keyMessages,
+      brief,
+      icpContext,
+      mergedRedFlags,
+      mergedInternalLinks,
+      documentContext,
+      knowledgeBaseContext,
+    })
+    systemPrompt = legacySystem
+    finalUserPrompt = legacyUser
+  }
 
   console.log('Generated prompts:')
   console.log('System prompt length:', systemPrompt.length)
-  console.log('User prompt length:', userPrompt.length)
+  console.log('User prompt length:', finalUserPrompt.length)
   console.log('KB sources used:', kbSources.length ? kbSources.join(', ') : '(none)')
   console.log('Topic:', topic)
   console.log('Target audience:', targetAudience)
