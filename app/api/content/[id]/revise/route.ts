@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { assertProjectAccess } from '@/lib/project'
 import { PAGE_SYSTEM_PROMPT_V3, buildPageUserPrompt } from '@/lib/prompts/page-system-v3'
+import { postProcessPage } from '@/lib/prompts/page-postprocess'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -114,18 +115,38 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       )
     }
     const data = await upstream.json()
-    const newText: string = data?.choices?.[0]?.message?.content ?? ''
-    if (!newText.trim()) {
+    const rawText: string = data?.choices?.[0]?.message?.content ?? ''
+    if (!rawText.trim()) {
       return NextResponse.json({ error: 'LLM returned empty content' }, { status: 502 })
     }
 
+    // Deterministic post-processing: enforce keyword MAX, dedupe + whitelist
+    // internal links, inject metadata header. LLM output goes through this
+    // gate so saved content is guaranteed within the brief's hard limits.
+    const primary = Array.isArray(brief.mainKeywords) ? brief.mainKeywords[0] : null
+    const post = postProcessPage(rawText, {
+      primaryKeyword: primary ? { term: String(primary.term), minCount: Number(primary.minCount ?? 1) } : undefined,
+      secondaryKeywords: Array.isArray(brief.mainKeywords) ? brief.mainKeywords.slice(1) : [],
+      lsiKeywords: Array.isArray(brief.lsiKeywords) ? brief.lsiKeywords : [],
+      internalLinks: Array.isArray(brief.internalLinks)
+        ? brief.internalLinks.map((l: any) => ({
+            url: String(l?.url ?? ''),
+            anchor: String(l?.anchor ?? ''),
+            priority: l?.priority === 'must' ? 'must' : 'nice',
+          }))
+        : [],
+      topic: content.topic,
+    })
+    if (post.fixes.length) console.log('[revise] postprocess fixes:', post.fixes)
+
     const updated = await prisma.generatedContent.update({
       where: { id: params.id },
-      data: { generatedBrief: newText },
+      data: { generatedBrief: post.text },
     })
     return NextResponse.json({
       content: { id: updated.id, generatedBrief: updated.generatedBrief },
       mode: parsed.data.mode,
+      postFixes: post.fixes,
     })
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message ?? 'Revision failed' }, { status: 502 })

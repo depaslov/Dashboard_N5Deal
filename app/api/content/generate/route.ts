@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db'
 import { getOrCreateCurrentProject } from '@/lib/project'
 import { buildBriefPrompt, type BriefData, type BriefInternalLink, type BriefRedFlag, type ContentType } from '@/lib/content-brief'
 import { PAGE_SYSTEM_PROMPT_V3, buildPageUserPrompt } from '@/lib/prompts/page-system-v3'
+import { postProcessPage } from '@/lib/prompts/page-postprocess'
 import { findSimilarGeneratedContent } from '@/lib/rag'
 import { embeddingsAvailable } from '@/lib/embeddings'
 import { loadVectorStoreForScopes } from '@/lib/embedding-store'
@@ -417,7 +418,6 @@ export async function POST(req: Request) {
             const data = trimmed.slice(5).trim()
             if (data === '[DONE]') {
               console.log('LLM stream done')
-              send({ status: 'completed', result: fullText })
               continue
             }
             try {
@@ -433,7 +433,26 @@ export async function POST(req: Request) {
           }
         }
 
-        send({ status: 'completed', result: fullText })
+        // Deterministic post-processing for page-style content:
+        // strip invented/duplicate links, cap primary keyword count by
+        // rewriting H2/H3 headings, inject metadata header if missing.
+        // Only run on pages (article/catalog) — linkedin/telegram don't
+        // share the same structural rules.
+        let finalText = fullText
+        if (usePageSystem) {
+          const primary = (brief.mainKeywords ?? [])[0]
+          const post = postProcessPage(fullText, {
+            primaryKeyword: primary ? { term: primary.term, minCount: primary.minCount } : undefined,
+            secondaryKeywords: (brief.mainKeywords ?? []).slice(1),
+            lsiKeywords: brief.lsiKeywords ?? [],
+            internalLinks: mergedInternalLinks.map((l) => ({ url: l.url, anchor: l.anchor, priority: l.priority })),
+            topic,
+          })
+          if (post.fixes.length) console.log('[generate] postprocess fixes:', post.fixes)
+          finalText = post.text
+        }
+
+        send({ status: 'completed', result: finalText })
         controller.enqueue(encoder.encode(`data: [DONE]\n\n`))
       } catch (err: any) {
         console.error('generation stream error', err)
