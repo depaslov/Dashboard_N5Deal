@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { getOrCreateCurrentProject } from '@/lib/project'
 import { buildBriefPrompt, type BriefData, type BriefInternalLink, type BriefRedFlag, type ContentType } from '@/lib/content-brief'
+import { PAGE_SYSTEM_PROMPT_V3 } from '@/lib/prompts/page-system-v3'
 import { findSimilarGeneratedContent } from '@/lib/rag'
 import { embeddingsAvailable } from '@/lib/embeddings'
 import { loadVectorStoreForScopes } from '@/lib/embedding-store'
@@ -255,7 +256,7 @@ export async function POST(req: Request) {
     }
   }
 
-  const { system: systemPrompt, user: userPrompt } = buildBriefPrompt({
+  const { system: _legacySystem, user: userPrompt } = buildBriefPrompt({
     contentType,
     topic,
     targetAudience,
@@ -267,6 +268,13 @@ export async function POST(req: Request) {
     documentContext,
     knowledgeBaseContext,
   })
+
+  // For page-style content (article / catalog) use the comprehensive PAGE
+  // SYSTEM PROMPT V3 with HARD GATES so quality is stable across runs.
+  // Other content types (linkedin / telegram) keep the lightweight legacy
+  // system prompt since those formats have different requirements.
+  const usePageSystem = contentType === 'article' || contentType === 'catalog'
+  const systemPrompt = usePageSystem ? PAGE_SYSTEM_PROMPT_V3 : _legacySystem
 
   console.log('Generated prompts:')
   console.log('System prompt length:', systemPrompt.length)
@@ -333,7 +341,7 @@ export async function POST(req: Request) {
               { role: 'user', content: userPrompt },
             ],
             stream: true,
-            max_tokens: 3500,
+            max_tokens: usePageSystem ? 6000 : 3500,
           }),
         })
 
