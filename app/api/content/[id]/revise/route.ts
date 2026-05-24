@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { assertProjectAccess } from '@/lib/project'
+import { PAGE_SYSTEM_PROMPT_V3 } from '@/lib/prompts/page-system-v3'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -17,39 +18,95 @@ const BodySchema = z.object({
   instructions: z.string().max(5_000).optional(),
 })
 
-const REGENERATE_INSTRUCTION = `Regenerate this content end-to-end. Keep the same topic, target audience, and overall tone. Substantively vary the structure, opening, examples, and wording while preserving all factual claims, the primary keyword strategy, every internal link in the original, and the final disclaimer verbatim. Aim for a fundamentally different reading experience while delivering the same information. Do not repeat the opening sentence pattern of the original.`
+const REGENERATE_INSTRUCTION = `Rewrite this page end-to-end from scratch. Keep the SAME topic, primary keyword, target audience, and overall purpose. Vary the opening, structure, examples, transitions, and wording so it reads as a fundamentally different draft. Preserve every internal link, named source, factual claim, and the disclaimer verbatim. The new draft must score AT LEAST as well as the current draft against every rule in the system prompt — anti-degradation rules apply.`
 
-const SYSTEM_PROMPT = `You revise marketing content for N5Deal based on user feedback or regeneration requests.
+// Pull the original brief (keywords, internal links, jurisdiction signals, etc.)
+// so the LLM has the same constraints during revision as it did at generation time.
+// Without this the model loses keyword counts, link URLs, and section structure —
+// which is exactly why iterated revisions drift toward lower quality.
+function buildBriefContext(briefData: any, contentType: string, topic: string, targetAudience: string, keyMessages: string): string {
+  const lines: string[] = []
+  lines.push(`# Original brief context (must be respected on every revision)`)
+  lines.push(`- Topic: ${topic}`)
+  lines.push(`- Content type: ${contentType}`)
+  lines.push(`- Target audience: ${targetAudience}`)
+  if (keyMessages) lines.push(`- Key messages: ${keyMessages}`)
 
-NON-NEGOTIABLE COMPLIANCE (override anything else):
-- N5DEAL IS an informational platform / introducer / fintech builder. NEVER a bank / broker / advisor / fund / asset manager.
-- We INFORM, not CONSULT. We EXPLAIN, not ADVISE. The user makes the decision.
-- Subject + verb: "the platform connects / introduces / lists", "the marketplace shows". NEVER "n5deal advises / recommends / manages / guarantees".
-- Preserve every internal link and every named external source from the original.
-- Preserve the existing disclaimer paragraph at the end verbatim.
+  if (briefData && typeof briefData === 'object') {
+    if (briefData.language) lines.push(`- Output language: ${briefData.language}`)
+    if (briefData.wordCountMin || briefData.wordCountMax) {
+      lines.push(`- Target word count: ${briefData.wordCountMin ?? '—'}–${briefData.wordCountMax ?? '—'}`)
+    }
+    if (briefData.pageUrl) lines.push(`- Page URL: ${briefData.pageUrl}`)
 
-HUMANIZATION (mandatory):
-- Banned words (replace every occurrence): leverage, unlock, seamlessly, robust, delve, embark, harness, pivotal, cultivate, transformative, ever-evolving, intricate, multifaceted, realm, landscape (figurative), arsenal, showcase (verb), bolster, empower, dynamic, holistic, comprehensive, myriad, plethora, tapestry, vibrant, foster.
-- Banned phrases: "in conclusion", "in summary", "furthermore", "moreover", "it is important to note", "navigating the complexities", "this is where X comes in", "stay ahead of the curve", "a deep dive into", "in today's fast-paced world", "the digital age", "play a pivotal role".
-- Em-dashes ≤ 2 in the body total — em-dash overuse is a strong AI fingerprint.
-- ≥ 3 contractions in body prose ("it's", "don't", "won't", "they're"). Disclaimers stay un-contracted.
-- Mix sentence lengths: at least one short sentence (<12 words) and one long (>22 words) per H2 section. Never 3 consecutive sentences of similar length.
-- ≥ 2 short sentence fragments for emphasis across the body.
-- Every paragraph needs a concrete anchor (named jurisdiction, date, number, framework, or company).
+    if (Array.isArray(briefData.mainKeywords) && briefData.mainKeywords.length > 0) {
+      lines.push(`\n## Primary + secondary keywords (MIN/MAX both enforced)`)
+      for (const k of briefData.mainKeywords) {
+        const min = Number(k?.minCount ?? 1)
+        const max = Math.max(min * 2, min + 3)
+        lines.push(`- "${k?.term ?? ''}" — min ${min}, max ${max}, bold every natural occurrence`)
+      }
+    }
 
-OUTPUT FORMAT:
-- Apply user instructions exactly.
-- Output ONLY the revised content — no preamble, no commentary, no "Here is the revised version".
-- Preserve the markdown structure (H1, H2, H3, bullet lists, bold).`
+    if (Array.isArray(briefData.lsiKeywords) && briefData.lsiKeywords.length > 0) {
+      lines.push(`\n## LSI keywords (≥60% must appear naturally across the page)`)
+      lines.push(briefData.lsiKeywords.map((k: any) => `- "${String(k)}"`).join('\n'))
+    }
 
-function buildUserPrompt(currentContent: string, instructions: string): string {
-  return `# Current content
-${currentContent}
+    if (Array.isArray(briefData.internalLinks) && briefData.internalLinks.length > 0) {
+      lines.push(`\n## Internal links — STRICT: exactly 2–3 total, no duplicates, exact URLs only`)
+      for (const l of briefData.internalLinks) {
+        const prio = l?.priority === 'must' ? '[MUST]' : '[OPTIONAL]'
+        const alts = Array.isArray(l?.anchorAlts) && l.anchorAlts.length ? ` (alt: ${l.anchorAlts.join(', ')})` : ''
+        lines.push(`- ${prio} [${l?.anchor ?? ''}](${l?.url ?? ''})${alts}`)
+      }
+    }
 
-# Revision instructions
+    if (Array.isArray(briefData.structure) && briefData.structure.length > 0) {
+      lines.push(`\n## Required H2 outline (use these exact headings, in this order)`)
+      briefData.structure.forEach((b: any, i: number) => {
+        lines.push(`${i + 1}. ${b?.heading ?? '(TBD)'}`)
+      })
+    }
+  }
+
+  return lines.join('\n')
+}
+
+function buildUserPrompt(args: {
+  currentContent: string
+  instructions: string
+  mode: 'regenerate' | 'edit'
+  briefContext: string
+}): string {
+  const { currentContent, instructions, mode, briefContext } = args
+  const intent =
+    mode === 'regenerate'
+      ? 'REGENERATION REQUEST'
+      : 'TARGETED EDIT REQUEST'
+
+  return `${briefContext}
+
+---
+
+# ${intent}
 ${instructions}
 
-Output the FULL revised version below. Begin directly with the revised content — no preamble, no headings like "Revised version:". Just the content.`
+---
+
+# Current content (this is what to revise)
+${currentContent}
+
+---
+
+# Output rules (read carefully)
+- Apply EVERY rule in the system prompt. The Anti-Degradation rules (PART 3) and the Pre-Output Checklist (PART 12) are mandatory on every revision — quality must NOT decline relative to the current content.
+- Preserve every internal link, every named external source, every concrete number/jurisdiction/date already present — unless the user request explicitly says otherwise.
+- Preserve the final disclaimer verbatim.
+- Honour the keyword MIN/MAX limits from the brief context above.
+- Output ONLY the revised page (Markdown). No preamble like "Here is the revised version". No commentary.
+- Begin output with: '**Word Count:** N words'.
+- End with the SEO METADATA + KEYWORD VERIFICATION + INTERNAL LINKS PLACED + PRE-OUTPUT CHECKLIST blocks defined in PART 13 of the system prompt.`
 }
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
@@ -82,6 +139,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: 'AI is not configured on the server' }, { status: 503 })
   }
 
+  const briefContext = buildBriefContext(
+    content.briefData,
+    content.contentType,
+    content.topic,
+    content.targetAudience,
+    content.keyMessages,
+  )
+
   try {
     const upstream = await fetch(ABACUSAI_URL, {
       method: 'POST',
@@ -92,10 +157,18 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       body: JSON.stringify({
         model: MODEL,
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: buildUserPrompt(content.generatedBrief ?? '', instructions) },
+          { role: 'system', content: PAGE_SYSTEM_PROMPT_V3 },
+          {
+            role: 'user',
+            content: buildUserPrompt({
+              currentContent: content.generatedBrief ?? '',
+              instructions,
+              mode: parsed.data.mode,
+              briefContext,
+            }),
+          },
         ],
-        max_tokens: 4096,
+        max_tokens: 6000,
         stream: false,
       }),
     })
