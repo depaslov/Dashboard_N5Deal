@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { postProcessPage, type PagePostProcessBrief } from '@/lib/prompts/page-postprocess'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -12,6 +13,14 @@ export const maxDuration = 300
 // has already reviewed/edited the system+user prompts in the textarea.
 // No prompt building happens here — what comes in is what gets sent to the
 // upstream model.
+//
+// If the request includes a `brief` field (forwarded from assemble-prompt),
+// we run the deterministic page post-processor on the LLM output before
+// returning the `completed` event. The post-processor enforces:
+//   - keyword MAX (rewrites H2/H3 headings until count ≤ MAX)
+//   - internal-link whitelist (strips invented + duplicate URLs)
+//   - metadata header (injects Word Count + Reading Time + Tags)
+// Without the brief field we behave exactly as before — raw LLM output.
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
   const userId = session?.user?.id as string | undefined
@@ -28,6 +37,27 @@ export async function POST(req: Request) {
   const systemPrompt = String(body?.systemPrompt ?? '').trim()
   const userPrompt = String(body?.userPrompt ?? '').trim()
   if (!userPrompt) return NextResponse.json({ error: 'userPrompt is required' }, { status: 400 })
+
+  // Optional brief snapshot — when provided, the LLM output is post-processed
+  // server-side to enforce keyword cap + link whitelist + metadata header.
+  const briefRaw = body?.brief
+  const brief: PagePostProcessBrief | null = briefRaw && typeof briefRaw === 'object' ? {
+    topic: typeof briefRaw.topic === 'string' ? briefRaw.topic : undefined,
+    primaryKeyword: briefRaw.primaryKeyword && briefRaw.primaryKeyword.term
+      ? { term: String(briefRaw.primaryKeyword.term), minCount: Math.max(1, Number(briefRaw.primaryKeyword.minCount ?? 1)) }
+      : undefined,
+    secondaryKeywords: Array.isArray(briefRaw.secondaryKeywords)
+      ? briefRaw.secondaryKeywords.map((k: any) => ({ term: String(k?.term ?? ''), minCount: Math.max(1, Number(k?.minCount ?? 1)) })).filter((k: any) => k.term)
+      : [],
+    lsiKeywords: Array.isArray(briefRaw.lsiKeywords) ? briefRaw.lsiKeywords.map((s: any) => String(s)).filter(Boolean) : [],
+    internalLinks: Array.isArray(briefRaw.internalLinks)
+      ? briefRaw.internalLinks.map((l: any) => ({
+          url: String(l?.url ?? ''),
+          anchor: String(l?.anchor ?? ''),
+          priority: l?.priority === 'must' ? 'must' : 'nice',
+        })).filter((l: any) => l.url && l.anchor)
+      : [],
+  } : null
 
   const encoder = new TextEncoder()
   const stream = new ReadableStream({
@@ -85,7 +115,7 @@ export async function POST(req: Request) {
             const trimmed = line.trim()
             if (!trimmed.startsWith('data:')) continue
             const data = trimmed.slice(5).trim()
-            if (data === '[DONE]') { send({ status: 'completed', result: fullText }); continue }
+            if (data === '[DONE]') continue
             try {
               const parsed = JSON.parse(data)
               const delta: string = parsed?.choices?.[0]?.delta?.content ?? ''
@@ -99,7 +129,15 @@ export async function POST(req: Request) {
         if (!fullText.trim()) {
           send({ status: 'error', message: 'LLM returned empty content (rate limit or upstream filter)' })
         } else {
-          send({ status: 'completed', result: fullText })
+          let finalText = fullText
+          let postFixes: string[] = []
+          if (brief) {
+            const post = postProcessPage(fullText, brief)
+            finalText = post.text
+            postFixes = post.fixes
+            if (postFixes.length) console.log('[generate-from-prompt] postprocess fixes:', postFixes)
+          }
+          send({ status: 'completed', result: finalText, postFixes })
         }
         controller.enqueue(encoder.encode(`data: [DONE]\n\n`))
       } catch (err: any) {

@@ -58,6 +58,10 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
   const [systemPrompt, setSystemPrompt] = useState('')
   const [userPrompt, setUserPrompt] = useState('')
   const [meta, setMeta] = useState<any>(null)
+  // Snapshot of the brief (keywords + internal links + topic) — forwarded
+  // to /generate-from-prompt so the server post-processor can enforce
+  // keyword MAX + link whitelist + metadata header injection.
+  const [assembledBrief, setAssembledBrief] = useState<any>(null)
   const [assembling, setAssembling] = useState(false)
 
   // Output (single)
@@ -154,6 +158,7 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
       setSystemPrompt(data.systemPrompt)
       setUserPrompt(data.userPrompt)
       setMeta(data.meta)
+      setAssembledBrief(data.brief ?? null)
       toast.success(
         bulkMode
           ? `Preview assembled (1/${bulkItems.length} — "${previewTopic.slice(0, 40)}…")`
@@ -165,10 +170,10 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
   // Stream a single LLM completion. Used by both single and bulk paths.
   // For bulk: each item gets its own assembly + generation, so the prompt
   // includes that item's topic. Returns the full assembled text.
-  const streamOneGeneration = async (sys: string, usr: string, onDelta: (s: string) => void) => {
+  const streamOneGeneration = async (sys: string, usr: string, onDelta: (s: string) => void, brief?: any) => {
     const res = await fetch('/api/content/generate-from-prompt', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ systemPrompt: sys, userPrompt: usr }),
+      body: JSON.stringify({ systemPrompt: sys, userPrompt: usr, brief: brief ?? null }),
     })
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))
@@ -207,7 +212,7 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
     if (!bulkMode) {
       setGenerating(true); setOutput(''); setSavedId(null)
       try {
-        await streamOneGeneration(systemPrompt, userPrompt, setOutput)
+        await streamOneGeneration(systemPrompt, userPrompt, setOutput, assembledBrief)
       } catch (err: any) {
         toast.error(err?.message ?? 'Could not generate')
       } finally { setGenerating(false) }
@@ -252,7 +257,7 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
           if (!r.ok) throw new Error(a?.error ?? 'Assemble failed')
           full = await streamOneGeneration(a.systemPrompt, a.userPrompt, (delta) => {
             setBulkResults((prev) => prev.map((row, idx) => idx === i ? { ...row, output: delta } : row))
-          })
+          }, a.brief)
           if (!full.trim()) throw new Error('LLM returned empty response')
           lastErr = null
           break

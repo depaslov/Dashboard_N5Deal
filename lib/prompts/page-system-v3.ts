@@ -39,8 +39,12 @@ export interface PageUserPromptInput {
   revisionMode?: 'regenerate' | 'edit'
 }
 
+// Keep in sync with lib/prompts/page-postprocess.ts — the post-processor uses
+// this same formula to cap occurrences. If they differ, the prompt promises
+// the model one limit while the post-processor enforces another → confusing
+// outputs (model thinks MAX=10, code clips at MAX=6).
 function keywordMax(min: number): number {
-  return Math.max(min * 2, min + 3)
+  return Math.max(min + 1, Math.ceil(min * 1.2))
 }
 
 export function buildPageUserPrompt(input: PageUserPromptInput): string {

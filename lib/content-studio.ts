@@ -9,6 +9,7 @@ import { renderTemplate } from './prompt-template'
 import { obsidianScope } from './obsidian-sync'
 import { loadVectorStoreForScopes } from './embedding-store'
 import { embeddingsAvailable } from './embeddings'
+import { PAGE_SYSTEM_PROMPT_V3, buildPageUserPrompt } from './prompts/page-system-v3'
 
 const KB_TOP_K = 6
 const KB_MIN_SCORE = 0.55
@@ -49,6 +50,17 @@ export interface AssembleResult {
     kbChars: number
     icpTags: string[]
     internalLinkCount: number
+  }
+  // Snapshot of the brief data needed for server-side post-processing of the
+  // LLM output (keyword cap, link whitelist, metadata header injection).
+  // Forwarded by the client to /api/content/generate-from-prompt so the
+  // generator can enforce the brief's hard limits on the final document.
+  brief: {
+    topic: string
+    primaryKeyword: { term: string; minCount: number } | null
+    secondaryKeywords: { term: string; minCount: number }[]
+    lsiKeywords: string[]
+    internalLinks: { url: string; anchor: string; priority: 'must' | 'nice' }[]
   }
 }
 
@@ -245,21 +257,74 @@ export async function assembleStudioPrompt(input: AssembleInput): Promise<Assemb
     ctx.redFlags ? `# Red flags\n${ctx.redFlags}` : '',
   ].filter(Boolean).join('\n\n')
 
-  const systemPrompt = template ? renderTemplate(template.systemTemplate, ctx) : fallbackSystem
-  const userPrompt = template ? renderTemplate(template.userTemplate, ctx) : fallbackUser
+  // For page-style content (pages / articles) override the DB template with the
+  // strict PAGE_SYSTEM_PROMPT_V3 + buildPageUserPrompt. The DB template is too
+  // soft — after 6 review rounds at 6-7.5/10 the same issues kept appearing
+  // (keyword overuse, missing metadata header, missing MUST links, invented
+  // URLs). The strict pair has HARD GATES and is paired with a deterministic
+  // server-side post-processor that enforces the brief's MAX limits.
+  const isPageStyle = input.contentType === 'pages' || input.contentType === 'articles'
+
+  let systemPrompt: string
+  let userPrompt: string
+  if (isPageStyle) {
+    systemPrompt = PAGE_SYSTEM_PROMPT_V3
+    userPrompt = buildPageUserPrompt({
+      topic: input.topic,
+      targetAudience: input.targetAudience ?? '',
+      keyMessages: input.keyMessages ?? '',
+      language,
+      wordCountMin: input.wordCountMin,
+      wordCountMax: input.wordCountMax,
+      mainKeywords: input.mainKeywords ?? [],
+      lsiKeywords: input.lsiKeywords ?? [],
+      internalLinks: internalLinks.map((l) => ({
+        url: l.url,
+        anchor: l.anchor,
+        anchorAlts: l.anchorAlts ?? [],
+        priority: (l.priority === 'must' ? 'must' : 'nice') as 'must' | 'nice',
+        context: l.context ?? undefined,
+      })),
+      structure: (input.sectionOutline ?? []).map((h) => ({ heading: h, subtopics: [] })),
+      knowledgeBaseContext: kb.context,
+      documentContext: input.documentText,
+      icpContext: ctx.icps,
+      redFlags: redFlags.map((r) => ({
+        word: r.word,
+        severity: (r.severity === 'block' ? 'block' : 'warn') as 'block' | 'warn',
+        reason: r.reason ?? undefined,
+      })),
+    })
+  } else {
+    systemPrompt = template ? renderTemplate(template.systemTemplate, ctx) : fallbackSystem
+    userPrompt = template ? renderTemplate(template.userTemplate, ctx) : fallbackUser
+  }
 
   return {
     systemPrompt,
     userPrompt,
     meta: {
       templateId: template?.id ?? null,
-      templateName: template?.name ?? null,
+      templateName: isPageStyle ? `${template?.name ?? '(no DB template)'} → overridden by PAGE_SYSTEM_PROMPT_V3` : (template?.name ?? null),
       icpNames: orderedIcps.map((i) => i.name),
       platform: safePlatform ? { id: safePlatform.id, name: safePlatform.name, slug: safePlatform.slug } : null,
       kbSources: kb.sources,
       kbChars: kb.chars,
       icpTags: icpTagNames,
       internalLinkCount: internalLinks.length,
+    },
+    brief: {
+      topic: input.topic,
+      primaryKeyword: (input.mainKeywords ?? [])[0]
+        ? { term: input.mainKeywords![0].term, minCount: input.mainKeywords![0].minCount }
+        : null,
+      secondaryKeywords: (input.mainKeywords ?? []).slice(1).map((k) => ({ term: k.term, minCount: k.minCount })),
+      lsiKeywords: input.lsiKeywords ?? [],
+      internalLinks: internalLinks.map((l) => ({
+        url: l.url,
+        anchor: l.anchor,
+        priority: (l.priority === 'must' ? 'must' : 'nice') as 'must' | 'nice',
+      })),
     },
   }
 }
