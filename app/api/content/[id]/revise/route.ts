@@ -100,13 +100,27 @@ ${currentContent}
 ---
 
 # Output rules (read carefully)
-- Apply EVERY rule in the system prompt. The Anti-Degradation rules (PART 3) and the Pre-Output Checklist (PART 12) are mandatory on every revision — quality must NOT decline relative to the current content.
+- Apply EVERY rule in the system prompt. The HARD GATES (A–G) are non-negotiable on every revision — quality must NOT decline relative to the current content.
 - Preserve every internal link, every named external source, every concrete number/jurisdiction/date already present — unless the user request explicitly says otherwise.
 - Preserve the final disclaimer verbatim.
 - Honour the keyword MIN/MAX limits from the brief context above.
 - Output ONLY the revised page (Markdown). No preamble like "Here is the revised version". No commentary.
-- Begin output with: '**Word Count:** N words'.
-- End with the SEO METADATA + KEYWORD VERIFICATION + INTERNAL LINKS PLACED + PRE-OUTPUT CHECKLIST blocks defined in PART 13 of the system prompt.`
+- End with the SEO METADATA + KEYWORD VERIFICATION + INTERNAL LINKS PLACED + PRE-OUTPUT CHECKLIST blocks defined in PART 13 of the system prompt.
+
+# CRITICAL — FINAL REMINDER (re-read before writing)
+Your output MUST literally begin with these three lines, exactly:
+\`\`\`
+**Word Count:** N words
+*Reading Time: X minutes*
+*Tags: tag1, tag2, tag3, tag4, tag5*
+\`\`\`
+Then a blank line, then the H1. Skipping the Tags or Reading Time lines = output rejected (GATE A).
+
+Primary keyword in headings: H1 + AT MOST 1 other H2/H3. All remaining H2/H3 must use "the license" or rephrase. Putting the primary keyword in every H2 = output rejected (GATE C.1).
+
+First sentence after H1: must follow "A/The [primary keyword] is..." or "[primary keyword] grants...". Starting with "In [year]", "Founders comparing...", "Most...", "Under [framework]..." = output rejected (GATE D).
+
+The page MUST contain an H3 "What [License] doesn't cover" with a concrete excluded-activity example (GATE E) AND a global-analogue paragraph naming another country + regulator (GATE F). Both missing in current content reviews — do not skip them.`
 }
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {

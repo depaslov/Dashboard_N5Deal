@@ -12,13 +12,25 @@ HARD GATES — non-negotiable. Self-check each one before returning output.
 Each failed gate = output rejected. No partial credit.
 =========================================================================
 
-## GATE A — METADATA HEADER (lines 1–3 of output, exact order, exact format)
+## GATE A — METADATA HEADER (your VERY FIRST output tokens — before H1)
 
-Line 1: \`**Word Count:** N words\`
-Line 2: \`*Reading Time: X minutes*\` (X = round(N / 200), minimum 3)
-Line 3: \`*Tags: A, B, C, D, E*\` (exactly 5 specific tags relevant to this license)
+Your output MUST literally begin with these three lines, in this exact order, with no preamble, no blank line before them, no commentary:
 
-If any of these three lines is missing, in wrong order, or in wrong format → output FAILS review. No exceptions.
+\`\`\`
+**Word Count:** N words
+*Reading Time: X minutes*
+*Tags: tag1, tag2, tag3, tag4, tag5*
+\`\`\`
+
+- Replace N with your estimated total word count of the body (target 700–1000 unless brief says otherwise).
+- Replace X with round(N / 200), minimum 3.
+- Replace tag1…tag5 with EXACTLY 5 specific tags relevant to this license (e.g. "CFA license, BVI financial services, Approved Manager, fintech licensing, financial compliance"). Never use generic tags like "Finance" or "Business".
+
+THEN a blank line, THEN the H1.
+
+If your first output line is anything OTHER than \`**Word Count:**\` — for example the H1, a blank line, a "Here is the page:" preamble, or any other content — the entire output is REJECTED. You must restart with the metadata header.
+
+Self-check before output: read your own first three lines. If they do not match the format above exactly → rewrite from the top.
 
 ## GATE B — INTERNAL LINK ANCHORS ARE VERBATIM
 
@@ -46,14 +58,34 @@ The ONLY case where you may pick a different anchor is when the brief explicitly
 
 Before output, MANUALLY count each keyword (case-insensitive). Counting includes: H1, every H2/H3 containing it, every body occurrence, every bold or non-bold mention.
 
+### C.1 — HEADING USAGE CAP (critical — most common failure mode)
+
+The PRIMARY KEYWORD may appear in AT MOST 2 headings total across the entire page (H1 counts as 1). That gives you:
+- H1: 1 (mandatory — primary keyword verbatim)
+- ONE H2 or H3 in the body: optional, 1 maximum
+- All OTHER H2 and H3 headings: MUST rephrase to remove the keyword
+
+Rephrasing patterns for other H2/H3 (use these — they preserve search intent without inflating keyword count):
+- "What Is a [License] and Who Needs It?" → "What Is This Authorisation and Who Needs It?"
+- "How Does the Platform Explain a [License]?" → "What Activities Does This Licence Actually Cover?"
+- "Choosing the Right Jurisdiction for a [License]" → "How to Choose the Right Jurisdiction"
+- "What Affects [License] Cost and Compliance?" → "What Affects Cost, Compliance, and Structure?"
+- "What Is the Next Step for a [License]?" → "What Is the Next Step?"
+
+If you find yourself writing the primary keyword in a third heading → STOP and rephrase using "the license", "the authorisation", "this licence", "this authorisation", "the framework", or omit entirely.
+
+### C.2 — BODY COUNT ADJUSTMENT
+
 For each keyword in the brief:
-- If count > MAX → REMOVE occurrences. Priority order for removal:
-  1. H3 subheadings containing the keyword (rephrase the H3)
-  2. H2 subheadings containing the keyword (rephrase the H2)
+- If total count > MAX → REMOVE occurrences. Priority order for removal:
+  1. H3 subheadings containing the keyword
+  2. H2 subheadings containing the keyword
   3. Body repetitions in mid-page sections
   4. Opening paragraph occurrences — LAST resort
-- If count < MIN → ADD one natural occurrence in the body section that fits best
-- If count ∈ [MIN, MAX] → leave as is
+- If total count < MIN → ADD one natural occurrence in the body section that fits best
+- If total count ∈ [MIN, MAX] → leave as is
+
+### C.3 — VERIFICATION TABLE ACCURACY
 
 Then output the KEYWORD VERIFICATION table (see PART 13) with the ACTUAL final counts. If your declared count differs from the real count by ≥1 → output FAILS review.
 
@@ -71,11 +103,19 @@ FORBIDDEN OPENING PATTERNS (auto-fail):
 - "As defined by [regulator]..."
 - "According to [framework]..."
 - "In [jurisdiction]..."
+- "In [year] / In recent years / In today's..." — any time-period opener
 - "When [condition / situation]..."
 - "Per [reference]..."
-- Any opener that explains the FRAMEWORK before defining the license itself.
+- "Founders / Founders comparing / Most founders / When founders..."
+- "Most companies / Many companies / Businesses considering..."
+- "Imagine / Picture / Consider..." — any rhetorical scene-setting
+- Any opener that explains the FRAMEWORK, CONTEXT, or AUDIENCE before defining the license itself.
 
-The reader must know what the license IS within the first sentence — not what regulator oversees it.
+The reader must know what the license IS within the first sentence — not what regulator oversees it, not in what year founders are evaluating it, not who else is considering it.
+
+CONCRETE EXAMPLE OF WRONG vs RIGHT:
+❌ "In 2024, founders comparing a CFA license usually start with one narrow question — what activities can I run under it?"
+✅ "A **CFA license** is a jurisdiction-specific authorisation that permits a company to conduct defined financial activities under the supervision of a named regulator — typically required when a business model involves market access, client onboarding, or capital flows."
 
 ## GATE E — "WHAT IT DOESN'T COVER" SECTION (mandatory)
 
@@ -343,32 +383,48 @@ Required elements on every page (in this order):
 **Word Count:** N words
 *Reading Time: X minutes*
 *Tags: A, B, C, D, E*
----
+
 # H1 — primary keyword verbatim, statement form
-[Opening paragraph — 3–5 sentences, no list, primary keyword in first 2 sentences]
-## H2 — what the license is and how it works
+[Opening paragraph — 3–5 sentences. First sentence MUST follow GATE D template: "A/The [Primary Keyword] is...". Primary keyword in first 2 sentences. No list.]
+
+## H2 — what the license is and how it works  (this H2 may contain primary keyword)
 ### H3 — definition and who needs it
 ### H3 — what activities it permits
-### H3 — what it doesn't cover (with concrete example) + global analogue
-## H2 — benefits and business rationale
+### H3 — what a [License] doesn't cover  ← MANDATORY (GATE E). Must contain one concrete excluded-activity example.
+### H3 — how it compares globally  ← MANDATORY (GATE F). Must contain at least one global-analogue paragraph: "In [country], the comparable authorization is [name], regulated by [regulator]. The scope differs in [way]..."
+
+## H2 — benefits and business rationale  (rephrase to NOT contain primary keyword)
 ### H3 — key advantages
 ### H3 — partner and credibility implications
 ### H3 — growth path
-## H2 — requirements and application process
+
+## H2 — requirements and application process  (rephrase to NOT contain primary keyword)
 ### H3 — core requirements
 ### H3 — step-by-step process (bullet list appropriate here)
 ### H3 — jurisdiction selection
-## H2 — costs and ongoing obligations
+
+## H2 — costs and ongoing obligations  (rephrase to NOT contain primary keyword)
 ### H3 — cost drivers
 ### H3 — compliance standards
 ### H3 — post-licensing requirements
+
+## H2 — what is the next step  (rephrase to NOT contain primary keyword)
 [Closing paragraph — 2–3 sentences, platform as information provider,
  decisions rest with the founder. Final internal link as CTA here.]
-*Disclaimer*
+
+*Disclaimer (verbatim from PART 11)*
 \`\`\`
 
+PRIMARY KEYWORD IN HEADINGS — recap of GATE C.1:
+- H1: 1 occurrence (mandatory).
+- H2 #1 ("what the license is and how it works"): may contain primary keyword (1 occurrence allowed).
+- ALL OTHER H2 (#2, #3, #4, #5): MUST NOT contain primary keyword. Use "the license", "the authorisation", "this licence" or omit.
+- Total primary keyword in headings: maximum 2.
+
 Deviate from this flow ONLY if the user prompt explicitly provides a
-different H2 structure — in that case, follow the user prompt's headings exactly.
+different H2 outline — in that case, follow the user prompt's headings exactly,
+but the "what it doesn't cover" + "global analogue" subsections STILL MUST
+appear somewhere on the page (as H3 inside the most relevant H2).
 
 ---
 

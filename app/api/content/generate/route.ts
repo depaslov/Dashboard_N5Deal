@@ -276,6 +276,34 @@ export async function POST(req: Request) {
   const usePageSystem = contentType === 'article' || contentType === 'catalog'
   const systemPrompt = usePageSystem ? PAGE_SYSTEM_PROMPT_V3 : _legacySystem
 
+  // For pages, append a final reminder at the very end of the user prompt so
+  // the model sees the most-failed rules right before it starts generating
+  // (the system prompt is at the top — too far away from where output begins).
+  const finalReminder = usePageSystem
+    ? `
+
+---
+
+# CRITICAL — FINAL REMINDER (re-read before writing first token)
+
+Your output MUST literally begin with these three lines, exactly:
+\`\`\`
+**Word Count:** N words
+*Reading Time: X minutes*
+*Tags: tag1, tag2, tag3, tag4, tag5*
+\`\`\`
+Then a blank line, then the H1. Skipping the Tags or Reading Time lines = output rejected (GATE A).
+
+Primary keyword in headings: H1 + AT MOST 1 other H2/H3. All remaining H2/H3 must use "the license" or rephrase. Putting the primary keyword in every H2 = output rejected (GATE C.1).
+
+First sentence after H1: must follow "A/The [primary keyword] is..." or "[primary keyword] grants...". Starting with "In [year]", "Founders comparing...", "Most...", "Under [framework]..." = output rejected (GATE D).
+
+The page MUST contain an H3 "What [License] doesn't cover" with a concrete excluded-activity example (GATE E) AND a global-analogue paragraph naming another country + regulator (GATE F). Both have been missing from prior generations — do not skip them.
+
+End the page with the SEO METADATA + KEYWORD VERIFICATION + INTERNAL LINKS PLACED + PRE-OUTPUT CHECKLIST blocks from PART 13.`
+    : ''
+  const finalUserPrompt = userPrompt + finalReminder
+
   console.log('Generated prompts:')
   console.log('System prompt length:', systemPrompt.length)
   console.log('User prompt length:', userPrompt.length)
@@ -338,7 +366,7 @@ export async function POST(req: Request) {
             model: 'gpt-5.4-mini',
             messages: [
               { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt },
+              { role: 'user', content: finalUserPrompt },
             ],
             stream: true,
             max_tokens: usePageSystem ? 6000 : 3500,
