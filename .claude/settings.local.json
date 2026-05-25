@@ -59,7 +59,10 @@
       "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_pdGQT80LIZSW@ep-summer-wildflower-aqmf7hp3-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx tsx --require dotenv/config scripts/import-gsc-keywords.ts)",
       "Bash(grep -n \"^=\\\\{73\\\\}\\\\`$\\\\|^const TEMPLATES\" /Users/andriykrechkivsky/Downloads/n5deal_export_v3/scripts/seed-prompt-templates.ts)",
       "Bash(curl -s -L \"https://n5deal.com/\")",
-      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")"
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(curl -sS \"https://n5deal.com/sitemap.xml\")",
+      "Bash(awk -F/ '{print \"/\"$4}')",
+      "Bash(git reset *)"
     ]
   }
 }

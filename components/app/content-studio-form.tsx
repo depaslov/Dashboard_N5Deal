@@ -53,6 +53,9 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
   const [wordCountMax, setWordCountMax] = useState<number | ''>(1000)
   const [secondaryAudience, setSecondaryAudience] = useState('')
   const [sectionOutlineText, setSectionOutlineText] = useState('')
+  // Per-brief internal links — markdown or arrow / pipe format.
+  // When non-empty, overrides the project library entirely.
+  const [internalLinksText, setInternalLinksText] = useState('')
 
   // Assembled prompts (editable)
   const [systemPrompt, setSystemPrompt] = useState('')
@@ -100,6 +103,46 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
         return { term: line, minCount: 1 }
       })
   }, [mainKeywordsText])
+
+  // Parse per-brief internal links from a paste-friendly textarea.
+  // Supported formats (one link per line, mix-and-match):
+  //   [anchor](url) — must         markdown style with trailing priority
+  //   [anchor](url) - must         dash works too
+  //   [anchor](url)                priority defaults to nice
+  //   anchor -> url must           arrow style
+  //   anchor | url | must          pipe style
+  // Priority keywords (case-insensitive): "must" | "nice". Anything else is ignored.
+  const briefInternalLinks = useMemo(() => {
+    const out: { url: string; anchor: string; priority: 'must' | 'nice' }[] = []
+    for (const raw of internalLinksText.split('\n')) {
+      const line = raw.trim()
+      if (!line || line.startsWith('#')) continue
+      let anchor = '', url = '', priority: 'must' | 'nice' = 'nice'
+
+      // markdown: [anchor](url) optionally followed by — must / - must / : must
+      const md = line.match(/^\[([^\]]+)\]\(([^)]+)\)\s*(?:[—\-:]\s*(must|nice))?\s*$/i)
+      if (md) {
+        anchor = md[1].trim(); url = md[2].trim(); priority = (md[3]?.toLowerCase() === 'must' ? 'must' : 'nice')
+        if (anchor && url) out.push({ anchor, url, priority })
+        continue
+      }
+      // arrow: anchor -> url [must]
+      const arrow = line.match(/^(.+?)\s*->\s*(\S+?)\s*(must|nice)?\s*$/i)
+      if (arrow) {
+        anchor = arrow[1].trim(); url = arrow[2].trim(); priority = (arrow[3]?.toLowerCase() === 'must' ? 'must' : 'nice')
+        if (anchor && url) out.push({ anchor, url, priority })
+        continue
+      }
+      // pipe: anchor | url [| must]
+      const pipe = line.split('|').map((p) => p.trim())
+      if (pipe.length >= 2 && pipe[1]) {
+        anchor = pipe[0]; url = pipe[1]; priority = (pipe[2]?.toLowerCase() === 'must' ? 'must' : 'nice')
+        if (anchor && url) out.push({ anchor, url, priority })
+        continue
+      }
+    }
+    return out
+  }, [internalLinksText])
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -151,6 +194,7 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
           wordCountMax: features.seo && wordCountMax !== '' ? Number(wordCountMax) : undefined,
           secondaryAudience: features.seo ? secondaryAudience : '',
           sectionOutline: features.seo ? sectionOutline : [],
+          internalLinks: briefInternalLinks.length > 0 ? briefInternalLinks : undefined,
         }),
       })
       const data = await res.json()
@@ -445,6 +489,32 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
                 <Input type="number" min={100} value={wordCountMax}
                   onChange={(e) => setWordCountMax(e.target.value === '' ? '' : Number(e.target.value))} />
               </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label>
+                Internal links from this brief <span className="text-muted-foreground font-normal">
+                  (one per line — if filled, these ANCHORS are used verbatim and the project library is ignored.
+                  Format: <code className="text-[11px]">[anchor](url) — must</code> or <code className="text-[11px]">anchor → url must</code>)
+                </span>
+              </Label>
+              <Textarea
+                rows={5}
+                value={internalLinksText}
+                onChange={(e) => setInternalLinksText(e.target.value)}
+                placeholder={'[buy a licensed business](https://n5deal.com/buyer) — must\n[licensed business marketplace](https://n5deal.com/all-listing) — must\n[frequently asked questions](https://n5deal.com/faq) — must'}
+                className="font-mono text-xs"
+              />
+              {briefInternalLinks.length > 0 ? (
+                <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                  {briefInternalLinks.length} link{briefInternalLinks.length === 1 ? '' : 's'} parsed —
+                  project library will be IGNORED, only these anchors will be sent to the LLM and accepted by the post-processor.
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Empty = system uses the active links from the project library (with their stored anchors).
+                </p>
+              )}
             </div>
           </>
         )}

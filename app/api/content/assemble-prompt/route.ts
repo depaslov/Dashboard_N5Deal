@@ -54,6 +54,20 @@ export async function POST(req: Request) {
     sectionOutline: Array.isArray(body?.sectionOutline)
       ? body.sectionOutline.map((s: any) => String(s ?? '').trim()).filter(Boolean)
       : [],
+    // Per-brief internal links — when provided, override the project library.
+    // The operator's anchors are used verbatim; the post-processor whitelist
+    // also flips to this set.
+    internalLinks: Array.isArray(body?.internalLinks)
+      ? body.internalLinks
+          .map((l: any) => ({
+            url: String(l?.url ?? '').trim(),
+            anchor: String(l?.anchor ?? '').trim(),
+            anchorAlts: Array.isArray(l?.anchorAlts) ? l.anchorAlts.map((a: any) => String(a ?? '').trim()).filter(Boolean) : [],
+            context: l?.context ? String(l.context).trim() : null,
+            priority: l?.priority === 'must' ? 'must' as const : 'nice' as const,
+          }))
+          .filter((l: any) => l.url && l.anchor)
+      : undefined,
   })
 
   return NextResponse.json(result)

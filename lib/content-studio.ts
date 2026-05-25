@@ -33,6 +33,18 @@ export interface AssembleInput {
   wordCountMax?: number
   secondaryAudience?: string
   sectionOutline?: string[]
+  // Per-brief internal links. When provided AND non-empty, these OVERRIDE
+  // the project library entirely — only these URLs+anchors are sent to
+  // the LLM and only these are accepted by the post-processor. Lets the
+  // operator hard-pin the anchors from the technical brief (TZ) instead
+  // of leaking the project library's default anchors into the page.
+  internalLinks?: {
+    url: string
+    anchor: string
+    anchorAlts?: string[]
+    context?: string | null
+    priority?: 'must' | 'nice'
+  }[]
   // New SEO-aware fields used by the v2 Pages/Articles templates
   primaryGoal?: string
   externalSources?: string
@@ -149,8 +161,15 @@ async function buildKbContext(projectId: string, query: string): Promise<{ conte
 export async function assembleStudioPrompt(input: AssembleInput): Promise<AssembleResult> {
   const language = input.language ?? 'en'
 
+  // If the brief specifies its own internal links, those are the source of
+  // truth — we skip the project-library fetch entirely. The operator's
+  // brief anchors then go to the LLM verbatim (no merging, no DB defaults).
+  const briefLinks = Array.isArray(input.internalLinks) && input.internalLinks.length > 0
+    ? input.internalLinks
+    : null
+
   // Load template, ICPs, platform, red flags, ICP tags, internal links in parallel.
-  const [template, icps, platform, redFlags, icpTagLinks, internalLinks] = await Promise.all([
+  const [template, icps, platform, redFlags, icpTagLinks, dbInternalLinks] = await Promise.all([
     pickTemplate(input.projectId, input.contentType, input.platformId ?? null, input.promptTemplateId ?? null),
     (input.icpIds && input.icpIds.length > 0)
       ? prisma.iCP.findMany({ where: { id: { in: input.icpIds }, projectId: input.projectId } })
@@ -168,12 +187,27 @@ export async function assembleStudioPrompt(input: AssembleInput): Promise<Assemb
           include: { tag: { select: { name: true } } },
         })
       : Promise.resolve([]),
-    prisma.internalLink.findMany({
-      where: { projectId: input.projectId, isActive: true },
-      orderBy: [{ priority: 'asc' }, { anchor: 'asc' }],
-      select: { url: true, anchor: true, anchorAlts: true, context: true, priority: true },
-    }),
+    // Skip the project-library fetch entirely when the brief specifies its
+    // own links — saves a DB roundtrip + guarantees no leakage.
+    briefLinks
+      ? Promise.resolve([] as { url: string; anchor: string; anchorAlts: string[]; context: string | null; priority: string }[])
+      : prisma.internalLink.findMany({
+          where: { projectId: input.projectId, isActive: true },
+          orderBy: [{ priority: 'asc' }, { anchor: 'asc' }],
+          select: { url: true, anchor: true, anchorAlts: true, context: true, priority: true },
+        }),
   ])
+
+  // Final list of links the LLM (and the post-processor whitelist) will see.
+  const internalLinks = briefLinks
+    ? briefLinks.map((l) => ({
+        url: l.url,
+        anchor: l.anchor,
+        anchorAlts: l.anchorAlts ?? [],
+        context: l.context ?? null,
+        priority: l.priority ?? 'nice',
+      }))
+    : dbInternalLinks
 
   // Reorder ICPs to match input order
   const orderedIcps = (input.icpIds ?? [])
