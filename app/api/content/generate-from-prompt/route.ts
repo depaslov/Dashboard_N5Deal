@@ -94,7 +94,12 @@ export async function POST(req: Request) {
               { role: 'user', content: userPrompt },
             ],
             stream: true,
-            max_tokens: 3500,
+            // When a brief is provided the user prompt is the strict
+            // buildPageUserPrompt format — system + user can run ~35k chars
+            // and the expected output is body (≤1000 words) + SEO METADATA
+            // + KEYWORD VERIFICATION + INTERNAL LINKS PLACED + CHECKLIST.
+            // 3500 tokens hits the ceiling mid-checklist; 6000 fits.
+            max_tokens: brief ? 6000 : 3500,
           }),
           signal: upstreamAbort.signal,
         })
@@ -136,16 +141,27 @@ export async function POST(req: Request) {
             } catch {}
           }
         }
+        console.log(`[generate-from-prompt] stream complete. raw length: ${fullText.length} chars, brief present: ${Boolean(brief)}`)
         if (!fullText.trim()) {
           send({ status: 'error', message: 'LLM returned empty content (rate limit or upstream filter)' })
         } else {
           let finalText = fullText
           let postFixes: string[] = []
           if (brief) {
-            const post = postProcessPage(fullText, brief)
-            finalText = post.text
-            postFixes = post.fixes
-            if (postFixes.length) console.log('[generate-from-prompt] postprocess fixes:', postFixes)
+            try {
+              const post = postProcessPage(fullText, brief)
+              // Defensive: if post-processor somehow returns empty, fall back
+              // to the raw model output instead of sending an empty page.
+              finalText = post.text.trim() ? post.text : fullText
+              postFixes = post.fixes
+              console.log(`[generate-from-prompt] post-processed length: ${finalText.length} chars, fixes: ${postFixes.length}`)
+              if (postFixes.length) console.log('[generate-from-prompt] postprocess fixes:', postFixes)
+            } catch (e) {
+              // Don't blow up the request on a post-processor bug — surface
+              // the raw output and log the error so it can be diagnosed.
+              console.error('[generate-from-prompt] postprocess threw, falling back to raw output:', e)
+              finalText = fullText
+            }
           }
           send({ status: 'completed', result: finalText, postFixes })
         }
