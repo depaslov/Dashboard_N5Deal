@@ -39,10 +39,12 @@ export async function POST(req: Request) {
     sourceUrl: typeof body?.sourceUrl === 'string' ? body.sourceUrl.trim() : '',
     mainKeywords: Array.isArray(body?.mainKeywords)
       ? body.mainKeywords
-          .map((k: any) => ({
-            term: String(k?.term ?? '').trim(),
-            minCount: Number.isFinite(Number(k?.minCount)) && Number(k.minCount) > 0 ? Math.floor(Number(k.minCount)) : 1,
-          }))
+          .map((k: any) => {
+            const min = Number.isFinite(Number(k?.minCount)) && Number(k.minCount) > 0 ? Math.floor(Number(k.minCount)) : 1
+            const maxRaw = Number(k?.maxCount)
+            const max = Number.isFinite(maxRaw) && maxRaw >= min ? Math.floor(maxRaw) : undefined
+            return { term: String(k?.term ?? '').trim(), minCount: min, maxCount: max }
+          })
           .filter((k: any) => k.term)
       : [],
     lsiKeywords: Array.isArray(body?.lsiKeywords)
@@ -53,6 +55,14 @@ export async function POST(req: Request) {
     secondaryAudience: typeof body?.secondaryAudience === 'string' ? body.secondaryAudience.trim() : '',
     sectionOutline: Array.isArray(body?.sectionOutline)
       ? body.sectionOutline.map((s: any) => String(s ?? '').trim()).filter(Boolean)
+      : [],
+    sectionStructure: Array.isArray(body?.sectionStructure)
+      ? body.sectionStructure
+          .map((b: any) => ({
+            heading: String(b?.heading ?? '').trim(),
+            subtopics: Array.isArray(b?.subtopics) ? b.subtopics.map((s: any) => String(s ?? '').trim()).filter(Boolean) : [],
+          }))
+          .filter((b: any) => b.heading)
       : [],
     // Per-brief internal links — when provided, override the project library.
     // The operator's anchors are used verbatim; the post-processor whitelist

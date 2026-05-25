@@ -24,7 +24,7 @@ export interface PageUserPromptInput {
   language?: 'en' | 'uk' | 'ru'
   wordCountMin?: number
   wordCountMax?: number
-  mainKeywords?: { term: string; minCount: number }[]
+  mainKeywords?: { term: string; minCount: number; maxCount?: number }[]
   lsiKeywords?: string[]
   internalLinks?: { url: string; anchor: string; anchorAlts?: string[]; priority?: 'must' | 'nice'; context?: string }[]
   structure?: { heading: string; subtopics?: string[] }[]
@@ -81,9 +81,11 @@ If your first output line is anything other than \`**Word Count:**\` — the out
     const rows: string[] = []
     rows.push(`| Keyword | MIN | MAX | Bold | Notes |`)
     rows.push(`|---|---|---|---|---|`)
-    rows.push(`| **${primary.term}** (primary) | ${primary.minCount} | ${keywordMax(primary.minCount)} | every natural occurrence | H1 + AT MOST 1 other heading. All other H2/H3 must rephrase. |`)
+    const primaryMax = primary.maxCount && primary.maxCount > 0 ? primary.maxCount : keywordMax(primary.minCount)
+    rows.push(`| **${primary.term}** (primary) | ${primary.minCount} | ${primaryMax} | every natural occurrence | H1 + AT MOST 1 other heading. All other H2/H3 must rephrase. |`)
     for (const k of secondaries) {
-      rows.push(`| ${k.term} | ${k.minCount} | ${keywordMax(k.minCount)} | first appearance | within MIN–MAX range |`)
+      const kMax = k.maxCount && k.maxCount > 0 ? k.maxCount : keywordMax(k.minCount)
+      rows.push(`| ${k.term} | ${k.minCount} | ${kMax} | first appearance | within MIN–MAX range |`)
     }
 
     lines.push(`# KEYWORD ENFORCEMENT — counts verified before output

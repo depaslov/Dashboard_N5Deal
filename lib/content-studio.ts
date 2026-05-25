@@ -27,12 +27,16 @@ export interface AssembleInput {
   promptTemplateId?: string | null  // override template selection
   documentText?: string
   sourceUrl?: string                 // for Market News
-  mainKeywords?: { term: string; minCount: number }[]
+  mainKeywords?: { term: string; minCount: number; maxCount?: number }[]
   lsiKeywords?: string[]
   wordCountMin?: number
   wordCountMax?: number
   secondaryAudience?: string
   sectionOutline?: string[]
+  // Optional structured outline with H3 subtopics. When provided, supersedes
+  // sectionOutline for the page-system path (buildPageUserPrompt). The legacy
+  // template path still uses sectionOutline (flat string list).
+  sectionStructure?: { heading: string; subtopics?: string[] }[]
   // Per-brief internal links. When provided AND non-empty, these OVERRIDE
   // the project library entirely — only these URLs+anchors are sent to
   // the LLM and only these are accepted by the post-processor. Lets the
@@ -69,8 +73,8 @@ export interface AssembleResult {
   // generator can enforce the brief's hard limits on the final document.
   brief: {
     topic: string
-    primaryKeyword: { term: string; minCount: number } | null
-    secondaryKeywords: { term: string; minCount: number }[]
+    primaryKeyword: { term: string; minCount: number; maxCount?: number } | null
+    secondaryKeywords: { term: string; minCount: number; maxCount?: number }[]
     lsiKeywords: string[]
     internalLinks: { url: string; anchor: string; priority: 'must' | 'nice' }[]
   }
@@ -319,7 +323,9 @@ export async function assembleStudioPrompt(input: AssembleInput): Promise<Assemb
         priority: (l.priority === 'must' ? 'must' : 'nice') as 'must' | 'nice',
         context: l.context ?? undefined,
       })),
-      structure: (input.sectionOutline ?? []).map((h) => ({ heading: h, subtopics: [] })),
+      structure: (input.sectionStructure && input.sectionStructure.length > 0)
+        ? input.sectionStructure.map((b) => ({ heading: b.heading, subtopics: b.subtopics ?? [] }))
+        : (input.sectionOutline ?? []).map((h) => ({ heading: h, subtopics: [] })),
       knowledgeBaseContext: kb.context,
       documentContext: input.documentText,
       icpContext: ctx.icps,
@@ -350,9 +356,17 @@ export async function assembleStudioPrompt(input: AssembleInput): Promise<Assemb
     brief: {
       topic: input.topic,
       primaryKeyword: (input.mainKeywords ?? [])[0]
-        ? { term: input.mainKeywords![0].term, minCount: input.mainKeywords![0].minCount }
+        ? {
+            term: input.mainKeywords![0].term,
+            minCount: input.mainKeywords![0].minCount,
+            maxCount: input.mainKeywords![0].maxCount,
+          }
         : null,
-      secondaryKeywords: (input.mainKeywords ?? []).slice(1).map((k) => ({ term: k.term, minCount: k.minCount })),
+      secondaryKeywords: (input.mainKeywords ?? []).slice(1).map((k) => ({
+        term: k.term,
+        minCount: k.minCount,
+        maxCount: k.maxCount,
+      })),
       lsiKeywords: input.lsiKeywords ?? [],
       internalLinks: internalLinks.map((l) => ({
         url: l.url,

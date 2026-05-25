@@ -17,8 +17,12 @@
 // the operator what was auto-corrected.
 
 export interface PagePostProcessBrief {
-  primaryKeyword?: { term: string; minCount: number }
-  secondaryKeywords?: { term: string; minCount: number }[]
+  // When `maxCount` is explicitly set (e.g. brief says "CFA license: 5-6"),
+  // the post-processor uses it directly — no formula. Otherwise it derives
+  // MAX from MIN via keywordMax(). The explicit path is preferred since the
+  // brief author knows the SEO target far better than any heuristic.
+  primaryKeyword?: { term: string; minCount: number; maxCount?: number }
+  secondaryKeywords?: { term: string; minCount: number; maxCount?: number }[]
   lsiKeywords?: string[]
   internalLinks?: { url: string; anchor: string; priority?: 'must' | 'nice' }[]
   topic?: string
@@ -277,7 +281,12 @@ export function postProcessPage(
   fixes.push(...metaPass.fixes)
 
   if (brief.primaryKeyword?.term && brief.primaryKeyword.minCount > 0) {
-    const max = keywordMax(brief.primaryKeyword.minCount)
+    // Prefer the brief's explicit maxCount when present (e.g. brief says
+    // "5-6 times" → MAX=6). Fall back to the heuristic formula only when
+    // the brief gave just a MIN.
+    const max = brief.primaryKeyword.maxCount && brief.primaryKeyword.maxCount > 0
+      ? brief.primaryKeyword.maxCount
+      : keywordMax(brief.primaryKeyword.minCount)
     const kwPass = capPrimaryKeyword(out, brief.primaryKeyword.term, max)
     out = kwPass.text
     fixes.push(...kwPass.fixes)

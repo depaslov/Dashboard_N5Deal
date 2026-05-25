@@ -56,6 +56,8 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
   // Per-brief internal links — markdown or arrow / pipe format.
   // When non-empty, overrides the project library entirely.
   const [internalLinksText, setInternalLinksText] = useState('')
+  // LSI / supporting keywords (use ≥1× each, can be inflected).
+  const [lsiKeywordsText, setLsiKeywordsText] = useState('')
 
   // Assembled prompts (editable)
   const [systemPrompt, setSystemPrompt] = useState('')
@@ -86,18 +88,63 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
     [bulkItemsText],
   )
 
+  // Parse section outline supporting both flat headings AND headings with
+  // bulleted subtopics. Lines without a bullet prefix are H2 headings; lines
+  // starting with - / * / • / "N." become subtopics of the most recent heading.
+  // Optional "## " prefix on heading lines is stripped.
+  const sectionStructure = useMemo(() => {
+    const out: { heading: string; subtopics: string[] }[] = []
+    for (const raw of sectionOutlineText.split('\n')) {
+      const line = raw.trim()
+      if (!line || line.startsWith('#')) {
+        // Allow "## heading" — treat as heading, strip prefix
+        if (line.startsWith('##')) {
+          const h = line.replace(/^##?\s*/, '').trim()
+          if (h) out.push({ heading: h, subtopics: [] })
+        }
+        continue
+      }
+      const subMatch = line.match(/^(?:[-*•]|\d+\.)\s+(.+)$/)
+      if (subMatch) {
+        const sub = subMatch[1].trim()
+        if (out.length === 0) out.push({ heading: sub, subtopics: [] })
+        else out[out.length - 1].subtopics.push(sub)
+      } else {
+        out.push({ heading: line, subtopics: [] })
+      }
+    }
+    return out
+  }, [sectionOutlineText])
+
+  // Legacy flat list (just heading strings) — kept for template-rendering path.
   const sectionOutline = useMemo(
-    () => sectionOutlineText.split('\n').map((s) => s.trim()).filter(Boolean),
-    [sectionOutlineText],
+    () => sectionStructure.map((s) => s.heading),
+    [sectionStructure],
   )
 
-  // Parse "term:N" or "term" lines into structured main keywords.
+  // LSI keywords — one per line, no count needed (target is ≥1× each).
+  const lsiKeywords = useMemo(
+    () => lsiKeywordsText.split('\n').map((s) => s.trim()).filter(Boolean),
+    [lsiKeywordsText],
+  )
+
+  // Parse keyword lines. Supports:
+  //   "term"            → minCount=1
+  //   "term:N"          → minCount=N
+  //   "term:MIN-MAX"    → minCount=MIN, maxCount=MAX  (hard upper limit, used by post-processor)
+  // Dash variations accepted: -, –, —
   const mainKeywords = useMemo(() => {
     return mainKeywordsText
       .split('\n')
       .map((line) => line.trim())
       .filter(Boolean)
       .map((line) => {
+        const range = line.match(/^(.+?)\s*:\s*(\d+)\s*[-–—]\s*(\d+)\s*$/)
+        if (range) {
+          const min = Math.max(1, Number(range[2]))
+          const max = Math.max(min, Number(range[3]))
+          return { term: range[1].trim(), minCount: min, maxCount: max }
+        }
         const m = line.match(/^(.+?)\s*:\s*(\d+)\s*$/)
         if (m) return { term: m[1].trim(), minCount: Math.max(1, Number(m[2])) }
         return { term: line, minCount: 1 }
@@ -190,10 +237,12 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
           sourceUrl: features.sourceUrl ? sourceUrl : '',
           documentText: features.document ? documentText : '',
           mainKeywords: features.seo ? mainKeywords : [],
+          lsiKeywords: features.seo ? lsiKeywords : [],
           wordCountMin: features.seo && wordCountMin !== '' ? Number(wordCountMin) : undefined,
           wordCountMax: features.seo && wordCountMax !== '' ? Number(wordCountMax) : undefined,
           secondaryAudience: features.seo ? secondaryAudience : '',
           sectionOutline: features.seo ? sectionOutline : [],
+          sectionStructure: features.seo ? sectionStructure : [],
           internalLinks: briefInternalLinks.length > 0 ? briefInternalLinks : undefined,
         }),
       })
@@ -449,33 +498,69 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
 
             <div className="space-y-1">
               <Label>
-                Section outline <span className="text-muted-foreground font-normal">(optional — exact H2 headings to use, one per line; if empty, system uses standard flow)</span>
+                Section outline <span className="text-muted-foreground font-normal">
+                  (H2 headings with optional H3 subtopics. Heading on its own line, subtopics on indented bullets <code className="text-[11px]">- subtopic</code>.
+                  Empty = system uses its standard flow.)
+                </span>
               </Label>
               <Textarea
-                rows={6}
+                rows={10}
                 value={sectionOutlineText}
                 onChange={(e) => setSectionOutlineText(e.target.value)}
-                placeholder={'What Is an EMI Licence and How Does the Industry Work?\nHow Does N5Deal Support EMI Licence Acquisition?\nBuy Your EMI Licence Step by Step\nChoose the Right Country and Licence Scope\nWhat Tools and Infrastructure Should You Plan For?\nWhat Is the Next Step?'}
+                placeholder={'Launch Your Fintech Business With a CFA License\n- What Is a CFA License and Who Needs It\n- Financial Activities Allowed Under a CFA License\n- How CFA Licensing Supports Investment Companies\nWhy a CFA License Is Essential for Modern Financial Companies\n- Key Benefits of Obtaining a CFA License\n- How a CFA License Builds Trust and Regulatory Compliance\n- Why Investment Firms Choose Licensed Structures'}
                 className="font-mono text-xs"
               />
-              {sectionOutline.length > 0 && (
-                <p className="text-xs text-muted-foreground">{sectionOutline.length} headings parsed</p>
+              {sectionStructure.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {sectionStructure.length} H2 heading{sectionStructure.length === 1 ? '' : 's'} parsed
+                  {sectionStructure.some((s) => s.subtopics.length > 0) ? (
+                    <> · {sectionStructure.reduce((n, s) => n + s.subtopics.length, 0)} subtopic{sectionStructure.reduce((n, s) => n + s.subtopics.length, 0) === 1 ? '' : 's'}</>
+                  ) : null}
+                </p>
               )}
             </div>
 
             <div className="space-y-1">
               <Label>
-                Main SEO keywords <span className="text-muted-foreground font-normal">(one per line; append <code className="text-[11px]">:N</code> for min frequency. <strong>First line is the PRIMARY keyword</strong>, rest are secondary.)</span>
+                Main SEO keywords <span className="text-muted-foreground font-normal">
+                  (one per line. <strong>First line is PRIMARY</strong>, rest are secondary. Formats:
+                  <code className="text-[11px]"> term:N</code> = min N×;
+                  <code className="text-[11px]"> term:MIN-MAX</code> = exact range (post-processor caps at MAX);
+                  <code className="text-[11px]"> term</code> alone = min 1×.)
+                </span>
               </Label>
               <Textarea
                 rows={6}
                 value={mainKeywordsText}
                 onChange={(e) => setMainKeywordsText(e.target.value)}
-                placeholder={'fintech startup:6\nfintech startups:3\nfintech startup companies:1\nbuild fintech startup:1\nlaunch fintech company:2'}
+                placeholder={'CFA license:5-6\nfinancial services license:2-3\ninvestment business license:1-2\nfintech licensing solutions:1-2\nregulated financial company:1-2\nfinancial compliance requirements:1\nAML and KYC procedures:1'}
                 className="font-mono text-xs"
               />
               {mainKeywords.length > 0 && (
-                <p className="text-xs text-muted-foreground">{mainKeywords.length} keyword{mainKeywords.length === 1 ? '' : 's'} parsed</p>
+                <p className="text-xs text-muted-foreground">
+                  {mainKeywords.length} keyword{mainKeywords.length === 1 ? '' : 's'} parsed
+                  {mainKeywords.some((k: any) => k.maxCount) ? (
+                    <> · {mainKeywords.filter((k: any) => k.maxCount).length} with explicit MIN-MAX range</>
+                  ) : null}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <Label>
+                LSI / supporting keywords <span className="text-muted-foreground font-normal">
+                  (one per line. Target: ≥60% of these appear ≥1× in the page; inflection allowed.)
+                </span>
+              </Label>
+              <Textarea
+                rows={6}
+                value={lsiKeywordsText}
+                onChange={(e) => setLsiKeywordsText(e.target.value)}
+                placeholder={'incorporation license\ninvestment management license\ncapital markets regulation\nlicensed financial institution\ncross-border financial services\nfintech regulatory compliance\nfinancial services provider\nfinancial business incorporation'}
+                className="font-mono text-xs"
+              />
+              {lsiKeywords.length > 0 && (
+                <p className="text-xs text-muted-foreground">{lsiKeywords.length} LSI keyword{lsiKeywords.length === 1 ? '' : 's'} parsed</p>
               )}
             </div>
             <div className="grid gap-3 md:grid-cols-2">

@@ -44,10 +44,20 @@ export async function POST(req: Request) {
   const brief: PagePostProcessBrief | null = briefRaw && typeof briefRaw === 'object' ? {
     topic: typeof briefRaw.topic === 'string' ? briefRaw.topic : undefined,
     primaryKeyword: briefRaw.primaryKeyword && briefRaw.primaryKeyword.term
-      ? { term: String(briefRaw.primaryKeyword.term), minCount: Math.max(1, Number(briefRaw.primaryKeyword.minCount ?? 1)) }
+      ? {
+          term: String(briefRaw.primaryKeyword.term),
+          minCount: Math.max(1, Number(briefRaw.primaryKeyword.minCount ?? 1)),
+          maxCount: Number.isFinite(Number(briefRaw.primaryKeyword.maxCount)) && Number(briefRaw.primaryKeyword.maxCount) > 0
+            ? Math.floor(Number(briefRaw.primaryKeyword.maxCount))
+            : undefined,
+        }
       : undefined,
     secondaryKeywords: Array.isArray(briefRaw.secondaryKeywords)
-      ? briefRaw.secondaryKeywords.map((k: any) => ({ term: String(k?.term ?? ''), minCount: Math.max(1, Number(k?.minCount ?? 1)) })).filter((k: any) => k.term)
+      ? briefRaw.secondaryKeywords.map((k: any) => ({
+          term: String(k?.term ?? ''),
+          minCount: Math.max(1, Number(k?.minCount ?? 1)),
+          maxCount: Number.isFinite(Number(k?.maxCount)) && Number(k?.maxCount) > 0 ? Math.floor(Number(k.maxCount)) : undefined,
+        })).filter((k: any) => k.term)
       : [],
     lsiKeywords: Array.isArray(briefRaw.lsiKeywords) ? briefRaw.lsiKeywords.map((s: any) => String(s)).filter(Boolean) : [],
     internalLinks: Array.isArray(briefRaw.internalLinks)
