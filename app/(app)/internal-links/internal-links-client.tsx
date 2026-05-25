@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Plus, Trash2, Link2, Search, Pencil, Star, Power, PowerOff, ExternalLink } from 'lucide-react'
+import { Plus, Trash2, Link2, Search, Pencil, Star, Power, PowerOff, ExternalLink, RefreshCw, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -67,6 +67,37 @@ export function InternalLinksClient({ initialLinks }: Props) {
   const [editOpen, setEditOpen] = useState(false)
   const [editForm, setEditForm] = useState<InternalLink | null>(null)
   const [editAltsInput, setEditAltsInput] = useState('')
+
+  const [syncOpen, setSyncOpen] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [sitemapUrl, setSitemapUrl] = useState('https://n5deal.com/sitemap.xml')
+  const [deactivateMissing, setDeactivateMissing] = useState(false)
+  const [lastSyncSummary, setLastSyncSummary] = useState<{
+    total: number; created: number; skipped: number; deactivated: number; reactivated: number;
+    details: { created: string[]; deactivated: string[] }
+  } | null>(null)
+
+  const handleSyncSitemap = async () => {
+    setSyncing(true)
+    setLastSyncSummary(null)
+    try {
+      const res = await fetch('/api/internal-links/sync-sitemap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sitemapUrl: sitemapUrl.trim(), deactivateMissing }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data?.error ?? 'Sitemap sync failed')
+        return
+      }
+      setLastSyncSummary(data)
+      toast.success(`Synced ${data.total} URLs — created ${data.created}, skipped ${data.skipped}${data.deactivated ? `, deactivated ${data.deactivated}` : ''}`)
+      router.refresh()
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   const categories = useMemo(() => {
     const set = new Set<string>()
@@ -238,6 +269,83 @@ export function InternalLinksClient({ initialLinks }: Props) {
           </select>
         </div>
         <div className="flex gap-2">
+          <Dialog open={syncOpen} onOpenChange={setSyncOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-1.5">
+                <RefreshCw className="h-3.5 w-3.5" /> Sync sitemap
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-xl">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <RefreshCw className="h-4 w-4" /> Sync internal links from sitemap
+                </DialogTitle>
+                <DialogDescription>
+                  Pulls every URL from your site's sitemap.xml and adds the missing ones to this library.
+                  Existing links are NOT overwritten — your custom anchors and priorities stay intact.
+                  Well-known landing pages (/buyer, /seller, /faq, /marketplace, /incorporation-license…)
+                  get hand-written anchors automatically.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="sitemap-url">Sitemap URL</Label>
+                  <Input
+                    id="sitemap-url"
+                    value={sitemapUrl}
+                    onChange={(e) => setSitemapUrl(e.target.value)}
+                    placeholder="https://n5deal.com/sitemap.xml"
+                  />
+                </div>
+                <label className="flex items-start gap-2 text-sm cursor-pointer">
+                  <Checkbox
+                    checked={deactivateMissing}
+                    onCheckedChange={(v) => setDeactivateMissing(Boolean(v))}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    <span className="font-medium">Deactivate URLs that are no longer in the sitemap</span>
+                    <span className="block text-xs text-muted-foreground mt-0.5">
+                      Pages that have been deleted from the site will be marked inactive instead of deleted.
+                      Leave unchecked on first sync — recommended.
+                    </span>
+                  </span>
+                </label>
+                {lastSyncSummary ? (
+                  <div className="rounded-md border border-border p-3 bg-muted/50 text-xs space-y-1.5">
+                    <div className="flex items-center gap-2 font-semibold text-foreground">
+                      Sync result
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 tabular-nums">
+                      <div><span className="text-muted-foreground">Total:</span> {lastSyncSummary.total}</div>
+                      <div className="text-emerald-700 dark:text-emerald-300">+{lastSyncSummary.created} new</div>
+                      <div className="text-muted-foreground">{lastSyncSummary.skipped} kept</div>
+                      {lastSyncSummary.deactivated > 0 ? <div className="text-amber-700 dark:text-amber-300">−{lastSyncSummary.deactivated} off</div> : null}
+                    </div>
+                    {lastSyncSummary.reactivated > 0 ? (
+                      <div className="text-emerald-700 dark:text-emerald-300">+{lastSyncSummary.reactivated} reactivated</div>
+                    ) : null}
+                    {lastSyncSummary.details.created.length > 0 ? (
+                      <details className="mt-1">
+                        <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Show newly added URLs ({lastSyncSummary.details.created.length})</summary>
+                        <div className="mt-1.5 max-h-40 overflow-y-auto font-mono text-[10px] text-muted-foreground">
+                          {lastSyncSummary.details.created.slice(0, 100).map((u) => <div key={u}>{u}</div>)}
+                          {lastSyncSummary.details.created.length > 100 ? <div>… and {lastSyncSummary.details.created.length - 100} more</div> : null}
+                        </div>
+                      </details>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setSyncOpen(false)} disabled={syncing}>Close</Button>
+                <Button onClick={handleSyncSitemap} disabled={syncing || !sitemapUrl.trim()} className="gap-1.5">
+                  {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                  {syncing ? 'Syncing…' : 'Run sync'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
               <Button>
