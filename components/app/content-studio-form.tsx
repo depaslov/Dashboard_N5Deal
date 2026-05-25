@@ -277,6 +277,8 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
     const decoder = new TextDecoder()
     let full = ''
     let buffer = ''
+    let processingCount = 0
+    let sawCompleted = false
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
@@ -290,12 +292,34 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
         if (!payload || payload === '[DONE]') continue
         try {
           const data = JSON.parse(payload)
-          if (data.status === 'processing' && data.delta) { full += data.delta; onDelta(full) }
-          else if (data.status === 'completed') { full = data.result || full; onDelta(full) }
-          else if (data.status === 'error') throw new Error(data.message)
-        } catch {}
+          if (data.status === 'processing' && data.delta) {
+            full += data.delta
+            processingCount++
+            onDelta(full)
+          } else if (data.status === 'completed') {
+            sawCompleted = true
+            // Always trust the completed result if it's non-empty — that's
+            // the post-processed canonical version. Only fall back to the
+            // accumulated stream text if completed.result is empty/missing.
+            const finalText = (typeof data.result === 'string' && data.result.length > 0) ? data.result : full
+            full = finalText
+            onDelta(finalText)
+            console.log(`[studio] completed event — result: ${data.result?.length ?? 0} chars, accumulated stream: ${processingCount} chunks. Final: ${finalText.length} chars.`)
+            if (data.postFixes?.length) console.log('[studio] postprocess fixes:', data.postFixes)
+          } else if (data.status === 'error') {
+            throw new Error(data.message)
+          }
+        } catch (e) {
+          // Don't swallow real errors — surface a JSON parse failure so
+          // we don't end up with a silent empty output.
+          if (e instanceof Error && e.message && !e.message.startsWith('Unexpected')) {
+            throw e
+          }
+          console.warn('[studio] SSE parse error on payload:', payload.slice(0, 120))
+        }
       }
     }
+    console.log(`[studio] stream done — sawCompleted: ${sawCompleted}, processingChunks: ${processingCount}, finalLength: ${full.length}`)
     return full
   }
 
@@ -305,7 +329,15 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
     if (!bulkMode) {
       setGenerating(true); setOutput(''); setSavedId(null)
       try {
-        await streamOneGeneration(systemPrompt, userPrompt, setOutput, assembledBrief)
+        const final = await streamOneGeneration(systemPrompt, userPrompt, setOutput, assembledBrief)
+        // Defensive: if the stream finished but state never updated (race
+        // with React batching, or some chunk got swallowed), force the
+        // final text into the output state so the user can see it.
+        if (final && final.length > 0) {
+          setOutput(final)
+        } else {
+          toast.error('Generation finished but no text was returned. Check browser console + Network tab.')
+        }
       } catch (err: any) {
         toast.error(err?.message ?? 'Could not generate')
       } finally { setGenerating(false) }
