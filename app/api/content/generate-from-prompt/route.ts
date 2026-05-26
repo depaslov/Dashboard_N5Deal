@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { postProcessPage, type PagePostProcessBrief } from '@/lib/prompts/page-postprocess'
+import { streamAnthropic } from '@/lib/llm/anthropic-stream'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -26,8 +27,8 @@ export async function POST(req: Request) {
   const userId = session?.user?.id as string | undefined
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  if (!process.env.ABACUSAI_API_KEY) {
-    return NextResponse.json({ error: 'AI API key is not configured on the server' }, { status: 500 })
+  if (!process.env.ABACUSAI_API_KEY && !process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json({ error: 'No AI API key configured — set ABACUSAI_API_KEY or ANTHROPIC_API_KEY' }, { status: 500 })
   }
 
   let body: any
@@ -86,15 +87,24 @@ export async function POST(req: Request) {
       // error instead of returning empty content.
       const upstreamTimeout = setTimeout(() => upstreamAbort.abort(), 280_000)
 
-      // Model + token budget are env-configurable so the operator can swap
-      // models without redeploying code when gpt-5.4-mini misbehaves
-      // (e.g. reasoning loop, content filter). Falls back to known-good
-      // defaults if env not set.
-      const MODEL = process.env.ABACUSAI_MODEL ?? 'gpt-5.4-mini'
-      const MAX_TOKENS_PAGE = Number(process.env.ABACUSAI_MAX_TOKENS_PAGE) || 4096
-      const MAX_TOKENS_DEFAULT = Number(process.env.ABACUSAI_MAX_TOKENS) || 3500
+      // Provider routing — prefer Anthropic direct when:
+      //   1. ANTHROPIC_API_KEY is set, AND
+      //   2. operator opted in via LLM_PROVIDER=anthropic OR set CLAUDE_MODEL,
+      //      OR no Abacus key exists (Anthropic is the only option).
+      // Otherwise fall through to Abacus.AI's OpenAI-compatible gateway.
+      const ENV_PROVIDER = (process.env.LLM_PROVIDER ?? '').toLowerCase()
+      const CLAUDE_MODEL = process.env.CLAUDE_MODEL ?? 'claude-sonnet-4-6'
+      const ABACUS_MODEL = process.env.ABACUSAI_MODEL ?? 'gpt-5.4-mini'
+      const hasAnthropic = Boolean(process.env.ANTHROPIC_API_KEY)
+      const hasAbacus = Boolean(process.env.ABACUSAI_API_KEY)
+      const wantsAnthropic = ENV_PROVIDER === 'anthropic' || Boolean(process.env.CLAUDE_MODEL)
+      const useAnthropic = hasAnthropic && (wantsAnthropic || !hasAbacus)
+
+      const MODEL = useAnthropic ? CLAUDE_MODEL : ABACUS_MODEL
+      const MAX_TOKENS_PAGE = Number(process.env.LLM_MAX_TOKENS_PAGE) || Number(process.env.ABACUSAI_MAX_TOKENS_PAGE) || (useAnthropic ? 8000 : 4096)
+      const MAX_TOKENS_DEFAULT = Number(process.env.LLM_MAX_TOKENS) || Number(process.env.ABACUSAI_MAX_TOKENS) || 3500
       const MAX_TOKENS = brief ? MAX_TOKENS_PAGE : MAX_TOKENS_DEFAULT
-      console.log(`[generate-from-prompt] using model=${MODEL} max_tokens=${MAX_TOKENS}`)
+      console.log(`[generate-from-prompt] provider=${useAnthropic ? 'anthropic' : 'abacus'} model=${MODEL} max_tokens=${MAX_TOKENS}`)
 
       async function callUpstream(maxTokens: number) {
         return fetch('https://apps.abacus.ai/v1/chat/completions', {
@@ -116,7 +126,84 @@ export async function POST(req: Request) {
         })
       }
 
+      // Shared finalisation step — runs post-processing (when brief present),
+      // emits the `completed` event, then the SSE terminator. Both provider
+      // branches converge here so the post-processor + telemetry logic only
+      // lives in one place.
+      async function finishWith(fullText: string) {
+        console.log(`[generate-from-prompt] stream complete. raw length: ${fullText.length} chars, brief present: ${Boolean(brief)}`)
+        if (!fullText.trim()) {
+          send({ status: 'error', message: 'LLM returned empty content (rate limit or upstream filter)' })
+        } else {
+          let finalText = fullText
+          let postFixes: string[] = []
+          if (brief) {
+            try {
+              const post = postProcessPage(fullText, brief)
+              finalText = post.text.trim() ? post.text : fullText
+              postFixes = post.fixes
+              console.log(`[generate-from-prompt] post-processed length: ${finalText.length} chars, fixes: ${postFixes.length}`)
+              if (postFixes.length) console.log('[generate-from-prompt] postprocess fixes:', postFixes)
+            } catch (e) {
+              console.error('[generate-from-prompt] postprocess threw, falling back to raw output:', e)
+              finalText = fullText
+            }
+          }
+          send({ status: 'completed', result: finalText, postFixes })
+        }
+        controller.enqueue(encoder.encode(`data: [DONE]\n\n`))
+      }
+
       try {
+        heartbeat = setInterval(() => {
+          try { controller.enqueue(encoder.encode(`: ping\n\n`)) } catch {}
+        }, 10000)
+
+        // ──────────────────────────────────────────────────────────────────
+        // Anthropic provider path — calls api.anthropic.com directly.
+        // ──────────────────────────────────────────────────────────────────
+        if (useAnthropic) {
+          const r1 = await streamAnthropic({
+            systemPrompt,
+            userPrompt,
+            model: MODEL,
+            maxTokens: MAX_TOKENS,
+            apiKey: process.env.ANTHROPIC_API_KEY!,
+            signal: upstreamAbort.signal,
+            onDelta: (delta) => send({ status: 'processing', delta }),
+          })
+          console.log(`[generate-from-prompt] anthropic attempt 1 — status=${r1.upstreamStatus} chunks=${r1.chunks} chars=${r1.text.length} terminated=${r1.terminated}`)
+          if (r1.chunks === 0) console.log(`[generate-from-prompt] anthropic RAW SAMPLE:\n---\n${r1.rawSample}\n---`)
+
+          let fullText = r1.text
+          let streamChunks = r1.chunks
+
+          // One retry on zero-content outcome (consistent with the Abacus path).
+          if (streamChunks === 0) {
+            console.warn('[generate-from-prompt] anthropic zero chunks — retrying once')
+            send({ status: 'processing', delta: '' })
+            const r2 = await streamAnthropic({
+              systemPrompt,
+              userPrompt,
+              model: MODEL,
+              maxTokens: MAX_TOKENS,
+              apiKey: process.env.ANTHROPIC_API_KEY!,
+              signal: upstreamAbort.signal,
+              onDelta: (delta) => send({ status: 'processing', delta }),
+            })
+            console.log(`[generate-from-prompt] anthropic attempt 2 — status=${r2.upstreamStatus} chunks=${r2.chunks} chars=${r2.text.length} terminated=${r2.terminated}`)
+            if (r2.chunks === 0) console.log(`[generate-from-prompt] anthropic attempt 2 RAW SAMPLE:\n---\n${r2.rawSample}\n---`)
+            fullText = r2.text
+            streamChunks = r2.chunks
+          }
+
+          await finishWith(fullText)
+          return
+        }
+
+        // ──────────────────────────────────────────────────────────────────
+        // Abacus.AI provider path — OpenAI-compatible gateway, original logic.
+        // ──────────────────────────────────────────────────────────────────
         let upstream = await callUpstream(MAX_TOKENS)
         console.log(`[generate-from-prompt] upstream attempt 1 — status=${upstream.status} content-type=${upstream.headers.get('content-type')}`)
 
@@ -128,19 +215,12 @@ export async function POST(req: Request) {
           return
         }
 
-        heartbeat = setInterval(() => {
-          try { controller.enqueue(encoder.encode(`: ping\n\n`)) } catch {}
-        }, 10000)
-
         async function readStream(body: ReadableStream<Uint8Array>): Promise<{ text: string; chunks: number; terminated: boolean; rawSample: string }> {
           const reader = body.getReader()
           const decoder = new TextDecoder()
           let partial = ''
           let fullText = ''
           let chunks = 0
-          // Keep a small sample of the actual stream bytes for diagnostics when
-          // the stream completes with 0 content — that's the only way to tell
-          // reasoning-tokens vs safety-filter vs upstream-error apart.
           let rawSample = ''
           try {
             while (true) {
@@ -204,31 +284,7 @@ export async function POST(req: Request) {
             console.error(`[generate-from-prompt] retry rejected: status=${upstream.status} body=${text.slice(0, 500)}`)
           }
         }
-        console.log(`[generate-from-prompt] stream complete. raw length: ${fullText.length} chars, brief present: ${Boolean(brief)}`)
-        if (!fullText.trim()) {
-          send({ status: 'error', message: 'LLM returned empty content (rate limit or upstream filter)' })
-        } else {
-          let finalText = fullText
-          let postFixes: string[] = []
-          if (brief) {
-            try {
-              const post = postProcessPage(fullText, brief)
-              // Defensive: if post-processor somehow returns empty, fall back
-              // to the raw model output instead of sending an empty page.
-              finalText = post.text.trim() ? post.text : fullText
-              postFixes = post.fixes
-              console.log(`[generate-from-prompt] post-processed length: ${finalText.length} chars, fixes: ${postFixes.length}`)
-              if (postFixes.length) console.log('[generate-from-prompt] postprocess fixes:', postFixes)
-            } catch (e) {
-              // Don't blow up the request on a post-processor bug — surface
-              // the raw output and log the error so it can be diagnosed.
-              console.error('[generate-from-prompt] postprocess threw, falling back to raw output:', e)
-              finalText = fullText
-            }
-          }
-          send({ status: 'completed', result: finalText, postFixes })
-        }
-        controller.enqueue(encoder.encode(`data: [DONE]\n\n`))
+        await finishWith(fullText)
       } catch (err: any) {
         const msg = err?.name === 'AbortError'
           ? 'Generation timed out after 280s — the model took too long to respond'
