@@ -69,6 +69,11 @@ export async function POST(req: Request) {
       : [],
   } : null
 
+  // Total chars of input — useful to log so we can see if Abacus is
+  // refusing oversized requests vs returning empty for another reason.
+  const inputBytes = systemPrompt.length + userPrompt.length
+  console.log(`[generate-from-prompt] inbound: system=${systemPrompt.length} user=${userPrompt.length} total=${inputBytes} brief=${Boolean(brief)}`)
+
   const encoder = new TextEncoder()
   const stream = new ReadableStream({
     async start(controller) {
@@ -80,8 +85,12 @@ export async function POST(req: Request) {
       // room for the final flush). If the LLM hangs we abort and surface an
       // error instead of returning empty content.
       const upstreamTimeout = setTimeout(() => upstreamAbort.abort(), 280_000)
-      try {
-        const upstream = await fetch('https://apps.abacus.ai/v1/chat/completions', {
+
+      // Helper that does one upstream attempt. Lets us retry once if the
+      // upstream connection terminates with zero content — that pattern
+      // looks like a transient Abacus issue rather than a real failure.
+      async function callUpstream(maxTokens: number) {
+        return fetch('https://apps.abacus.ai/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -94,18 +103,23 @@ export async function POST(req: Request) {
               { role: 'user', content: userPrompt },
             ],
             stream: true,
-            // When a brief is provided the user prompt is the strict
-            // buildPageUserPrompt format — system + user can run ~35k chars
-            // and the expected output is body (≤1000 words) + SEO METADATA
-            // + KEYWORD VERIFICATION + INTERNAL LINKS PLACED + CHECKLIST.
-            // 3500 tokens hits the ceiling mid-checklist; 6000 fits.
-            max_tokens: brief ? 6000 : 3500,
+            max_tokens: maxTokens,
           }),
           signal: upstreamAbort.signal,
         })
+      }
+
+      try {
+        // gpt-5.4-mini at Abacus appears to cap max_tokens at ~4096 even
+        // when the prompt + output would fit a larger context. The previous
+        // value of 6000 was causing "terminated" mid-stream with zero chunks.
+        const MAX_TOKENS = brief ? 4096 : 3500
+        let upstream = await callUpstream(MAX_TOKENS)
+        console.log(`[generate-from-prompt] upstream attempt 1 — status=${upstream.status} content-type=${upstream.headers.get('content-type')}`)
 
         if (!upstream.ok || !upstream.body) {
           const text = await upstream.text().catch(() => '')
+          console.error(`[generate-from-prompt] upstream rejected: status=${upstream.status} body=${text.slice(0, 500)}`)
           send({ status: 'error', message: `LLM upstream error: ${upstream.status} ${text.slice(0, 200)}` })
           controller.close()
           return
@@ -115,30 +129,60 @@ export async function POST(req: Request) {
           try { controller.enqueue(encoder.encode(`: ping\n\n`)) } catch {}
         }, 10000)
 
-        const reader = upstream.body.getReader()
-        const decoder = new TextDecoder()
-        let partial = ''
-        let fullText = ''
-
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          partial += decoder.decode(value, { stream: true })
-          const lines = partial.split('\n')
-          partial = lines.pop() ?? ''
-          for (const line of lines) {
-            const trimmed = line.trim()
-            if (!trimmed.startsWith('data:')) continue
-            const data = trimmed.slice(5).trim()
-            if (data === '[DONE]') continue
-            try {
-              const parsed = JSON.parse(data)
-              const delta: string = parsed?.choices?.[0]?.delta?.content ?? ''
-              if (delta) {
-                fullText += delta
-                send({ status: 'processing', delta })
+        async function readStream(body: ReadableStream<Uint8Array>): Promise<{ text: string; chunks: number; terminated: boolean }> {
+          const reader = body.getReader()
+          const decoder = new TextDecoder()
+          let partial = ''
+          let fullText = ''
+          let chunks = 0
+          try {
+            while (true) {
+              const { done, value } = await reader.read()
+              if (done) break
+              partial += decoder.decode(value, { stream: true })
+              const lines = partial.split('\n')
+              partial = lines.pop() ?? ''
+              for (const line of lines) {
+                const trimmed = line.trim()
+                if (!trimmed.startsWith('data:')) continue
+                const data = trimmed.slice(5).trim()
+                if (data === '[DONE]') continue
+                try {
+                  const parsed = JSON.parse(data)
+                  const delta: string = parsed?.choices?.[0]?.delta?.content ?? ''
+                  if (delta) {
+                    fullText += delta
+                    chunks++
+                    send({ status: 'processing', delta })
+                  }
+                } catch {}
               }
-            } catch {}
+            }
+            return { text: fullText, chunks, terminated: false }
+          } catch (err: any) {
+            // "terminated" / connection reset → tell the caller so they can retry.
+            console.error(`[generate-from-prompt] stream broke after ${chunks} chunks / ${fullText.length} chars:`, err?.message ?? err)
+            return { text: fullText, chunks, terminated: true }
+          }
+        }
+
+        let { text: fullText, chunks: streamChunks, terminated } = await readStream(upstream.body)
+        console.log(`[generate-from-prompt] attempt 1 result: chunks=${streamChunks} chars=${fullText.length} terminated=${terminated}`)
+
+        // Retry once if the upstream terminated BEFORE producing any content —
+        // that signature is consistent with a transient Abacus issue, not a
+        // real failure that would also fail on retry.
+        if (terminated && streamChunks === 0) {
+          console.warn('[generate-from-prompt] upstream terminated with zero chunks — retrying once')
+          send({ status: 'processing', delta: '' }) // keepalive for the client
+          upstream = await callUpstream(MAX_TOKENS)
+          console.log(`[generate-from-prompt] upstream attempt 2 — status=${upstream.status}`)
+          if (upstream.ok && upstream.body) {
+            const r2 = await readStream(upstream.body)
+            fullText = r2.text
+            streamChunks = r2.chunks
+            terminated = r2.terminated
+            console.log(`[generate-from-prompt] attempt 2 result: chunks=${streamChunks} chars=${fullText.length} terminated=${terminated}`)
           }
         }
         console.log(`[generate-from-prompt] stream complete. raw length: ${fullText.length} chars, brief present: ${Boolean(brief)}`)
