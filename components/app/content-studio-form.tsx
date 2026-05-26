@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -150,6 +150,87 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
         return { term: line, minCount: 1 }
       })
   }, [mainKeywordsText])
+
+  // Extract internal links from an uploaded TZ document.
+  //
+  // Supports the canonical Ukrainian TZ format the team uses:
+  //   1. Fintech License
+  //   URL: https://n5deal.com/incorporation-license/fintech
+  //   Анкор: fintech license
+  //
+  // Plus English / Russian variants ("Anchor:" / "Якорь:") and raw
+  // markdown links `[anchor](url)` that may appear in pasted TZs.
+  //
+  // Pairs are formed by scanning line-by-line, tracking the most recent
+  // URL: and Anchor: lines, and flushing them when a numbered list item
+  // (or bullet) signals a new block.
+  const extractedTzLinks = useMemo(() => {
+    if (!documentText.trim()) return []
+    const out: { url: string; anchor: string; priority: 'must' | 'nice' }[] = []
+    const seen = new Set<string>()
+
+    // Pass 1 — line-scan for "URL: …" + "Анкор: …" pairs
+    const lines = documentText.split('\n').map((l) => l.trim())
+    let pendingUrl = ''
+    let pendingAnchor = ''
+    const flush = () => {
+      const url = pendingUrl.replace(/[.,;]+$/, '').trim()
+      const anchor = pendingAnchor.trim()
+      pendingUrl = ''; pendingAnchor = ''
+      if (!url || !anchor || seen.has(url)) return
+      seen.add(url)
+      out.push({ url, anchor, priority: 'must' })
+    }
+    for (const line of lines) {
+      // Numbered / bulleted boundary — flush whatever we collected so far
+      if (/^\d+\.\s/.test(line) || /^[-*•]\s/.test(line)) {
+        if (pendingUrl && pendingAnchor) flush()
+      }
+      const urlM = line.match(/(?:URL|Url|url|Посилання|Ссылка)\s*[:：]\s*(https?:\/\/[^\s]+)/i)
+      if (urlM) {
+        if (pendingUrl && pendingAnchor) flush()
+        pendingUrl = urlM[1]
+        continue
+      }
+      const anchorM = line.match(/(?:Анкор|Anchor|Якорь|Анкор-текст|Anchor text)\s*[:：]\s*(.+)/i)
+      if (anchorM) {
+        if (pendingUrl && pendingAnchor) flush()
+        pendingAnchor = anchorM[1]
+        continue
+      }
+    }
+    if (pendingUrl && pendingAnchor) flush()
+
+    // Pass 2 — also catch raw markdown links scattered in the TZ
+    const mdRe = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g
+    let m: RegExpExecArray | null
+    while ((m = mdRe.exec(documentText)) !== null) {
+      const url = m[2].trim()
+      const anchor = m[1].trim()
+      if (!url || !anchor || seen.has(url)) continue
+      seen.add(url)
+      out.push({ url, anchor, priority: 'must' })
+    }
+
+    return out
+  }, [documentText])
+
+  // Auto-fill the per-brief internal links textarea from the TZ when a TZ
+  // is uploaded AND the user hasn't started typing their own links there.
+  // Won't overwrite manual edits — checks for emptiness first.
+  useEffect(() => {
+    if (extractedTzLinks.length === 0) return
+    if (internalLinksText.trim().length > 0) return
+    const formatted = extractedTzLinks
+      .map((l) => `[${l.anchor}](${l.url}) — must`)
+      .join('\n')
+    setInternalLinksText(formatted)
+    toast.success(`Imported ${extractedTzLinks.length} link${extractedTzLinks.length === 1 ? '' : 's'} from the TZ`)
+    // We deliberately only watch extractedTzLinks; running again when
+    // internalLinksText changes would create a loop or block legitimate
+    // user edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [extractedTzLinks])
 
   // Parse per-brief internal links from a paste-friendly textarea.
   // Supported formats (one link per line, mix-and-match):
@@ -609,12 +690,31 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
             </div>
 
             <div className="space-y-1">
-              <Label>
-                Internal links from this brief <span className="text-muted-foreground font-normal">
-                  (one per line — if filled, these ANCHORS are used verbatim and the project library is ignored.
-                  Format: <code className="text-[11px]">[anchor](url) — must</code> or <code className="text-[11px]">anchor → url must</code>)
-                </span>
-              </Label>
+              <div className="flex items-start justify-between gap-2 flex-wrap">
+                <Label>
+                  Internal links from this brief <span className="text-muted-foreground font-normal">
+                    (one per line — if filled, these ANCHORS are used verbatim and the project library is ignored.
+                    Format: <code className="text-[11px]">[anchor](url) — must</code> or <code className="text-[11px]">anchor → url must</code>)
+                  </span>
+                </Label>
+                {extractedTzLinks.length > 0 ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      const formatted = extractedTzLinks
+                        .map((l) => `[${l.anchor}](${l.url}) — must`)
+                        .join('\n')
+                      setInternalLinksText(formatted)
+                      toast.success(`Replaced with ${extractedTzLinks.length} link${extractedTzLinks.length === 1 ? '' : 's'} from the TZ`)
+                    }}
+                  >
+                    Re-import from TZ ({extractedTzLinks.length})
+                  </Button>
+                ) : null}
+              </div>
               <Textarea
                 rows={5}
                 value={internalLinksText}
@@ -627,9 +727,13 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
                   {briefInternalLinks.length} link{briefInternalLinks.length === 1 ? '' : 's'} parsed —
                   project library will be IGNORED, only these anchors will be sent to the LLM and accepted by the post-processor.
                 </p>
+              ) : extractedTzLinks.length > 0 ? (
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  TZ contains {extractedTzLinks.length} link{extractedTzLinks.length === 1 ? '' : 's'} but they haven't been imported here yet. Click "Re-import from TZ" above to load them, or paste manually.
+                </p>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  Empty = system uses the active links from the project library (with their stored anchors).
+                  Empty = system uses the active links from the project library. Upload a TZ in the next step — links with <code className="text-[11px]">URL: …</code> + <code className="text-[11px]">Анкор: …</code> blocks are auto-imported here.
                 </p>
               )}
             </div>
