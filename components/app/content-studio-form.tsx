@@ -73,6 +73,16 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
   const [output, setOutput] = useState('')
   const [generating, setGenerating] = useState(false)
   const [savedId, setSavedId] = useState<string | null>(null)
+  // Always-visible stream telemetry so failures don't end up as a blank screen.
+  const [streamStats, setStreamStats] = useState<{
+    chunks: number
+    rawChars: number
+    finalChars: number
+    sawCompleted: boolean
+    state: 'idle' | 'streaming' | 'done' | 'error' | 'empty'
+    error?: string
+    postFixes?: string[]
+  }>({ chunks: 0, rawChars: 0, finalChars: 0, sawCompleted: false, state: 'idle' })
 
   // Output (bulk)
   const [bulkResults, setBulkResults] = useState<{ topic: string; output: string; status: 'pending' | 'running' | 'done' | 'error'; error?: string }[]>([])
@@ -345,21 +355,28 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
   // For bulk: each item gets its own assembly + generation, so the prompt
   // includes that item's topic. Returns the full assembled text.
   const streamOneGeneration = async (sys: string, usr: string, onDelta: (s: string) => void, brief?: any) => {
+    setStreamStats({ chunks: 0, rawChars: 0, finalChars: 0, sawCompleted: false, state: 'streaming' })
     const res = await fetch('/api/content/generate-from-prompt', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ systemPrompt: sys, userPrompt: usr, brief: brief ?? null }),
     })
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))
-      throw new Error(data?.error ?? 'Failed to generate')
+      const msg = data?.error ?? 'Failed to generate'
+      setStreamStats((s) => ({ ...s, state: 'error', error: msg }))
+      throw new Error(msg)
     }
-    if (!res.body) throw new Error('No response body')
+    if (!res.body) {
+      setStreamStats((s) => ({ ...s, state: 'error', error: 'No response body' }))
+      throw new Error('No response body')
+    }
     const reader = res.body.getReader()
     const decoder = new TextDecoder()
     let full = ''
     let buffer = ''
     let processingCount = 0
     let sawCompleted = false
+    let postFixes: string[] | undefined = undefined
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
@@ -377,22 +394,24 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
             full += data.delta
             processingCount++
             onDelta(full)
+            // Update telemetry every 5 chunks so render doesn't thrash
+            if (processingCount % 5 === 0) {
+              setStreamStats((s) => ({ ...s, chunks: processingCount, rawChars: full.length }))
+            }
           } else if (data.status === 'completed') {
             sawCompleted = true
-            // Always trust the completed result if it's non-empty — that's
-            // the post-processed canonical version. Only fall back to the
-            // accumulated stream text if completed.result is empty/missing.
             const finalText = (typeof data.result === 'string' && data.result.length > 0) ? data.result : full
             full = finalText
             onDelta(finalText)
+            postFixes = data.postFixes
             console.log(`[studio] completed event — result: ${data.result?.length ?? 0} chars, accumulated stream: ${processingCount} chunks. Final: ${finalText.length} chars.`)
             if (data.postFixes?.length) console.log('[studio] postprocess fixes:', data.postFixes)
           } else if (data.status === 'error') {
-            throw new Error(data.message)
+            const msg = data.message ?? 'Upstream error'
+            setStreamStats((s) => ({ ...s, state: 'error', error: msg, chunks: processingCount, rawChars: full.length }))
+            throw new Error(msg)
           }
         } catch (e) {
-          // Don't swallow real errors — surface a JSON parse failure so
-          // we don't end up with a silent empty output.
           if (e instanceof Error && e.message && !e.message.startsWith('Unexpected')) {
             throw e
           }
@@ -401,6 +420,14 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
       }
     }
     console.log(`[studio] stream done — sawCompleted: ${sawCompleted}, processingChunks: ${processingCount}, finalLength: ${full.length}`)
+    setStreamStats({
+      chunks: processingCount,
+      rawChars: processingCount > 0 ? full.length : 0,
+      finalChars: full.length,
+      sawCompleted,
+      state: full.length === 0 ? 'empty' : 'done',
+      postFixes,
+    })
     return full
   }
 
@@ -902,6 +929,47 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
               </details>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* STEP 3 — Stream telemetry (always visible during/after a single generation) */}
+      {!bulkMode && streamStats.state !== 'idle' && (
+        <div className={`rounded-lg border p-4 text-sm ${
+          streamStats.state === 'error' || streamStats.state === 'empty'
+            ? 'border-destructive/50 bg-destructive/5'
+            : streamStats.state === 'streaming'
+              ? 'border-primary/30 bg-primary/5'
+              : 'border-emerald-500/30 bg-emerald-500/5'
+        }`}>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="font-medium">
+              {streamStats.state === 'streaming' && <>⏳ Streaming… {streamStats.chunks} chunks · {streamStats.rawChars.toLocaleString()} chars so far</>}
+              {streamStats.state === 'done' && <>✓ Done — {streamStats.finalChars.toLocaleString()} chars, {streamStats.chunks} chunks streamed</>}
+              {streamStats.state === 'empty' && <>⚠️ Stream finished but no text — see diagnostics below</>}
+              {streamStats.state === 'error' && <>✗ Error: {streamStats.error}</>}
+            </div>
+          </div>
+          {(streamStats.state === 'empty' || streamStats.state === 'error') && (
+            <div className="mt-3 space-y-1.5 text-xs text-muted-foreground">
+              <div>• Stream chunks received: <strong>{streamStats.chunks}</strong></div>
+              <div>• Raw text accumulated: <strong>{streamStats.rawChars.toLocaleString()}</strong> chars</div>
+              <div>• Server "completed" event seen: <strong>{streamStats.sawCompleted ? 'yes' : 'no'}</strong></div>
+              <div className="pt-1">
+                {streamStats.chunks === 0
+                  ? <>The upstream LLM returned 0 content chunks. Most common causes: rate limit, safety filter, wrong API key, or the model spent its budget on reasoning. Check the dev-server terminal for <code className="text-[11px]">[generate-from-prompt]</code> log lines.</>
+                  : <>Stream produced text but the final result was empty after post-processing. Check the dev-server terminal for the <code className="text-[11px]">[generate-from-prompt] post-processed length</code> log line.</>
+                }
+              </div>
+            </div>
+          )}
+          {streamStats.postFixes && streamStats.postFixes.length > 0 && (
+            <details className="mt-3 text-xs">
+              <summary className="cursor-pointer">Show {streamStats.postFixes.length} post-processor fix{streamStats.postFixes.length === 1 ? '' : 'es'}</summary>
+              <ul className="mt-1.5 ml-4 list-disc space-y-0.5">
+                {streamStats.postFixes.map((f, i) => <li key={i}>{f}</li>)}
+              </ul>
+            </details>
+          )}
         </div>
       )}
 
