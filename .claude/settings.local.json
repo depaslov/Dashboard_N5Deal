@@ -62,7 +62,8 @@
       "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
       "Bash(curl -sS \"https://n5deal.com/sitemap.xml\")",
       "Bash(awk -F/ '{print \"/\"$4}')",
-      "Bash(git reset *)"
+      "Bash(git reset *)",
+      "Bash(git revert *)"
     ]
   }
 }

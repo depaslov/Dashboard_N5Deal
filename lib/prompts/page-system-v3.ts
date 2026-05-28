@@ -262,6 +262,14 @@ ${input.currentContent}`)
 7. End with: SEO METADATA + KEYWORD VERIFICATION (real counts) + INTERNAL LINKS PLACED + PRE-OUTPUT CHECKLIST.
 8. Output ONLY the page Markdown — no "Here is the page:" preamble, no commentary.
 
+FACTUAL + COHERENCE (review-driven — these caused real defects):
+9. Regulatory citations: don't guess numbered references. AML documentation = FATF Rec 10 (CDD) + 11 (record-keeping), NOT Rec 15 (which is virtual assets only). Unsure of a number → name the framework generally ("under FATF AML standards").
+10. Describe what the licence PERMITS using regulatory activities ("arranging investments", "dealing in investments"), NOT operational processes ("client onboarding", "service flow").
+11. Don't force two keywords into a false comparison. If a keyword distorts meaning, rephrase the sentence — clarity beats keyword count.
+12. "the two X" / "both" / "these" must refer to things you explicitly NAMED in the same or prior sentence. Name both before referring to "the two".
+13. Each heading must be answered by its section: "Why" → reason, "How" → process, "What" → definition. Re-read every heading vs its first sentence.
+14. One grammatical person per section: never switch between "you" and "founders/firms" mid-sentence.
+
 Now generate the page.`)
 
   return lines.join('\n\n')
@@ -457,6 +465,30 @@ For global analogues (e.g. PSSP Nigeria, SVF Hong Kong, PPI India):
 name them explicitly, state the jurisdiction, note they operate under
 distinct local rules. Do NOT present them as identical to the primary license.
 
+### REGULATORY CITATION ACCURACY (high severity — wrong number = factual error)
+Do NOT cite a specific numbered regulation / recommendation unless you are
+certain the number is correct for that exact topic. A wrong number misleads
+readers and damages credibility. Known FATF Recommendation scopes:
+- FATF Recommendation 10 = Customer Due Diligence (CDD) — client identity / onboarding documentation
+- FATF Recommendation 11 = Record-keeping
+- FATF Recommendation 15 = New technologies / virtual assets ONLY (NOT general AML docs)
+- FATF Recommendation 16 = Wire transfers ("travel rule")
+So "documentation must match the business model" → cite Recommendations 10 and 11,
+NOT 15. When unsure of the exact number, reference the framework generally
+("under FATF AML standards", "per applicable AML rules") — never guess a number.
+The same applies to PSD2 articles, MiCA titles, EBA guidelines: name the
+framework generally unless the specific article/number is certain.
+
+### REGULATORY vs OPERATIONAL FRAMING (medium severity)
+When describing what a license PERMITS, use regulatory activity categories,
+NOT operational business processes.
+- USE (regulatory): "arranging investments", "advising on financial instruments",
+  "dealing in investments", "facilitating regulated market-facing transactions",
+  "providing structured access to capital-markets services within the authorised scope".
+- DO NOT USE (operational): "client onboarding", "operating a documented service
+  flow", "handling paperwork". Those describe HOW a business runs day-to-day, not
+  WHAT the licence authorises — mixing them misleads a reader comparing licence scope.
+
 ---
 
 ## PART 3 — ANTI-DEGRADATION RULES (apply on every iteration, not just first)
@@ -502,6 +534,48 @@ or merge it into an adjacent sentence where it adds context.
 ALL bullet list items must start with a capital letter.
 All items within one list must follow the same grammatical structure
 (all noun phrases OR all verb phrases — never mixed in the same list).
+
+### Keyword insertion must not break meaning (coherence)
+Meaning always wins over keyword placement. NEVER force two keywords into a
+comparison or list structure if they aren't genuinely alternatives.
+- WRONG: "Founders comparing fintech license and fintech licensing solutions…"
+  (these aren't two things being compared — the sentence falsely implies they're
+  alternatives).
+- RIGHT: "Founders exploring fintech licensing solutions often reach the CFA route
+  where structure, ownership, and reporting obligations become unavoidable."
+If a keyword cannot be placed without distorting the sentence's meaning, rephrase
+the whole sentence — do not sacrifice clarity to hit a keyword count.
+
+### Referring expressions need clear antecedents (coherence)
+Every "the two X", "both", "the former/latter", "these", "the two files" must
+point to two (or more) things you EXPLICITLY named in the same or the immediately
+preceding sentence.
+- WRONG: name only "crypto license", then write "the two files should never be
+  treated as interchangeable" — only one was named, the reader has to guess the other.
+- RIGHT: "A CFA authorisation and a crypto license address different activity sets
+  and should never be treated as interchangeable — holding one does not satisfy
+  the requirements of the other."
+
+### Heading must be answered by its section (coherence)
+Each H2/H3 heading is a promise the section body must keep. Re-read every heading
+before finalising and confirm the section's first sentence starts answering exactly
+that question:
+- "Why …?" → the section must give the REASON, not just describe what happens next.
+- "How …?" → the section must give the PROCESS or steps.
+- "What …?" → the section must give the DEFINITION or scope.
+Example failure: heading "Why Investment Firms Choose Licensed Structures" followed
+by a paragraph that only says what firms do AFTER licensing. Fix: open the section
+with the actual reason ("Investment firms choose licensed structures because
+unlicensed entities are shut out of institutional relationships, correspondent
+accounts, and regulated market access"), or change the heading to match the content
+("How Licensed Structures Support Long-Term Growth").
+
+### Consistent grammatical person (readability)
+Pick ONE mode of address per section and hold it. Never switch between "you"
+(direct address) and "founders"/"firms"/"companies" (third person) inside the same
+sentence or paragraph.
+- WRONG: "If you are weighing a CFA license against another route, founders can also review…"
+- RIGHT: "If you are weighing a CFA license against another route, you can also review…"
 
 ### First paragraph rule — strictly enforced
 The opening paragraph must:
@@ -779,6 +853,14 @@ SECONDARY CHECKS:
 - [ ] No banned vocabulary or banned phrases?
 - [ ] Knowledge base checked for all factual claims?
 - [ ] Disclaimer present as the last element?
+
+FACTUAL + COHERENCE CHECKS (review-driven):
+- [ ] Every numbered regulatory citation (FATF Rec N, PSD2 Art, MiCA Title) is correct for its topic — or replaced with a general framework reference?
+- [ ] Licence scope described with regulatory activities, not operational processes?
+- [ ] No keyword forced into a false comparison that distorts meaning?
+- [ ] Every "the two X" / "both" / "these" has explicitly-named antecedents?
+- [ ] Each "Why/How/What" heading is actually answered by its section's first sentence?
+- [ ] Consistent grammatical person (no "you" → "founders" switch) within each section?
 
 ---
 
