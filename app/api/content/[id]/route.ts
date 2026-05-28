@@ -13,6 +13,8 @@ const UpdateSchema = z.object({
   targetAudience: z.string().max(500).optional(),
   keyMessages: z.string().max(5_000).optional(),
   tone: z.string().max(500).optional(),
+  // Move to a folder (null = remove from folder / uncategorised).
+  folderId: z.string().nullable().optional(),
 })
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
@@ -52,6 +54,14 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   }
   if (Object.keys(parsed.data).length === 0) {
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+  }
+
+  // If moving to a folder, ensure that folder exists in the SAME project.
+  if (parsed.data.folderId) {
+    const folder = await prisma.contentFolder.findUnique({ where: { id: parsed.data.folderId } })
+    if (!folder || folder.projectId !== content.projectId) {
+      return NextResponse.json({ error: 'Folder not found in this project' }, { status: 400 })
+    }
   }
 
   const updated = await prisma.generatedContent.update({

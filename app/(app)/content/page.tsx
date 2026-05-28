@@ -24,11 +24,18 @@ export default async function ContentPage() {
   const userId = session?.user?.id as string
   const project = await getOrCreateCurrentProject(userId)
 
-  const contents = await prisma.generatedContent.findMany({
-    where: { projectId: project.id },
-    orderBy: { createdAt: 'desc' },
-    include: { createdBy: true },
-  })
+  const [contents, folders] = await Promise.all([
+    prisma.generatedContent.findMany({
+      where: { projectId: project.id },
+      orderBy: { createdAt: 'desc' },
+      include: { createdBy: true },
+    }),
+    prisma.contentFolder.findMany({
+      where: { projectId: project.id },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+      include: { _count: { select: { contents: true } } },
+    }),
+  ])
 
   return (
     <div className="max-w-[1200px] mx-auto">
@@ -70,6 +77,13 @@ export default async function ContentPage() {
           tone: c.tone,
           createdAt: c.createdAt.toISOString(),
           createdByName: c?.createdBy?.name ?? '',
+          folderId: c.folderId ?? null,
+        }))}
+        folders={folders.map((f: any) => ({
+          id: f.id,
+          name: f.name,
+          color: f.color ?? null,
+          count: f._count.contents,
         }))}
       />
     </div>
