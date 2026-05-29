@@ -46,36 +46,111 @@ function keywordMax(min: number): number {
 }
 
 // ---------------------------------------------------------------------------
-// PASS 1+2 — internal-link normalisation
+// PASS 1 — STRICT internal-link enforcement (exactly the TZ set)
+//
+// Guarantees the final page contains PRECISELY the links from the brief —
+// no more, no less, each exactly once, with the brief's anchor text verbatim:
+//   - any link whose URL is NOT in the brief → stripped (markup removed, text kept)
+//   - any duplicate of a brief URL → stripped (keep first occurrence)
+//   - a kept brief link whose anchor differs from the brief → anchor corrected
+//   - any brief link MISSING from the output → injected:
+//       * first try to linkify an existing plain-text mention of the anchor
+//       * else append a "See also:" reference line before the disclaimer
+//
+// When the brief specifies NO links, we leave the text untouched (there is no
+// whitelist to enforce, so we don't strip anything).
 // ---------------------------------------------------------------------------
-function normalizeInternalLinks(
+function linkifyFirstOccurrence(text: string, anchor: string, url: string): { text: string; done: boolean } {
+  const re = new RegExp(escapeRegex(anchor), 'i')
+  const lines = text.split('\n')
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    if (line.startsWith('#')) continue                          // skip headings
+    if (/^\*\*Word Count|^\*Reading Time|^\*Tags/i.test(line)) continue // skip metadata header
+    if (/^\*This page is for informational/i.test(line)) continue       // skip disclaimer
+    const m = line.match(re)
+    if (!m || m.index === undefined) continue
+    const idx = m.index
+    // Don't linkify text that's already inside a markdown link: [anchor](...)
+    const before = line.slice(Math.max(0, idx - 1), idx)
+    const after = line.slice(idx + m[0].length)
+    if (before === '[' && after.startsWith('](')) continue
+    lines[i] = line.slice(0, idx) + `[${anchor}](${url})` + line.slice(idx + m[0].length)
+    return { text: lines.join('\n'), done: true }
+  }
+  return { text, done: false }
+}
+
+function appendRelatedLinks(text: string, links: { url: string; anchor: string }[]): string {
+  const refs = links.map((l) => `[${l.anchor}](${l.url})`).join(', ')
+  const block = `**See also:** ${refs}`
+  // Insert before the disclaimer if present, else before the SEO METADATA
+  // appendix, else at the very end.
+  const discIdx = text.search(/\*This page is for informational/i)
+  if (discIdx > 0) {
+    return text.slice(0, discIdx).replace(/\s+$/, '') + `\n\n${block}\n\n` + text.slice(discIdx)
+  }
+  const seoIdx = text.indexOf('## SEO METADATA')
+  if (seoIdx > 0) {
+    return text.slice(0, seoIdx).replace(/\s+$/, '') + `\n\n${block}\n\n` + text.slice(seoIdx)
+  }
+  return text.replace(/\s+$/, '') + `\n\n${block}\n`
+}
+
+function enforceExactLinks(
   text: string,
-  allowed: { url: string; anchor: string }[],
+  required: { url: string; anchor: string }[],
 ): { text: string; fixes: string[] } {
   const fixes: string[] = []
-  const allowedUrls = new Set(allowed.map((l) => l.url.trim()))
+  // No TZ links → nothing to enforce against; leave links as the model wrote them.
+  if (required.length === 0) return { text, fixes }
+
+  const byUrl = new Map(required.map((l) => [l.url.trim(), l.anchor.trim()]))
+  const allowedUrls = new Set(byUrl.keys())
   const seenUrls = new Set<string>()
 
-  const out = text.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (full, anchor, url) => {
+  // Pass 1: walk existing links — strip non-brief + duplicates, force anchor verbatim.
+  let out = text.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (full, anchor, url) => {
     const cleanUrl = String(url).trim()
-
-    // Pass 1: strip invented URLs (anything not in the brief whitelist).
-    // External http(s) URLs are also stripped per system-prompt rule —
-    // editors add nofollow externals in the CMS, not the LLM.
     if (!allowedUrls.has(cleanUrl)) {
-      fixes.push(`stripped invented/external link: [${anchor}](${cleanUrl})`)
+      fixes.push(`stripped link not in TZ: [${anchor}](${cleanUrl})`)
       return String(anchor)
     }
-
-    // Pass 2: strip duplicate links (keep the FIRST occurrence per URL).
     if (seenUrls.has(cleanUrl)) {
-      fixes.push(`stripped duplicate link (URL already used): [${anchor}](${cleanUrl})`)
+      fixes.push(`stripped duplicate TZ link: [${anchor}](${cleanUrl})`)
       return String(anchor)
     }
-
     seenUrls.add(cleanUrl)
+    const wantAnchor = byUrl.get(cleanUrl)!
+    if (anchor !== wantAnchor) {
+      fixes.push(`anchor corrected to TZ: "${anchor}" → "${wantAnchor}"`)
+      return `[${wantAnchor}](${cleanUrl})`
+    }
     return full
   })
+
+  // Pass 2: inject any TZ link still missing.
+  const toAppend: { url: string; anchor: string }[] = []
+  for (const l of required) {
+    const url = l.url.trim()
+    if (seenUrls.has(url)) continue
+    const anchor = l.anchor.trim()
+    const res = linkifyFirstOccurrence(out, anchor, url)
+    if (res.done) {
+      out = res.text
+      seenUrls.add(url)
+      fixes.push(`injected missing TZ link by linkifying existing text "${anchor}"`)
+    } else {
+      toAppend.push({ url, anchor })
+    }
+  }
+  if (toAppend.length > 0) {
+    out = appendRelatedLinks(out, toAppend)
+    for (const l of toAppend) {
+      seenUrls.add(l.url)
+      fixes.push(`injected missing TZ link "${l.anchor}" as a See-also reference (phrase not found in body)`)
+    }
+  }
 
   return { text: out, fixes }
 }
@@ -272,7 +347,7 @@ export function postProcessPage(
   //    primary-keyword occurrences picked up by the metadata header), so
   //    the MAX limit is honoured on the document the user actually sees.
 
-  const linkPass = normalizeInternalLinks(out, brief.internalLinks ?? [])
+  const linkPass = enforceExactLinks(out, brief.internalLinks ?? [])
   out = linkPass.text
   fixes.push(...linkPass.fixes)
 
@@ -292,16 +367,15 @@ export function postProcessPage(
     fixes.push(...kwPass.fixes)
   }
 
-  // Report any MUST-priority internal links that the LLM forgot. We can't
-  // safely auto-inject them (placement requires editorial judgement) but the
-  // operator should see the warning and add via Request edit.
-  const mustLinks = (brief.internalLinks ?? []).filter((l) => l.priority === 'must')
-  for (const l of mustLinks) {
-    const escapedUrl = escapeRegex(l.url)
-    const present = new RegExp(`\\]\\(${escapedUrl}\\)`).test(out)
-    if (!present) {
-      fixes.push(`WARNING: MUST link missing from output — [${l.anchor}](${l.url}). Add manually via Request edit.`)
-    }
+  // Final safety net: confirm every brief link is now present exactly once.
+  // enforceExactLinks should have guaranteed this; this just surfaces a clear
+  // line in the fixes log for the operator + flags the rare unrecoverable case.
+  for (const l of (brief.internalLinks ?? [])) {
+    const escapedUrl = escapeRegex(l.url.trim())
+    const count = (out.match(new RegExp(`\\]\\(${escapedUrl}\\)`, 'g')) ?? []).length
+    if (count === 1) continue
+    if (count === 0) fixes.push(`WARNING: TZ link still missing after enforcement — [${l.anchor}](${l.url})`)
+    else fixes.push(`WARNING: TZ link appears ${count}× after enforcement — [${l.anchor}](${l.url})`)
   }
 
   return { text: out, fixes }

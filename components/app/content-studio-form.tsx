@@ -282,6 +282,15 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
     return out
   }, [internalLinksText])
 
+  // The links actually sent to the generator. Manual textarea wins; if it's
+  // empty we fall back to whatever was auto-extracted from the uploaded TZ.
+  // This removes the earlier fragility where, if the auto-fill effect didn't
+  // populate the textarea, the system silently fell back to the project library.
+  const effectiveLinks = useMemo(
+    () => (briefInternalLinks.length > 0 ? briefInternalLinks : extractedTzLinks),
+    [briefInternalLinks, extractedTzLinks],
+  )
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -334,7 +343,7 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
           secondaryAudience: features.seo ? secondaryAudience : '',
           sectionOutline: features.seo ? sectionOutline : [],
           sectionStructure: features.seo ? sectionStructure : [],
-          internalLinks: briefInternalLinks.length > 0 ? briefInternalLinks : undefined,
+          internalLinks: effectiveLinks.length > 0 ? effectiveLinks : undefined,
         }),
       })
       const data = await res.json()
@@ -484,6 +493,8 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
               wordCountMax: features.seo && wordCountMax !== '' ? Number(wordCountMax) : undefined,
               secondaryAudience: features.seo ? secondaryAudience : '',
               sectionOutline: features.seo ? sectionOutline : [],
+              sectionStructure: features.seo ? sectionStructure : [],
+              internalLinks: effectiveLinks.length > 0 ? effectiveLinks : undefined,
             }),
           })
           const a = await r.json()
