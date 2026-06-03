@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { addDays, format, startOfWeek } from 'date-fns'
 import { toast } from 'sonner'
-import { ChevronLeft, ChevronRight, CalendarDays, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CalendarDays, Plus, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { WeekView } from './week-view'
@@ -12,6 +12,7 @@ import { MonthView } from './month-view'
 import { ListView } from './list-view'
 import { BoardView } from './board-view'
 import { PostFormModal } from './post-form-modal'
+import { ImportPlanModal } from './import-plan-modal'
 import type { CalAccount, CalPost } from './types'
 
 type View = 'week' | 'month' | 'list' | 'board'
@@ -47,6 +48,7 @@ export function CalendarBoard({
   const params = useSearchParams()
   const [view, setView] = useState<View>(initialView)
   const [mode, setMode] = useState<Mode>(null)
+  const [importOpen, setImportOpen] = useState(false)
 
   const weekStart = new Date(weekStartISO)
   const anchor = new Date(anchorISO)
@@ -156,6 +158,9 @@ export function CalendarBoard({
               </button>
             ))}
           </div>
+          <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-1.5">
+            <Upload className="h-3.5 w-3.5" /> Import plan
+          </Button>
           <Button
             onClick={() =>
               openCreate(new Date().toISOString(), accounts[0]?.id)
@@ -232,6 +237,11 @@ export function CalendarBoard({
       )}
 
       <PostFormModal accounts={accounts} mode={mode} onClose={() => setMode(null)} />
+      <ImportPlanModal
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        accountSlugs={accounts.map((a) => ({ slug: a.slug, name: a.name }))}
+      />
     </div>
   )
 }
