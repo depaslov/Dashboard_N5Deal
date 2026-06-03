@@ -4,6 +4,10 @@ import { prisma } from '@/lib/db'
 import { getOrCreateCurrentProject } from '@/lib/project'
 import { Target } from 'lucide-react'
 import { StrategyEditor, type BudgetData, type GoalsData, type CurrentState, type AuthorityLayer } from './strategy-editor'
+import { StrategyTabs } from './strategy-tabs'
+import { FourPathView } from './four-path-view'
+import { SocialMediaGuide } from './social-media-guide'
+import { LinkBuildingGuide } from './link-building-guide'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,7 +32,7 @@ export default async function MarketingStrategyPage() {
     )
   }
 
-  return (
+  const strategyEditor = (
     <StrategyEditor
       initial={{
         activeBudgetMonth: strategy.activeBudgetMonth as 'april' | 'may' | 'june' | 'q3' | 'q4',
@@ -42,6 +46,15 @@ export default async function MarketingStrategyPage() {
         currentState: (strategy.currentState as CurrentState | null) ?? null,
         authorityLayer: (strategy.authorityLayer as AuthorityLayer | null) ?? null,
       }}
+    />
+  )
+
+  return (
+    <StrategyTabs
+      strategyContent={strategyEditor}
+      fourPathContent={<FourPathView />}
+      socialContent={<SocialMediaGuide />}
+      linkBuildingContent={<LinkBuildingGuide />}
     />
   )
 }
