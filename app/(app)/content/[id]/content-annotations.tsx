@@ -33,6 +33,8 @@ interface CtxValue {
   annotations: Annotation[]
   focusedId: string | null
   setFocusedId: (id: string | null) => void
+  /** Focus + scroll the page to the highlight + briefly pulse it. */
+  jumpTo: (id: string) => void
   create: (input: { selectedText: string; note: string; contextBefore: string | null; contextAfter: string | null }) => Promise<void>
   update: (id: string, patch: { note?: string; resolved?: boolean }) => Promise<void>
   remove: (id: string) => Promise<void>
@@ -93,9 +95,54 @@ export function AnnotationsProvider({
     toast.success('Deleted')
   }, [])
 
+  // Focus the annotation, scroll the page to its <mark>, and pulse it briefly.
+  // Fallback: if the highlight was never wrapped (e.g. selection spanned
+  // multiple paragraphs), walk text nodes for the first 40 chars of the
+  // selected text and scroll there. If even that fails the source text was
+  // probably edited away — surface a toast so the operator knows.
+  const jumpTo = useCallback((id: string) => {
+    setFocusedId(id)
+    requestAnimationFrame(() => {
+      const mark = document.querySelector(`mark[data-ann-id="${id}"]`) as HTMLElement | null
+      if (mark) {
+        mark.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        mark.setAttribute('data-just-focused', 'true')
+        window.setTimeout(() => mark.removeAttribute('data-just-focused'), 1600)
+        return
+      }
+      // No mark — try text-node search
+      const ann = annotations.find((a) => a.id === id)
+      const container = document.querySelector('.markdown-output') as HTMLElement | null
+      if (!ann || !container) {
+        toast.error('Could not locate the highlighted text — it may have been edited.')
+        return
+      }
+      const needle = ann.selectedText.slice(0, 40)
+      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT)
+      let node: Node | null
+      while ((node = walker.nextNode())) {
+        const txt = node.textContent ?? ''
+        const idx = txt.indexOf(needle)
+        if (idx < 0) continue
+        try {
+          const range = document.createRange()
+          range.setStart(node, idx)
+          range.setEnd(node, Math.min(txt.length, idx + needle.length))
+          const rect = range.getBoundingClientRect()
+          window.scrollTo({ top: window.scrollY + rect.top - window.innerHeight / 2, behavior: 'smooth' })
+          toast.info('Text found but cannot be inline-highlighted (spans multiple paragraphs).')
+        } catch {
+          toast.error('Could not scroll to the highlighted text.')
+        }
+        return
+      }
+      toast.error('Highlighted text is no longer in the body — it may have been edited.')
+    })
+  }, [annotations])
+
   const value = useMemo<CtxValue>(() => ({
-    contentId, annotations, focusedId, setFocusedId, create, update, remove, version,
-  }), [contentId, annotations, focusedId, create, update, remove, version])
+    contentId, annotations, focusedId, setFocusedId, jumpTo, create, update, remove, version,
+  }), [contentId, annotations, focusedId, jumpTo, create, update, remove, version])
 
   return <AnnotationsCtx.Provider value={value}>{children}</AnnotationsCtx.Provider>
 }
@@ -208,6 +255,16 @@ export function AnnotationsBody({ markdown }: { markdown: string }) {
           outline: 1px solid rgb(2 132 199);
         }
         [data-ann-resolved="true"] { background-color: rgb(187 247 208 / 0.45); }
+        /* Brief 3-pulse flash when the operator jumps to a highlight from the
+           sidebar list. Removed by JS after ~1.6s so the steady focused state
+           takes over. */
+        @keyframes ann-pulse {
+          0%, 100% { background-color: rgb(56 189 248 / 0.65); }
+          50%      { background-color: rgb(2 132 199 / 0.95); }
+        }
+        [data-ann-id][data-just-focused="true"] {
+          animation: ann-pulse 0.5s ease-in-out 3;
+        }
       `}</style>
     </>
   )
@@ -221,7 +278,7 @@ const QUOTE_TRUNC = 150
 const NOTE_TRUNC = 300
 
 export function AnnotationsList() {
-  const { annotations, focusedId, setFocusedId, update, remove } = useAnnotations()
+  const { annotations, focusedId, jumpTo, update, remove } = useAnnotations()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
   const [expanded, setExpanded] = useState<Record<string, { quote?: boolean; note?: boolean }>>({})
@@ -288,7 +345,7 @@ export function AnnotationsList() {
                             : a.resolved ? 'opacity-70 hover:bg-secondary/40'
                                          : 'hover:bg-secondary/40'
                 }`}
-                onClick={() => setFocusedId(a.id)}
+                onClick={() => jumpTo(a.id)}
               >
                 <div className="flex items-start gap-2">
                   <button
