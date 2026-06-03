@@ -15,6 +15,9 @@ const UpdateSchema = z.object({
   tone: z.string().max(500).optional(),
   // Move to a folder (null = remove from folder / uncategorised).
   folderId: z.string().nullable().optional(),
+  // Operator notes / review comments — never sent to the LLM, just a
+  // sticky sidebar where the user can write down feedback or to-dos.
+  notes: z.string().max(100_000).nullable().optional(),
 })
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {

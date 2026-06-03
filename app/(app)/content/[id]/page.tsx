@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, FileText, BookOpen, Linkedin, Send, Clock, Globe, Target, ShieldAlert, Link2, Star, ExternalLink } from 'lucide-react'
 import { ContentActions } from './content-actions'
 import { ContentEditor } from './content-editor'
+import { ContentNotes } from './content-notes'
 import { format } from 'date-fns'
 import type { BriefData } from '@/lib/content-brief'
 
@@ -53,7 +54,7 @@ export default async function ContentDetailPage({ params }: { params: { id: stri
         actions={<ContentActions id={content.id} brief={content.generatedBrief} topic={content.topic} />}
       />
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-3 xl:grid-cols-4">
         <aside className="md:col-span-1 space-y-4">
           <div className="bg-card border border-border shadow-sm p-5">
             <div className="flex items-center gap-3">
@@ -188,6 +189,12 @@ export default async function ContentDetailPage({ params }: { params: { id: stri
         <section className="md:col-span-2 bg-card border border-border shadow-sm p-6">
           <ContentEditor id={content.id} initialBrief={content.generatedBrief} />
         </section>
+
+        <aside className="md:col-span-3 xl:col-span-1">
+          <div className="xl:sticky xl:top-4">
+            <ContentNotes id={content.id} initialNotes={content.notes ?? ''} />
+          </div>
+        </aside>
       </div>
     </div>
   )

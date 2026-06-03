@@ -286,6 +286,7 @@ model GeneratedContent {
   generatedBrief String   @db.Text
   briefData      Json?    // Structured SEO brief spec (TZ-style): pageUrl, wordCount, structure[], mainKeywords[], lsiKeywords[], redFlags[], language, uniqueness, etc.
   folderId       String?  // optional ContentFolder — null = uncategorised
+  notes          String?  @db.Text // free-form operator notes / review comments — never sent to the LLM
   createdAt      DateTime @default(now())
 
   project   Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
