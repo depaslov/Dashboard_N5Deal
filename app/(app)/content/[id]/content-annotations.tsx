@@ -194,18 +194,20 @@ export function AnnotationsBody({ markdown }: { markdown: string }) {
       ) : null}
       <style jsx global>{`
         [data-ann-id] {
-          background-color: rgb(254 240 138 / 0.7);
+          /* Barely-noticeable light blue (Tailwind sky-200 @ 35%) so the
+             quoted text is gently marked without fighting the body copy. */
+          background-color: rgb(186 230 253 / 0.35);
           padding: 0.05em 0.1em;
           border-radius: 2px;
           cursor: pointer;
-          transition: background-color 0.15s;
+          transition: background-color 0.15s, outline-color 0.15s;
         }
-        [data-ann-id]:hover { background-color: rgb(252 211 77 / 0.85); }
+        [data-ann-id]:hover { background-color: rgb(125 211 252 / 0.55); }
         [data-ann-id][data-focused="true"] {
-          background-color: rgb(251 191 36 / 0.95);
-          outline: 1px solid rgb(217 119 6);
+          background-color: rgb(56 189 248 / 0.65);
+          outline: 1px solid rgb(2 132 199);
         }
-        [data-ann-resolved="true"] { background-color: rgb(187 247 208 / 0.5); }
+        [data-ann-resolved="true"] { background-color: rgb(187 247 208 / 0.45); }
       `}</style>
     </>
   )
@@ -282,7 +284,7 @@ export function AnnotationsList() {
                 key={a.id}
                 data-ann-card-id={a.id}
                 className={`p-3 transition-colors cursor-pointer ${
-                  isFocused ? 'bg-amber-50 dark:bg-amber-900/20'
+                  isFocused ? 'bg-sky-50 dark:bg-sky-900/20'
                             : a.resolved ? 'opacity-70 hover:bg-secondary/40'
                                          : 'hover:bg-secondary/40'
                 }`}
@@ -300,7 +302,7 @@ export function AnnotationsList() {
 
                   <div className="flex-1 min-w-0">
                     {/* quote */}
-                    <blockquote className={`text-[11px] italic text-muted-foreground border-l-2 border-amber-400 pl-2 break-words ${a.resolved ? 'line-through' : ''}`}>
+                    <blockquote className={`text-[11px] italic text-muted-foreground border-l-2 border-sky-400 pl-2 break-words ${a.resolved ? 'line-through' : ''}`}>
                       "{quoteShown}"
                       {quoteOver ? (
                         <button
@@ -436,7 +438,7 @@ function DraftPopover({
       <div className="flex items-center gap-1.5 text-xs font-semibold mb-2">
         <MessageSquarePlus className="h-3.5 w-3.5" /> Add note
       </div>
-      <blockquote className="text-[11px] italic text-muted-foreground border-l-2 border-amber-400 pl-2 mb-2 max-h-16 overflow-y-auto">
+      <blockquote className="text-[11px] italic text-muted-foreground border-l-2 border-sky-400 pl-2 mb-2 max-h-16 overflow-y-auto">
         "{text.length > 180 ? text.slice(0, 180) + '…' : text}"
       </blockquote>
       <Textarea
