@@ -86,6 +86,14 @@ export const MARKETING_NAV = [
 // =============================================================================
 
 export const LB_TYPES = [
+  // Daily content-cadence tactics (added to support monthly plans)
+  { k: 'profile', label: 'Profile link' },
+  { k: 'web20', label: 'Web 2.0' },
+  { k: 'crowd', label: 'Crowd marketing' },
+  { k: 'medium', label: 'Medium article' },
+  { k: 'article', label: 'Site article' },
+  { k: 'market_news', label: 'Market news' },
+  // Original placement / outreach categories
   { k: 'outreach', label: 'Cold outreach' },
   { k: 'guest_post', label: 'Guest post' },
   { k: 'resource', label: 'Resource page' },

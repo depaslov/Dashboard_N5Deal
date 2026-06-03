@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { format, isSameDay, isSameMonth, startOfMonth, endOfMonth } from 'date-fns'
 import { toast } from 'sonner'
 import {
-  CalendarDays, List as ListIcon, Layers, Plus, ChevronLeft, ChevronRight, Link2, ExternalLink,
+  CalendarDays, List as ListIcon, Layers, Plus, ChevronLeft, ChevronRight, Link2, ExternalLink, Upload,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -14,6 +14,7 @@ import {
 } from '@/lib/marketing/constants'
 import { cn } from '@/lib/utils'
 import { LbFormModal } from './lb-form-modal'
+import { LbImportModal } from './lb-import-modal'
 
 export interface LbItem {
   id: string
@@ -55,6 +56,7 @@ export function LinkBuildingBoard({
   const params = useSearchParams()
   const [view, setView] = useState<View>(initialView)
   const [mode, setMode] = useState<Mode>(null)
+  const [importOpen, setImportOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string>('all')
 
   const anchor = new Date(anchorMonthISO)
@@ -172,6 +174,9 @@ export function LinkBuildingBoard({
               </Button>
             </>
           ) : null}
+          <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-1.5">
+            <Upload className="h-3.5 w-3.5" /> Import plan
+          </Button>
           <Button onClick={() => setMode({ kind: 'create' })}>
             <Plus className="h-4 w-4 mr-1.5" /> Add link
           </Button>
@@ -197,6 +202,7 @@ export function LinkBuildingBoard({
       )}
 
       <LbFormModal mode={mode} onClose={() => setMode(null)} />
+      <LbImportModal open={importOpen} onOpenChange={setImportOpen} />
     </div>
   )
 }
