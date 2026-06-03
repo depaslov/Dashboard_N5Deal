@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Trash2, Download } from 'lucide-react'
+import { Trash2, Download, Sparkles, Loader2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -51,6 +51,7 @@ export function PostFormModal({ accounts, mode, onClose }: Props) {
   const [imagesLoading, setImagesLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [generating, setGenerating] = useState(false)
 
   // Re-seed form whenever mode changes
   useEffect(() => {
@@ -166,6 +167,39 @@ export function PostFormModal({ accounts, mode, onClose }: Props) {
       onClose()
     } finally {
       setDeleting(false)
+    }
+  }
+
+  // Generate the full n5deal.com site article from the post's title (used as
+  // topic). Lands on POST /api/marketing/posts/[id]/generate-article which
+  // wraps the operator-locked system + user prompts and saves the markdown
+  // straight into post.content. Only enabled for type === 'Article'.
+  async function generateArticle() {
+    if (!isEdit) return
+    const topic = title.trim()
+    if (!topic) { toast.error('Set a topic in the Title field first.'); return }
+    if (content.trim() && !confirm('Replace the current content with a freshly generated article?')) return
+    setGenerating(true)
+    try {
+      const res = await fetch(`/api/marketing/posts/${mode!.post.id}/generate-article`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data?.error ?? 'Generation failed')
+        return
+      }
+      // Pull the saved article straight back into the textarea so the
+      // operator can edit / re-generate without closing the modal.
+      setContent(data.article ?? data.post?.content ?? '')
+      toast.success('Article generated and saved to content.')
+      router.refresh()
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Generation failed')
+    } finally {
+      setGenerating(false)
     }
   }
 
@@ -349,19 +383,31 @@ export function PostFormModal({ accounts, mode, onClose }: Props) {
         <DialogFooter className="gap-2 sm:gap-2 flex-wrap">
           {isEdit ? (
             <>
-              <Button variant="destructive" onClick={remove} disabled={saving || deleting} className="mr-auto gap-1.5">
+              <Button variant="destructive" onClick={remove} disabled={saving || deleting || generating} className="mr-auto gap-1.5">
                 <Trash2 className="h-3.5 w-3.5" />
                 {deleting ? 'Deleting…' : 'Delete'}
               </Button>
-              <Button variant="outline" onClick={exportMarkdown} disabled={saving || deleting} className="gap-1.5">
+              <Button variant="outline" onClick={exportMarkdown} disabled={saving || deleting || generating} className="gap-1.5">
                 <Download className="h-3.5 w-3.5" /> Export .md
               </Button>
+              {type === 'Article' ? (
+                <Button
+                  variant="outline"
+                  onClick={generateArticle}
+                  disabled={saving || deleting || generating || !title.trim()}
+                  className="gap-1.5"
+                  title={!title.trim() ? 'Enter a topic in the Title field first' : 'Generate a full n5deal.com site article from the title'}
+                >
+                  {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                  {generating ? 'Generating…' : 'Generate site article'}
+                </Button>
+              ) : null}
             </>
           ) : null}
-          <Button variant="outline" onClick={onClose} disabled={saving || deleting}>
+          <Button variant="outline" onClick={onClose} disabled={saving || deleting || generating}>
             Cancel
           </Button>
-          <Button onClick={save} disabled={saving || deleting}>
+          <Button onClick={save} disabled={saving || deleting || generating}>
             {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add post'}
           </Button>
         </DialogFooter>
