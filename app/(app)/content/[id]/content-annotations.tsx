@@ -110,27 +110,27 @@ export function AnnotationsProvider({
         window.setTimeout(() => mark.removeAttribute('data-just-focused'), 1600)
         return
       }
-      // No <mark> wrapped this annotation (cross-node selection). Use the
-      // same context-aware finder so we still land on the EXACT occurrence
-      // the operator highlighted, not the first textual match.
+      // No <mark> existed for this annotation — applyHighlight skipped it
+      // (e.g. because findAnnotationRange returned null). Resolve the range
+      // one more time and scroll to it. No toast — only complain if the
+      // text is truly missing.
       const ann = annotations.find((a) => a.id === id)
       const container = document.querySelector('.markdown-output') as HTMLElement | null
       if (!ann || !container) {
         toast.error('Could not locate the highlighted text — it may have been edited.')
         return
       }
-      const found = findAnnotationOccurrence(container, ann)
-      if (!found) {
+      const range = findAnnotationRange(container, ann)
+      if (!range) {
         toast.error('Highlighted text is no longer in the body — it may have been edited.')
         return
       }
       try {
-        const range = document.createRange()
-        range.setStart(found.node, found.offset)
-        range.setEnd(found.node, Math.min(found.node.data.length, found.offset + ann.selectedText.length))
-        const rect = range.getBoundingClientRect()
+        const r = document.createRange()
+        r.setStart(range.startNode, range.startOffset)
+        r.setEnd(range.endNode, range.endOffset)
+        const rect = r.getBoundingClientRect()
         window.scrollTo({ top: window.scrollY + rect.top - window.innerHeight / 2, behavior: 'smooth' })
-        toast.info('Text found but cannot be inline-highlighted (spans multiple paragraphs).')
       } catch {
         toast.error('Could not scroll to the highlighted text.')
       }
@@ -482,20 +482,26 @@ function commonPrefixLen(a: string, b: string): number {
   return i
 }
 
+interface AnnotationRange {
+  startNode: Text
+  startOffset: number
+  endNode: Text
+  endOffset: number
+}
+
 /**
  * Find which occurrence of `ann.selectedText` is the one the operator
- * originally highlighted. If the phrase repeats in the article we use the
- * `contextBefore` + `contextAfter` (~80 chars each) captured when the
- * annotation was created to pick the right one.
- *
- * Returns the text node + local offset of the chosen match. Caller checks
- * whether `selectedText` fits inside that single text node before wrapping
- * with <mark>.
+ * originally highlighted, and return its full DOM range. The selection
+ * might cross multiple text nodes (e.g. when the text contains markdown
+ * inlines like **bold**, *italic*, or [links] — each turns into its own
+ * inline element, splitting the surrounding paragraph into several text
+ * nodes). For repeats of the same phrase we disambiguate via the stored
+ * contextBefore / contextAfter window.
  */
-function findAnnotationOccurrence(
+function findAnnotationRange(
   el: HTMLElement,
   ann: Annotation,
-): { node: Text; offset: number } | null {
+): AnnotationRange | null {
   // Walk every text node in document order and concatenate. Remember each
   // segment's [start, end) in the flat string so we can map back to (node,
   // local offset) once we've decided which occurrence wins.
@@ -522,31 +528,36 @@ function findAnnotationOccurrence(
   }
   if (positions.length === 0) return null
 
-  // Single match — no ambiguity, just take it.
-  if (positions.length === 1) {
-    return mapToTextNode(segments, positions[0])
-  }
-
   // Multiple matches — score each by context similarity. The candidate with
   // the longest matching common-suffix-before + common-prefix-after wins.
-  // contextBefore / contextAfter were captured from innerText at annotation
-  // time; here we compare against the flat textContent. Block-element
-  // newlines may cause a few characters of mismatch at the very edge but
-  // the bulk of the ~80-char window still disambiguates correctly.
-  const storedBefore = ann.contextBefore ?? ''
-  const storedAfter = ann.contextAfter ?? ''
   let bestPos = positions[0]
-  let bestScore = -1
-  for (const pos of positions) {
-    const actualBefore = flat.slice(Math.max(0, pos - 80), pos)
-    const actualAfter = flat.slice(pos + ann.selectedText.length, pos + ann.selectedText.length + 80)
-    const score = commonSuffixLen(actualBefore, storedBefore) + commonPrefixLen(actualAfter, storedAfter)
-    if (score > bestScore) {
-      bestScore = score
-      bestPos = pos
+  if (positions.length > 1) {
+    const storedBefore = ann.contextBefore ?? ''
+    const storedAfter = ann.contextAfter ?? ''
+    let bestScore = -1
+    for (const pos of positions) {
+      const actualBefore = flat.slice(Math.max(0, pos - 80), pos)
+      const actualAfter = flat.slice(pos + ann.selectedText.length, pos + ann.selectedText.length + 80)
+      const score = commonSuffixLen(actualBefore, storedBefore) + commonPrefixLen(actualAfter, storedAfter)
+      if (score > bestScore) {
+        bestScore = score
+        bestPos = pos
+      }
     }
   }
-  return mapToTextNode(segments, bestPos)
+
+  // Map start (bestPos) and end (one past the last char) back to (textNode,
+  // localOffset). Range endOffset is exclusive — we compute it as the last
+  // char's offset + 1 so it points one past the final character.
+  const start = mapToTextNode(segments, bestPos)
+  const lastChar = mapToTextNode(segments, bestPos + ann.selectedText.length - 1)
+  if (!start || !lastChar) return null
+  return {
+    startNode: start.node,
+    startOffset: start.offset,
+    endNode: lastChar.node,
+    endOffset: lastChar.offset + 1,
+  }
 }
 
 function mapToTextNode(
@@ -561,28 +572,78 @@ function mapToTextNode(
   return null
 }
 
+function createMark(ann: Annotation, focused: boolean): HTMLElement {
+  const mark = document.createElement('mark')
+  mark.dataset.annId = ann.id
+  if (focused) mark.dataset.focused = 'true'
+  if (ann.resolved) mark.dataset.annResolved = 'true'
+  return mark
+}
+
 function applyHighlight(el: HTMLElement, ann: Annotation, focused: boolean) {
-  const found = findAnnotationOccurrence(el, ann)
-  if (!found) return
-  const txt = found.node.data
-  // <mark> wrapping requires the whole selection to live inside ONE text node.
-  // Cross-node selections (e.g. spanning two paragraphs) stay un-wrapped —
-  // they still show up in the sidebar list and `jumpTo` will scroll to them
-  // via the same finder.
-  if (found.offset + ann.selectedText.length > txt.length) return
-  try {
-    const range = document.createRange()
-    range.setStart(found.node, found.offset)
-    range.setEnd(found.node, found.offset + ann.selectedText.length)
-    const mark = document.createElement('mark')
-    mark.dataset.annId = ann.id
-    if (focused) mark.dataset.focused = 'true'
-    if (ann.resolved) mark.dataset.annResolved = 'true'
-    range.surroundContents(mark)
-  } catch {
-    // surroundContents throws if the range partially covers non-text nodes
-    // (rare after a fresh markdown re-render). Skip silently — the list
-    // card still exists and jumpTo can fall back to a Range-based scroll.
+  const range = findAnnotationRange(el, ann)
+  if (!range) return
+
+  // Single-text-node case — fast path via surroundContents.
+  if (range.startNode === range.endNode) {
+    try {
+      const r = document.createRange()
+      r.setStart(range.startNode, range.startOffset)
+      r.setEnd(range.endNode, range.endOffset)
+      r.surroundContents(createMark(ann, focused))
+    } catch {
+      // surroundContents throws on awkward partial-element ranges.
+      // Fall back to the per-node walk below.
+      wrapAcrossNodes(el, range, ann, focused)
+    }
+    return
+  }
+
+  // Multi-text-node case (markdown inlines: **bold**, *italic*, [link]).
+  // Wrap the in-range portion of every covered text node in its own <mark>
+  // sharing the same data-ann-id so CSS treats them as one annotation.
+  wrapAcrossNodes(el, range, ann, focused)
+}
+
+function wrapAcrossNodes(el: HTMLElement, range: AnnotationRange, ann: Annotation, focused: boolean) {
+  // Collect every text node from startNode to endNode in document order.
+  // The walker visits them in document order, so a simple "start collecting
+  // when we hit startNode, stop after endNode" works.
+  const nodes: Text[] = []
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+  let collecting = false
+  let n: Node | null
+  while ((n = walker.nextNode())) {
+    if (n === range.startNode) collecting = true
+    if (collecting) nodes.push(n as Text)
+    if (n === range.endNode) break
+  }
+  if (nodes.length === 0) return
+
+  // Walk in reverse so splitText mutations on earlier nodes don't shift
+  // the offsets we computed for later ones. Each wrap is independent
+  // because we already have per-node references.
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const node = nodes[i]
+    let from = 0
+    let to = node.data.length
+    if (node === range.startNode) from = range.startOffset
+    if (node === range.endNode) to = range.endOffset
+    if (from >= to) continue
+
+    // Split off the tail past `to` first so target node ends at `to`.
+    if (to < node.data.length) node.splitText(to)
+    // Split off the head before `from`; the returned tail is what we wrap.
+    const target: Text = from > 0 ? node.splitText(from) : node
+
+    try {
+      const mark = createMark(ann, focused)
+      target.parentNode?.insertBefore(mark, target)
+      mark.appendChild(target)
+    } catch {
+      // If insertion fails (very rare — parent is gone mid-mutation),
+      // skip this segment so the rest still highlight.
+    }
   }
 }
 
