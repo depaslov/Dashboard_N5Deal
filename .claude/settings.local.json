@@ -71,7 +71,8 @@
       "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_pdGQT80LIZSW@ep-summer-wildflower-aqmf7hp3-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx tsx scripts/seed-linkbuilding-june-2026.ts)",
       "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_pdGQT80LIZSW@ep-summer-wildflower-aqmf7hp3-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx tsx scripts/seed-marketing-reports-q2.ts)",
       "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_pdGQT80LIZSW@ep-summer-wildflower-aqmf7hp3-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx tsx scripts/seed-marketing-strategy-q2-q4.ts)",
-      "Bash(awk 'NR>=270 && NR<=350' /Users/andriykrechkivsky/Downloads/n5deal_export_v3/app/\\\\\\(app\\\\\\)/content/\\\\[id\\\\]/content-annotations.tsx)"
+      "Bash(awk 'NR>=270 && NR<=350' /Users/andriykrechkivsky/Downloads/n5deal_export_v3/app/\\\\\\(app\\\\\\)/content/\\\\[id\\\\]/content-annotations.tsx)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_pdGQT80LIZSW@ep-summer-wildflower-aqmf7hp3-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx tsx scripts/seed-marketing-site-articles-june-2026.ts)"
     ],
     "additionalDirectories": [
       "/Users/andriykrechkivsky/Downloads/n5deal_export_v3/app/(app)/content/[id]"
