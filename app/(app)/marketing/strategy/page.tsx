@@ -3,7 +3,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { getOrCreateCurrentProject } from '@/lib/project'
 import { Target } from 'lucide-react'
-import { StrategyEditor, type BudgetData, type GoalsData } from './strategy-editor'
+import { StrategyEditor, type BudgetData, type GoalsData, type CurrentState, type AuthorityLayer } from './strategy-editor'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,7 +31,7 @@ export default async function MarketingStrategyPage() {
   return (
     <StrategyEditor
       initial={{
-        activeBudgetMonth: strategy.activeBudgetMonth as 'april' | 'may' | 'june',
+        activeBudgetMonth: strategy.activeBudgetMonth as 'april' | 'may' | 'june' | 'q3' | 'q4',
         budget: strategy.budget as BudgetData,
         goals: (strategy.goals as GoalsData | null) ?? {},
         channelDirectives:
@@ -39,6 +39,8 @@ export default async function MarketingStrategyPage() {
             string,
             { title: string; color: string; body: string }
           > | null) ?? {},
+        currentState: (strategy.currentState as CurrentState | null) ?? null,
+        authorityLayer: (strategy.authorityLayer as AuthorityLayer | null) ?? null,
       }}
     />
   )

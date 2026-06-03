@@ -8,10 +8,13 @@ import { getOrCreateCurrentProject } from '@/lib/project'
 export const dynamic = 'force-dynamic'
 
 const PatchSchema = z.object({
-  activeBudgetMonth: z.enum(['april', 'may', 'june']).optional(),
+  // Extended to include Q3/Q4 buckets — the Q2 strategy doc plans the year out.
+  activeBudgetMonth: z.enum(['april', 'may', 'june', 'q3', 'q4']).optional(),
   budget: z.record(z.string(), z.any()).optional(),
   goals: z.record(z.string(), z.any()).optional(),
   channelDirectives: z.record(z.string(), z.any()).optional(),
+  currentState: z.record(z.string(), z.any()).optional(),
+  authorityLayer: z.record(z.string(), z.any()).optional(),
 })
 
 export async function PATCH(req: Request) {

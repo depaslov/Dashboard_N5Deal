@@ -129,7 +129,13 @@ model MarketingStrategy {
   budget            Json?    // { april: { channel: { min, max, actual, purpose } }, ... }
   goals             Json?    // { channel: { metric: { baseline, target, actual, unit, label } } }
   channelDirectives Json?
-  updatedAt         DateTime @updatedAt
+  // Baseline diagnosis from the Q2 strategy doc — current SEO / Traffic / IG /
+  // LinkedIn / Telegram numbers, plus the "system gap" narrative.
+  currentState     Json?
+  // Q3-Q4 plan: online events sequence, California offline, 4-part Report
+  // System, success measurement.
+  authorityLayer   Json?
+  updatedAt        DateTime @updatedAt
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
