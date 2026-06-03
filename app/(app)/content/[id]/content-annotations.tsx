@@ -194,11 +194,31 @@ export function AnnotationsBody({ markdown }: { markdown: string }) {
       const text = sel.toString().trim()
       if (text.length < 2 || text.length > 1000) return
 
-      const fullText = container.innerText
-      const idx = fullText.indexOf(text)
-      if (idx < 0) return
-      const contextBefore = fullText.slice(Math.max(0, idx - 80), idx)
-      const contextAfter = fullText.slice(idx + text.length, idx + text.length + 80)
+      // CRITICAL: capture context around the OPERATOR'S ACTUAL selection,
+      // not the first textual match. Walk text nodes building a flat string,
+      // sum lengths until we hit the selection's start container, then add
+      // its offset to get the absolute flat position. Earlier we used
+      // `fullText.indexOf(text)` which always returned the FIRST occurrence —
+      // so annotations on the 2nd/3rd repeat of a phrase ended up with the
+      // wrong context and jumpTo would land on the first repeat.
+      let flat = ''
+      let startFlat = -1
+      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT)
+      let node: Node | null
+      while ((node = walker.nextNode())) {
+        if (startFlat < 0 && node === range.startContainer) {
+          startFlat = flat.length + range.startOffset
+        }
+        flat += (node as Text).data
+      }
+      // If startContainer wasn't a text node (rare — e.g. range starts at an
+      // element boundary) fall back to the first textual match so we at least
+      // anchor somewhere instead of losing the note.
+      if (startFlat < 0) startFlat = flat.indexOf(text)
+      if (startFlat < 0) return
+
+      const contextBefore = flat.slice(Math.max(0, startFlat - 80), startFlat)
+      const contextAfter = flat.slice(startFlat + text.length, startFlat + text.length + 80)
       setDraft({ rect: range.getBoundingClientRect(), text, contextBefore, contextAfter, note: '' })
     }
     document.addEventListener('mouseup', onMouseUp)
