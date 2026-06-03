@@ -9,10 +9,12 @@ import {
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { renderMarkdown } from '@/lib/markdown'
+import { ContentAnnotations, type Annotation } from './content-annotations'
 
 interface Props {
   id: string
   initialBrief: string
+  initialAnnotations: Annotation[]
 }
 
 // Inline view/edit toggle + AI revision tools for a piece of GeneratedContent.
@@ -26,7 +28,7 @@ interface Props {
 //
 // The Regenerate button is a one-click preset that asks the LLM to rewrite
 // the same content end-to-end with substantively varied structure/wording.
-export function ContentEditor({ id, initialBrief }: Props) {
+export function ContentEditor({ id, initialBrief, initialAnnotations }: Props) {
   const router = useRouter()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(initialBrief)
@@ -179,10 +181,13 @@ export function ContentEditor({ id, initialBrief }: Props) {
           </div>
         ) : null}
 
-        <article
-          className="markdown-output mt-4"
-          dangerouslySetInnerHTML={{ __html: renderMarkdown(saved) }}
-        />
+        <div className="mt-4">
+          <ContentAnnotations
+            contentId={id}
+            markdown={saved}
+            initialAnnotations={initialAnnotations}
+          />
+        </div>
       </div>
     )
   }

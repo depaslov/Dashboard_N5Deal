@@ -10,7 +10,6 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, FileText, BookOpen, Linkedin, Send, Clock, Globe, Target, ShieldAlert, Link2, Star, ExternalLink } from 'lucide-react'
 import { ContentActions } from './content-actions'
 import { ContentEditor } from './content-editor'
-import { ContentNotes } from './content-notes'
 import { format } from 'date-fns'
 import type { BriefData } from '@/lib/content-brief'
 
@@ -28,7 +27,10 @@ export default async function ContentDetailPage({ params }: { params: { id: stri
   const userId = session?.user?.id as string
   const content = await prisma.generatedContent.findUnique({
     where: { id: params.id },
-    include: { createdBy: true },
+    include: {
+      createdBy: true,
+      annotations: { orderBy: { createdAt: 'asc' } },
+    },
   })
   if (!content) notFound()
   const canAccess = await assertProjectAccess(userId, content.projectId)
@@ -54,7 +56,7 @@ export default async function ContentDetailPage({ params }: { params: { id: stri
         actions={<ContentActions id={content.id} brief={content.generatedBrief} topic={content.topic} />}
       />
 
-      <div className="grid gap-6 md:grid-cols-3 xl:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-3">
         <aside className="md:col-span-1 space-y-4">
           <div className="bg-card border border-border shadow-sm p-5">
             <div className="flex items-center gap-3">
@@ -187,14 +189,21 @@ export default async function ContentDetailPage({ params }: { params: { id: stri
         </aside>
 
         <section className="md:col-span-2 bg-card border border-border shadow-sm p-6">
-          <ContentEditor id={content.id} initialBrief={content.generatedBrief} />
+          <ContentEditor
+            id={content.id}
+            initialBrief={content.generatedBrief}
+            initialAnnotations={content.annotations.map((a: any) => ({
+              id: a.id,
+              selectedText: a.selectedText,
+              note: a.note,
+              contextBefore: a.contextBefore,
+              contextAfter: a.contextAfter,
+              resolved: a.resolved,
+              createdAt: a.createdAt.toISOString(),
+              updatedAt: a.updatedAt.toISOString(),
+            }))}
+          />
         </section>
-
-        <aside className="md:col-span-3 xl:col-span-1">
-          <div className="xl:sticky xl:top-4">
-            <ContentNotes id={content.id} initialNotes={content.notes ?? ''} />
-          </div>
-        </aside>
       </div>
     </div>
   )

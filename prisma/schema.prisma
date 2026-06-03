@@ -289,15 +289,36 @@ model GeneratedContent {
   notes          String?  @db.Text // free-form operator notes / review comments — never sent to the LLM
   createdAt      DateTime @default(now())
 
-  project   Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdBy User                 @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  icps      GeneratedContentICP[]
-  folder    ContentFolder?       @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  project     Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy   User                 @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  icps        GeneratedContentICP[]
+  folder      ContentFolder?       @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  annotations ContentAnnotation[]
 
   @@index([projectId])
   @@index([createdById])
   @@index([contentType])
   @@index([folderId])
+}
+
+// Inline annotation: a comment / correction attached to a specific text
+// selection inside a GeneratedContent. The selectedText + contextBefore /
+// contextAfter fingerprint lets us re-locate the same span across edits +
+// re-renders without storing raw DOM offsets.
+model ContentAnnotation {
+  id            String   @id @default(cuid())
+  contentId     String
+  selectedText  String   @db.Text // the text the operator highlighted
+  note          String   @db.Text // their note / correction / TODO
+  contextBefore String?  @db.Text // up to ~80 chars before the selection
+  contextAfter  String?  @db.Text // up to ~80 chars after the selection
+  resolved      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  content GeneratedContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([contentId])
 }
 
 // User-defined folders to organise generated content (e.g. by client,

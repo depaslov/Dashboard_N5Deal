@@ -63,7 +63,12 @@
       "Bash(curl -sS \"https://n5deal.com/sitemap.xml\")",
       "Bash(awk -F/ '{print \"/\"$4}')",
       "Bash(git reset *)",
-      "Bash(git revert *)"
+      "Bash(git revert *)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_pdGQT80LIZSW@ep-summer-wildflower-aqmf7hp3-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx tsx scripts/check-latest-content.ts)",
+      "Bash(rm \"/Users/andriykrechkivsky/Downloads/n5deal_export_v3/app/\\(app\\)/content/[id]/content-notes.tsx\" && npx tsc --noEmit 2>&1 | head -15)"
+    ],
+    "additionalDirectories": [
+      "/Users/andriykrechkivsky/Downloads/n5deal_export_v3/app/(app)/content/[id]"
     ]
   }
 }
