@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Trash2, Download, Sparkles, Loader2 } from 'lucide-react'
+import { Trash2, Download, Sparkles, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -52,6 +52,14 @@ export function PostFormModal({ accounts, mode, onClose }: Props) {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [generating, setGenerating] = useState(false)
+  // Lint result from the last generation pass — { total, byCategory, top[] }
+  // + whether the auto-refine pass had to run. Cleared on next generate.
+  const [lintReport, setLintReport] = useState<{
+    total: number
+    byCategory: Record<string, number>
+    top: { category: string; term: string; count: number; excerpt: string }[]
+    refineUsed: boolean
+  } | null>(null)
 
   // Re-seed form whenever mode changes
   useEffect(() => {
@@ -180,6 +188,7 @@ export function PostFormModal({ accounts, mode, onClose }: Props) {
     if (!topic) { toast.error('Set a topic in the Title field first.'); return }
     if (content.trim() && !confirm('Replace the current content with a freshly generated article?')) return
     setGenerating(true)
+    setLintReport(null)
     try {
       const res = await fetch(`/api/marketing/posts/${mode!.post.id}/generate-article`, {
         method: 'POST',
@@ -194,7 +203,13 @@ export function PostFormModal({ accounts, mode, onClose }: Props) {
       // Pull the saved article straight back into the textarea so the
       // operator can edit / re-generate without closing the modal.
       setContent(data.article ?? data.post?.content ?? '')
-      toast.success('Article generated and saved to content.')
+      const report = data.violations ?? { total: 0, byCategory: {}, top: [] }
+      setLintReport({ ...report, refineUsed: !!data.refineUsed })
+      if (report.total === 0) {
+        toast.success(data.refineUsed ? 'Article generated, auto-refined, all rules pass.' : 'Article generated — all rules pass.')
+      } else {
+        toast.warning(`Article generated with ${report.total} rule violation${report.total === 1 ? '' : 's'}${data.refineUsed ? ' remaining after auto-refine' : ''} — review below.`)
+      }
       router.refresh()
     } catch (err: any) {
       toast.error(err?.message ?? 'Generation failed')
@@ -299,6 +314,61 @@ export function PostFormModal({ accounts, mode, onClose }: Props) {
               placeholder="What people will read on the platform..."
             />
           </div>
+
+          {/* Lint report from the last article generation pass. Surfaces the
+              exact banned-vocab / advisory-framing / forbidden-term hits that
+              survived auto-refine so the operator either fixes them by hand
+              or hits "Generate site article" again. */}
+          {lintReport ? (
+            lintReport.total === 0 ? (
+              <div className="border border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/30 rounded-md p-2.5 flex items-start gap-2 text-sm">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <div className="font-semibold text-emerald-700 dark:text-emerald-300">
+                    All rules pass{lintReport.refineUsed ? ' (after one auto-refine pass)' : ''}.
+                  </div>
+                  <p className="text-xs text-emerald-700/80 dark:text-emerald-300/80 mt-0.5">
+                    No banned vocab, no advisory framing, no forbidden compliance terms detected in the generated article.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="border border-amber-500/50 bg-amber-50 dark:bg-amber-950/30 rounded-md p-3 text-sm">
+                <div className="flex items-start gap-2 mb-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <div className="font-semibold text-amber-700 dark:text-amber-300">
+                      {lintReport.total} rule violation{lintReport.total === 1 ? '' : 's'}{lintReport.refineUsed ? ' survived auto-refine' : ''}
+                    </div>
+                    <p className="text-[11px] text-amber-700/80 dark:text-amber-300/80 mt-0.5">
+                      The article was generated and saved, but these still need a manual fix or a second Generate pass.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {Object.entries(lintReport.byCategory).map(([cat, n]) => (
+                    <span key={cat} className="text-[10px] uppercase tracking-widest font-semibold bg-amber-200 dark:bg-amber-900 text-amber-800 dark:text-amber-200 px-1.5 py-0.5 rounded">
+                      {cat.replace(/_/g, ' ')}: {n}
+                    </span>
+                  ))}
+                </div>
+                <details className="text-xs">
+                  <summary className="cursor-pointer text-amber-700 dark:text-amber-300 hover:underline">
+                    Show {lintReport.top.length} flagged term{lintReport.top.length === 1 ? '' : 's'}
+                  </summary>
+                  <ul className="mt-1.5 space-y-1 ml-2">
+                    {lintReport.top.map((v, i) => (
+                      <li key={`${v.category}-${v.term}-${i}`} className="text-amber-900 dark:text-amber-200">
+                        <span className="font-semibold">{v.term}</span>
+                        <span className="text-amber-700/70 dark:text-amber-300/70"> ×{v.count} · {v.category.replace(/_/g, ' ')}</span>
+                        <div className="text-[10px] text-amber-800/60 dark:text-amber-200/60 italic mt-0.5">{v.excerpt}</div>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              </div>
+            )
+          ) : null}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
