@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, FileText, BookOpen, Linkedin, Send, Clock, Globe, Target, ShieldAlert, Link2, Star, ExternalLink } from 'lucide-react'
 import { ContentActions } from './content-actions'
 import { ContentEditor } from './content-editor'
+import { AnnotationsProvider, AnnotationsList } from './content-annotations'
 import { format } from 'date-fns'
 import type { BriefData } from '@/lib/content-brief'
 
@@ -40,8 +41,19 @@ export default async function ContentDetailPage({ params }: { params: { id: stri
   const Icon = meta.icon
   const brief = (content.briefData as unknown) as BriefData | null
 
+  const initialAnnotations = content.annotations.map((a: any) => ({
+    id: a.id,
+    selectedText: a.selectedText,
+    note: a.note,
+    contextBefore: a.contextBefore,
+    contextAfter: a.contextAfter,
+    resolved: a.resolved,
+    createdAt: a.createdAt.toISOString(),
+    updatedAt: a.updatedAt.toISOString(),
+  }))
+
   return (
-    <div className="max-w-[1100px] mx-auto">
+    <div className="max-w-[1400px] mx-auto">
       <div className="mb-4">
         <Button asChild variant="ghost" size="sm">
           <Link href="/content" className="gap-1">
@@ -56,8 +68,9 @@ export default async function ContentDetailPage({ params }: { params: { id: stri
         actions={<ContentActions id={content.id} brief={content.generatedBrief} topic={content.topic} />}
       />
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <aside className="md:col-span-1 space-y-4">
+      <AnnotationsProvider contentId={content.id} initialAnnotations={initialAnnotations}>
+      <div className="grid gap-6 md:grid-cols-3 xl:grid-cols-12">
+        <aside className="md:col-span-1 xl:col-span-3 space-y-4">
           <div className="bg-card border border-border shadow-sm p-5">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center bg-primary text-primary-foreground">
@@ -188,23 +201,20 @@ export default async function ContentDetailPage({ params }: { params: { id: stri
           ) : null}
         </aside>
 
-        <section className="md:col-span-2 bg-card border border-border shadow-sm p-6">
+        <section className="md:col-span-2 xl:col-span-6 bg-card border border-border shadow-sm p-6">
           <ContentEditor
             id={content.id}
             initialBrief={content.generatedBrief}
-            initialAnnotations={content.annotations.map((a: any) => ({
-              id: a.id,
-              selectedText: a.selectedText,
-              note: a.note,
-              contextBefore: a.contextBefore,
-              contextAfter: a.contextAfter,
-              resolved: a.resolved,
-              createdAt: a.createdAt.toISOString(),
-              updatedAt: a.updatedAt.toISOString(),
-            }))}
           />
         </section>
+
+        <aside className="md:col-span-3 xl:col-span-3">
+          <div className="xl:sticky xl:top-4">
+            <AnnotationsList />
+          </div>
+        </aside>
       </div>
+      </AnnotationsProvider>
     </div>
   )
 }
