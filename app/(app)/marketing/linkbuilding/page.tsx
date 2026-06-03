@@ -17,7 +17,7 @@ export default async function MarketingLinkBuildingPage({
 
   const items = await prisma.linkBuildingItem.findMany({
     where: { projectId: project.id },
-    orderBy: { scheduledFor: 'desc' },
+    orderBy: { scheduledFor: 'asc' },
   })
 
   const data: LbItem[] = items.map((i) => ({
