@@ -110,33 +110,30 @@ export function AnnotationsProvider({
         window.setTimeout(() => mark.removeAttribute('data-just-focused'), 1600)
         return
       }
-      // No mark — try text-node search
+      // No <mark> wrapped this annotation (cross-node selection). Use the
+      // same context-aware finder so we still land on the EXACT occurrence
+      // the operator highlighted, not the first textual match.
       const ann = annotations.find((a) => a.id === id)
       const container = document.querySelector('.markdown-output') as HTMLElement | null
       if (!ann || !container) {
         toast.error('Could not locate the highlighted text — it may have been edited.')
         return
       }
-      const needle = ann.selectedText.slice(0, 40)
-      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT)
-      let node: Node | null
-      while ((node = walker.nextNode())) {
-        const txt = node.textContent ?? ''
-        const idx = txt.indexOf(needle)
-        if (idx < 0) continue
-        try {
-          const range = document.createRange()
-          range.setStart(node, idx)
-          range.setEnd(node, Math.min(txt.length, idx + needle.length))
-          const rect = range.getBoundingClientRect()
-          window.scrollTo({ top: window.scrollY + rect.top - window.innerHeight / 2, behavior: 'smooth' })
-          toast.info('Text found but cannot be inline-highlighted (spans multiple paragraphs).')
-        } catch {
-          toast.error('Could not scroll to the highlighted text.')
-        }
+      const found = findAnnotationOccurrence(container, ann)
+      if (!found) {
+        toast.error('Highlighted text is no longer in the body — it may have been edited.')
         return
       }
-      toast.error('Highlighted text is no longer in the body — it may have been edited.')
+      try {
+        const range = document.createRange()
+        range.setStart(found.node, found.offset)
+        range.setEnd(found.node, Math.min(found.node.data.length, found.offset + ann.selectedText.length))
+        const rect = range.getBoundingClientRect()
+        window.scrollTo({ top: window.scrollY + rect.top - window.innerHeight / 2, behavior: 'smooth' })
+        toast.info('Text found but cannot be inline-highlighted (spans multiple paragraphs).')
+      } catch {
+        toast.error('Could not scroll to the highlighted text.')
+      }
     })
   }, [annotations])
 
@@ -446,29 +443,126 @@ export function AnnotationsList() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// helpers
+// helpers — disambiguating which occurrence to highlight
 // ─────────────────────────────────────────────────────────────────────────────
-function applyHighlight(el: HTMLElement, ann: Annotation, focused: boolean) {
+
+// Longest common suffix length — how many chars from the END of a and b match.
+// Used to score how well a candidate's preceding context matches what was
+// captured at annotation time.
+function commonSuffixLen(a: string, b: string): number {
+  let i = 0
+  while (i < a.length && i < b.length && a[a.length - 1 - i] === b[b.length - 1 - i]) i++
+  return i
+}
+
+// Longest common prefix length — symmetrical, used for the trailing context.
+function commonPrefixLen(a: string, b: string): number {
+  let i = 0
+  while (i < a.length && i < b.length && a[i] === b[i]) i++
+  return i
+}
+
+/**
+ * Find which occurrence of `ann.selectedText` is the one the operator
+ * originally highlighted. If the phrase repeats in the article we use the
+ * `contextBefore` + `contextAfter` (~80 chars each) captured when the
+ * annotation was created to pick the right one.
+ *
+ * Returns the text node + local offset of the chosen match. Caller checks
+ * whether `selectedText` fits inside that single text node before wrapping
+ * with <mark>.
+ */
+function findAnnotationOccurrence(
+  el: HTMLElement,
+  ann: Annotation,
+): { node: Text; offset: number } | null {
+  // Walk every text node in document order and concatenate. Remember each
+  // segment's [start, end) in the flat string so we can map back to (node,
+  // local offset) once we've decided which occurrence wins.
+  type Seg = { node: Text; start: number; end: number }
+  const segments: Seg[] = []
+  let flat = ''
   const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
-  const target = ann.selectedText
-  let node: Node | null
-  while ((node = walker.nextNode())) {
-    const txt = node.textContent ?? ''
-    const idx = txt.indexOf(target)
-    if (idx < 0) continue
-    try {
-      const range = document.createRange()
-      range.setStart(node, idx)
-      range.setEnd(node, idx + target.length)
-      const mark = document.createElement('mark')
-      mark.dataset.annId = ann.id
-      if (focused) mark.dataset.focused = 'true'
-      if (ann.resolved) mark.dataset.annResolved = 'true'
-      range.surroundContents(mark)
-      return
-    } catch {
-      return
+  let n: Node | null
+  while ((n = walker.nextNode())) {
+    const t = (n as Text).data
+    if (!t) continue
+    segments.push({ node: n as Text, start: flat.length, end: flat.length + t.length })
+    flat += t
+  }
+
+  // Collect every occurrence of the selectedText in the flat string.
+  const positions: number[] = []
+  let from = 0
+  while (true) {
+    const idx = flat.indexOf(ann.selectedText, from)
+    if (idx < 0) break
+    positions.push(idx)
+    from = idx + 1
+  }
+  if (positions.length === 0) return null
+
+  // Single match — no ambiguity, just take it.
+  if (positions.length === 1) {
+    return mapToTextNode(segments, positions[0])
+  }
+
+  // Multiple matches — score each by context similarity. The candidate with
+  // the longest matching common-suffix-before + common-prefix-after wins.
+  // contextBefore / contextAfter were captured from innerText at annotation
+  // time; here we compare against the flat textContent. Block-element
+  // newlines may cause a few characters of mismatch at the very edge but
+  // the bulk of the ~80-char window still disambiguates correctly.
+  const storedBefore = ann.contextBefore ?? ''
+  const storedAfter = ann.contextAfter ?? ''
+  let bestPos = positions[0]
+  let bestScore = -1
+  for (const pos of positions) {
+    const actualBefore = flat.slice(Math.max(0, pos - 80), pos)
+    const actualAfter = flat.slice(pos + ann.selectedText.length, pos + ann.selectedText.length + 80)
+    const score = commonSuffixLen(actualBefore, storedBefore) + commonPrefixLen(actualAfter, storedAfter)
+    if (score > bestScore) {
+      bestScore = score
+      bestPos = pos
     }
+  }
+  return mapToTextNode(segments, bestPos)
+}
+
+function mapToTextNode(
+  segments: { node: Text; start: number; end: number }[],
+  flatOffset: number,
+): { node: Text; offset: number } | null {
+  for (const s of segments) {
+    if (flatOffset >= s.start && flatOffset < s.end) {
+      return { node: s.node, offset: flatOffset - s.start }
+    }
+  }
+  return null
+}
+
+function applyHighlight(el: HTMLElement, ann: Annotation, focused: boolean) {
+  const found = findAnnotationOccurrence(el, ann)
+  if (!found) return
+  const txt = found.node.data
+  // <mark> wrapping requires the whole selection to live inside ONE text node.
+  // Cross-node selections (e.g. spanning two paragraphs) stay un-wrapped —
+  // they still show up in the sidebar list and `jumpTo` will scroll to them
+  // via the same finder.
+  if (found.offset + ann.selectedText.length > txt.length) return
+  try {
+    const range = document.createRange()
+    range.setStart(found.node, found.offset)
+    range.setEnd(found.node, found.offset + ann.selectedText.length)
+    const mark = document.createElement('mark')
+    mark.dataset.annId = ann.id
+    if (focused) mark.dataset.focused = 'true'
+    if (ann.resolved) mark.dataset.annResolved = 'true'
+    range.surroundContents(mark)
+  } catch {
+    // surroundContents throws if the range partially covers non-text nodes
+    // (rare after a fresh markdown re-render). Skip silently — the list
+    // card still exists and jumpTo can fall back to a Range-based scroll.
   }
 }
 
