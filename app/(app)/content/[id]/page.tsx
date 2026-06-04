@@ -89,6 +89,14 @@ export default async function ContentDetailPage({ params }: { params: { id: stri
             brief={content.generatedBrief}
             topic={content.topic}
             unresolvedAnnotationCount={content.annotations.filter((a: any) => !a.resolved).length}
+            annotations={content.annotations.map((a: any) => ({
+              id: a.id,
+              selectedText: a.selectedText,
+              note: a.note,
+              contextBefore: a.contextBefore,
+              contextAfter: a.contextAfter,
+              resolved: a.resolved,
+            }))}
           />
         )}
       />
