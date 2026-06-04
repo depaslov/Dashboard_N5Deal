@@ -155,7 +155,14 @@ article" prefix.`
   await prisma.$transaction([
     prisma.generatedContent.update({
       where: { id: params.id },
-      data: { generatedBrief: revised },
+      data: {
+        generatedBrief: revised,
+        // Stash the pre-regenerate version so the UI can render an
+        // inline Google-Docs-style diff until the operator hits Accept
+        // or Revert. We grab content.generatedBrief from the outer scope
+        // — it's the text loaded BEFORE this transaction runs.
+        previousBrief: content.generatedBrief,
+      },
     }),
     // Add new memos
     ...newMemos.map((m) =>

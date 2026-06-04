@@ -291,6 +291,13 @@ model GeneratedContent {
   keyMessages    String
   tone           String
   generatedBrief String   @db.Text
+  // The version of generatedBrief that existed JUST BEFORE the last
+  // regenerate-from-notes run. Non-null = the operator has an unaccepted
+  // regeneration sitting on this row; the UI shows a Google-Docs-style
+  // diff (deletions strikethrough / insertions highlighted) until they
+  // hit Accept (clears this field) or Revert (copies it back into
+  // generatedBrief and clears).
+  previousBrief  String?  @db.Text
   briefData      Json?    // Structured SEO brief spec (TZ-style): pageUrl, wordCount, structure[], mainKeywords[], lsiKeywords[], redFlags[], language, uniqueness, etc.
   folderId       String?  // optional ContentFolder — null = uncategorised
   notes          String?  @db.Text // free-form operator notes / review comments — never sent to the LLM

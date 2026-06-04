@@ -230,6 +230,7 @@ export default async function ContentDetailPage({ params }: { params: { id: stri
           <ContentEditor
             id={content.id}
             initialBrief={content.generatedBrief}
+            previousBrief={(content as any).previousBrief ?? null}
           />
         </section>
 

@@ -10,10 +10,16 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { renderMarkdown } from '@/lib/markdown'
 import { AnnotationsBody } from './content-annotations'
+import { ContentDiffView } from './content-diff-view'
+import { Check, Undo2 } from 'lucide-react'
 
 interface Props {
   id: string
   initialBrief: string
+  // When set, the operator has a regenerate-from-notes diff pending. The
+  // editor renders a banner + the ContentDiffView until they Accept (clears
+  // previousBrief) or Revert (restores it as the live brief).
+  previousBrief?: string | null
 }
 
 // Inline view/edit toggle + AI revision tools for a piece of GeneratedContent.
@@ -27,13 +33,42 @@ interface Props {
 //
 // The Regenerate button is a one-click preset that asks the LLM to rewrite
 // the same content end-to-end with substantively varied structure/wording.
-export function ContentEditor({ id, initialBrief }: Props) {
+export function ContentEditor({ id, initialBrief, previousBrief }: Props) {
   const router = useRouter()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(initialBrief)
   const [saved, setSaved] = useState(initialBrief)
   const [saving, setSaving] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+  // Diff state — when previousBrief is set, default to showing the diff so
+  // the operator immediately sees what changed. Toggle between diff and
+  // clean view; Accept / Revert call /api/content/[id]/regeneration.
+  const [showDiff, setShowDiff] = useState(true)
+  const [resolvingDiff, setResolvingDiff] = useState<'accept' | 'revert' | null>(null)
+
+  const hasDiff = !!previousBrief && previousBrief !== initialBrief
+
+  async function resolveDiff(action: 'accept' | 'revert') {
+    setResolvingDiff(action)
+    try {
+      const res = await fetch(`/api/content/${id}/regeneration`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data?.error ?? `Could not ${action}`)
+        return
+      }
+      toast.success(action === 'accept' ? 'Changes accepted' : 'Reverted to previous version')
+      router.refresh()
+    } catch {
+      toast.error(`Could not ${action}`)
+    } finally {
+      setResolvingDiff(null)
+    }
+  }
 
   // AI revision state
   const [revisePanel, setRevisePanel] = useState(false)
@@ -180,8 +215,60 @@ export function ContentEditor({ id, initialBrief }: Props) {
           </div>
         ) : null}
 
+        {/* Pending-regeneration banner — appears whenever previousBrief is
+            set. Lets the operator toggle between diff view and clean view,
+            then accept or revert. */}
+        {hasDiff ? (
+          <div className="mt-4 border border-amber-500/40 bg-amber-50 dark:bg-amber-950/30 rounded-md p-3 flex items-center gap-3 flex-wrap">
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                Pending regeneration
+              </div>
+              <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                {showDiff
+                  ? 'Showing inline diff — deletions strikethrough, insertions highlighted. Accept to keep the new version, Revert to roll back.'
+                  : 'Showing the new version only. Toggle "Show diff" to compare with the previous draft.'}
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowDiff((v) => !v)}
+                disabled={resolvingDiff !== null}
+                className="gap-1.5"
+              >
+                {showDiff ? 'Hide diff' : 'Show diff'}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => resolveDiff('revert')}
+                disabled={resolvingDiff !== null}
+                className="gap-1.5 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-950"
+              >
+                {resolvingDiff === 'revert' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Undo2 className="h-3.5 w-3.5" />}
+                {resolvingDiff === 'revert' ? 'Reverting…' : 'Revert'}
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => resolveDiff('accept')}
+                disabled={resolvingDiff !== null}
+                className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {resolvingDiff === 'accept' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                {resolvingDiff === 'accept' ? 'Accepting…' : 'Accept'}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
         <div className="mt-4">
-          <AnnotationsBody markdown={saved} />
+          {hasDiff && showDiff && previousBrief ? (
+            <ContentDiffView previousBrief={previousBrief} currentBrief={saved} />
+          ) : (
+            <AnnotationsBody markdown={saved} />
+          )}
         </div>
       </div>
     )
