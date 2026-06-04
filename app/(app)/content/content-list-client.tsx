@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
-  Search, Sparkles, FileText, BookOpen, Linkedin, Send, Clock, Trash2,
+  Search, Sparkles, FileText, BookOpen, Linkedin, Send, Clock, Trash2, Files,
   Folder, FolderPlus, FolderOpen, Inbox, Pencil, Check, X, FolderInput, Loader2,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -50,6 +50,7 @@ export function ContentListClient({ items, folders: initialFolders }: { items: I
   const [type, setType] = useState<string>('all')
   const [activeFolder, setActiveFolder] = useState<string>(ALL)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null)
   const [folders, setFolders] = useState<FolderRow[]>(initialFolders)
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
@@ -81,6 +82,24 @@ export function ContentListClient({ items, folders: initialFolders }: { items: I
       router.refresh()
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  // Duplicate the row's content into a new "Copy of …" draft. Server copies
+  // the brief, briefData, folder, notes, and ICPs; annotations are skipped.
+  // Refresh so the new row shows up in the list immediately.
+  const handleDuplicate = async (id: string) => {
+    setDuplicatingId(id)
+    try {
+      const res = await fetch(`/api/content/${id}/duplicate`, { method: 'POST' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data?.id) { toast.error(data?.error ?? 'Could not duplicate'); return }
+      toast.success(`Duplicated as "${data.topic}"`)
+      router.refresh()
+    } catch {
+      toast.error('Could not duplicate')
+    } finally {
+      setDuplicatingId(null)
     }
   }
 
@@ -361,8 +380,20 @@ export function ContentListClient({ items, folders: initialFolders }: { items: I
                     <Button
                       variant="ghost"
                       size="icon-sm"
+                      onClick={() => handleDuplicate(c?.id)}
+                      disabled={duplicatingId === c?.id || deletingId === c?.id}
+                      aria-label="Duplicate"
+                      title="Duplicate as new draft"
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <Files className="h-3.5 w-3.5" />
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
                       onClick={() => handleDelete(c?.id)}
-                      disabled={deletingId === c?.id}
+                      disabled={deletingId === c?.id || duplicatingId === c?.id}
                       aria-label="Delete"
                       className="text-muted-foreground hover:text-destructive"
                     >

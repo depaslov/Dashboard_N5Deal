@@ -3,13 +3,14 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Copy, Download, Trash2 } from 'lucide-react'
+import { Copy, Download, Files, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { copyMarkdownAsRich } from '@/lib/markdown'
 
 export function ContentActions({ id, brief, topic }: { id: string; brief: string; topic: string }) {
   const router = useRouter()
   const [deleting, setDeleting] = useState(false)
+  const [duplicating, setDuplicating] = useState(false)
 
   const copy = async () => {
     try {
@@ -54,6 +55,30 @@ export function ContentActions({ id, brief, topic }: { id: string; brief: string
     }
   }
 
+  // Server copies every field (brief, briefData, folder, notes, ICPs) into
+  // a new draft titled "Copy of …" and navigates the operator straight to
+  // it. Annotations are NOT copied — they're anchored to specific text
+  // positions in the source and would either match by accident or drift
+  // the moment the copy is edited.
+  const duplicate = async () => {
+    setDuplicating(true)
+    try {
+      const res = await fetch(`/api/content/${id}/duplicate`, { method: 'POST' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data?.id) {
+        toast.error(data?.error ?? 'Could not duplicate')
+        return
+      }
+      toast.success(`Duplicated as "${data.topic}"`)
+      router.push(`/content/${data.id}`)
+      router.refresh()
+    } catch {
+      toast.error('Could not duplicate')
+    } finally {
+      setDuplicating(false)
+    }
+  }
+
   return (
     <div className="flex flex-wrap gap-2">
       <Button variant="outline" onClick={copy}>
@@ -61,6 +86,9 @@ export function ContentActions({ id, brief, topic }: { id: string; brief: string
       </Button>
       <Button variant="outline" onClick={download}>
         <Download className="h-4 w-4" /> Download
+      </Button>
+      <Button variant="outline" onClick={duplicate} loading={duplicating}>
+        <Files className="h-4 w-4" /> Duplicate
       </Button>
       <Button variant="outline" onClick={remove} loading={deleting} className="text-destructive hover:text-destructive">
         <Trash2 className="h-4 w-4" /> Delete
