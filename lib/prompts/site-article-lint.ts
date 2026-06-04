@@ -55,6 +55,50 @@ const ADVISORY_PATTERNS: { name: string; re: RegExp }[] = [
   { name: 'our recommendation / our advice',           re: /\bour\s+(recommendation|advice)\b/gi },
 ]
 
+// N5Deal terminology — mandatory replacements. These are specific to how
+// we talk about the product and the people who use it; the system prompt
+// covers them but models keep slipping in "listings", "users", and
+// "business brokers" so we catch them here as a hard backstop.
+interface TerminologySwap { term: string; replaceWith: string }
+const BANNED_TERMINOLOGY: readonly TerminologySwap[] = [
+  { term: 'listings',         replaceWith: 'assets' },
+  { term: 'listing',          replaceWith: 'asset' },
+  { term: 'users',            replaceWith: 'clients / buyers / sellers / founders' },
+  { term: 'pathway',          replaceWith: 'constructor / builder' },
+  { term: 'M&A brokers',      replaceWith: 'partners' },
+  { term: 'M&A broker',       replaceWith: 'partner' },
+  { term: 'business brokers', replaceWith: 'partners' },
+  { term: 'business broker',  replaceWith: 'partner' },
+]
+
+// Positioning violations — wrong phrasing for how N5Deal describes itself.
+// "fintech platform" is the recurring problem (too generic); "platform
+// like N5Deal" puts us in a pack instead of standing alone; "embark on
+// launching" is a banned construction; "At minimum:" without a follow-up
+// makes the answer feel incomplete.
+interface PositioningPattern { name: string; re: RegExp; advice: string }
+const POSITIONING_PATTERNS: readonly PositioningPattern[] = [
+  { name: 'fintech platform',     re: /\bfintech platform\b/gi,
+    advice: 'Use "fintech M&A marketplace" — "fintech platform" is too generic, doesn\'t convey M&A core' },
+  { name: 'platform like N5Deal', re: /\bplatform like n5deal\b/gi,
+    advice: 'N5Deal is unique in this niche — don\'t compare with other platforms' },
+  { name: 'lists verified companies', re: /\blists verified companies\b/gi,
+    advice: 'The platform lists more than companies — use "assets" or describe ready-made businesses + finance licenses + company from scratch' },
+  { name: 'embark on launching', re: /\bembark on launching\b/gi,
+    advice: 'Banned phrase — rewrite without "embark"' },
+  { name: 'At minimum:',         re: /\bAt minimum:\s*$/gim,
+    advice: 'Either describe the full list of documents/requirements, or use "depends on the business type and jurisdiction" — never leave "At minimum:" hanging' },
+]
+
+// Word-frequency caps. "Startup" is technically allowed but the spec
+// limits it to 1–2 per article — otherwise we want "business", "company",
+// or "venture". Anything over the cap gets surfaced for review.
+interface FrequencyLimit { term: string; max: number; advice: string }
+const FREQUENCY_LIMITS: readonly FrequencyLimit[] = [
+  { term: 'startup', max: 2,
+    advice: 'Limit "startup" to 1–2 occurrences per article; use "business", "company", or "venture" elsewhere' },
+]
+
 // Forbidden compliance terms — every one of these is a hard "never use"
 // per Part 9 of the system prompt. Some have plausible regulator-name
 // exceptions ("European Central Bank") so we exclude common proper-noun
@@ -99,12 +143,18 @@ export type ViolationCategory =
   | 'advisory_framing'
   | 'forbidden_term'
   | 'banking_reference'
+  | 'terminology'        // listings/users/brokers/pathway — N5Deal-specific replacements
+  | 'positioning'        // "fintech platform", "platform like N5Deal", etc.
+  | 'frequency'          // "startup" used too many times
 
 export interface Violation {
   category: ViolationCategory
   term: string
   count: number
   excerpt: string
+  // Per-violation guidance the refinement pass can pass back to the
+  // model so the fix instruction is specific instead of a vague "rewrite".
+  advice?: string
 }
 
 function escapeRegex(s: string): string {
@@ -228,6 +278,50 @@ export function lintArticle(text: string): Violation[] {
       count: bankMatches.length,
       excerpt: getExcerpt(body, bankMatches[0].idx, bankMatches[0].raw.length),
     })
+  }
+
+  // ── N5Deal terminology — mandatory replacements
+  for (const swap of BANNED_TERMINOLOGY) {
+    const re = new RegExp(`\\b${escapeRegex(swap.term)}\\b`, 'gi')
+    const matches = [...body.matchAll(re)]
+    if (matches.length) {
+      out.push({
+        category: 'terminology',
+        term: swap.term,
+        count: matches.length,
+        excerpt: getExcerpt(body, matches[0].index ?? 0, matches[0][0].length),
+        advice: `Replace with "${swap.replaceWith}"`,
+      })
+    }
+  }
+
+  // ── Positioning / framing patterns
+  for (const p of POSITIONING_PATTERNS) {
+    const matches = [...body.matchAll(p.re)]
+    if (matches.length) {
+      out.push({
+        category: 'positioning',
+        term: p.name,
+        count: matches.length,
+        excerpt: getExcerpt(body, matches[0].index ?? 0, matches[0][0].length),
+        advice: p.advice,
+      })
+    }
+  }
+
+  // ── Word-frequency caps (e.g. "startup" max 2 per article)
+  for (const limit of FREQUENCY_LIMITS) {
+    const re = new RegExp(`\\b${escapeRegex(limit.term)}s?\\b`, 'gi')
+    const matches = [...body.matchAll(re)]
+    if (matches.length > limit.max) {
+      out.push({
+        category: 'frequency',
+        term: `"${limit.term}" used ${matches.length} times (max ${limit.max})`,
+        count: matches.length - limit.max,
+        excerpt: getExcerpt(body, matches[0].index ?? 0, matches[0][0].length),
+        advice: limit.advice,
+      })
+    }
   }
 
   return out

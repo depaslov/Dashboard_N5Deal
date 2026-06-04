@@ -246,6 +246,98 @@ management, suitable for you, best for your needs, personal recommendation.
 
 ---
 
+## PART 9b — N5DEAL TERMINOLOGY & POSITIONING (hard rules — applies to every page, not just FAQ)
+
+### Terminology — mandatory replacements (no exceptions)
+
+Replace every occurrence in the article:
+- "listings" → "assets"
+- "listing" (as a noun referring to platform content) → "asset"
+- "users" → "clients" (or, when the role is known: "buyers", "sellers", "founders")
+- "pathway" (when describing Fintech Builder) → "constructor" or "builder"
+- "M&A brokers" → "partners" (N5Deal has NO brokers)
+- "business brokers" / "business broker" → "partners"
+- "M&A experts" — use only as anchor text, never as a generic descriptor
+- "startup" — cap at 1–2 occurrences per article; otherwise use "business", "company", or "venture"
+- "embark on launching" — forbidden phrase, rewrite
+
+### How we describe N5Deal — positioning
+
+CORRECT:
+- "N5Deal is a fintech M&A marketplace connecting buyers, sellers, and founders across licensed financial businesses."
+- "The platform operates as an informational resource and marketplace introducer — not a regulated financial entity."
+
+FORBIDDEN:
+- "N5Deal is a fintech platform" — too generic, doesn't convey M&A core
+- "An M&A platform like N5Deal" — we are unique, don't compare with others
+- "The platform lists verified companies" — we are more than companies
+
+Positioning rule: N5Deal is a FINTECH M&A MARKETPLACE. Not a generic "fintech platform". Not "like other M&A platforms". We are unique in this niche.
+
+### Platform features — three-group structure
+
+When describing what the platform offers, group into three categories:
+1. Ready-made businesses (existing companies for acquisition)
+2. Finance licenses (EMI, PI, crypto, banking, and other regulated licenses)
+3. Company from scratch (incorporation and launch support — Fintech Builder)
+
+Do NOT list specific licence types in the general overview — that detail belongs on dedicated pages.
+
+### Client types — three only
+
+We have three client types — always use one of them, never "users":
+- Buyers (people acquiring businesses or licenses)
+- Sellers (people selling businesses or licenses)
+- Founders (people building from scratch)
+
+In general contexts: "clients" instead of "users".
+
+### Partners — how we talk about them
+
+N5Deal does NOT have brokers and does NOT provide access to brokers. We have PARTNERS — M&A professionals, legal specialists, deal structuring professionals.
+
+CORRECT:
+- "The platform connects clients with independent partners who assist with due diligence and deal structuring."
+- "Partners on the platform work with both buyers and sellers."
+
+FORBIDDEN:
+- "M&A brokers on the platform"
+- "business brokers engaged through N5Deal"
+- "A business broker can assist with…"
+
+### Fintech Builder — how to describe
+
+Fintech Builder is a CONSTRUCTOR / BUILDER, not a "pathway" or "program".
+
+CORRECT:
+- "The Fintech Builder is a structured constructor for founders launching a financial business from the ground up."
+
+FORBIDDEN:
+- "a structured pathway"
+- "embark on launching"
+
+### Partner page — what NOT to ask in FAQs
+
+The question "How do I connect with M&A brokers?" is FORBIDDEN — we do not provide brokers.
+
+Replace with:
+- "How do I connect with deal partners through the platform?"
+- "What types of partners are available on N5Deal?"
+
+### Crypto licenses — geography
+
+Do not limit examples to Lithuania, Estonia, or Malta. Always include the line: "Crypto licenses are available across multiple jurisdictions — the right choice depends on the business model, target market, and regulatory requirements."
+
+### Grammatical person — consistency within Q&A
+
+If the question is written from "I" (buyer perspective), the answer must use "you" or "the buyer". If the question is from a seller perspective, the answer uses "you" or "the seller". Never mix first and third person within a single Q&A pair.
+
+### "At minimum" — never alone
+
+Never write "At minimum:" without describing what the maximum is. Either give the full list of documents/requirements, or write "depends on the business type and jurisdiction".
+
+---
+
 ## PART 10 — MANDATORY DISCLAIMER (exact wording)
 
 *Disclaimer: This article is for informational purposes only and does not

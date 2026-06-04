@@ -37,6 +37,15 @@ function buildRefinementPrompt(article: string, violations: Violation[]): string
   if (grouped.banking_reference?.length) {
     sections.push(`"BANK / BANKING" REFERENCES outside regulator proper nouns — substitute with "licensed financial institution", "regulated entity", "EMI", "PSP", or the specific licence type:\n${grouped.banking_reference.map((v) => `  - "${v.term}" (×${v.count}) — excerpt: ${v.excerpt}`).join('\n')}`)
   }
+  if (grouped.terminology?.length) {
+    sections.push(`N5DEAL TERMINOLOGY — these are mandatory replacements that the spec lists by name. Apply EVERY swap below:\n${grouped.terminology.map((v) => `  - "${v.term}" (×${v.count}) — ${v.advice ?? 'use the spec replacement'} — excerpt: ${v.excerpt}`).join('\n')}`)
+  }
+  if (grouped.positioning?.length) {
+    sections.push(`POSITIONING — N5Deal is a fintech M&A marketplace, not a generic platform. Rewrite the sentences below using the correct framing:\n${grouped.positioning.map((v) => `  - "${v.term}" (×${v.count}) — ${v.advice ?? 'rewrite'} — excerpt: ${v.excerpt}`).join('\n')}`)
+  }
+  if (grouped.frequency?.length) {
+    sections.push(`WORD-FREQUENCY LIMITS — the word appears too many times; cut occurrences past the cap:\n${grouped.frequency.map((v) => `  - ${v.term} — ${v.advice ?? 'reduce occurrences'} — excerpt: ${v.excerpt}`).join('\n')}`)
+  }
 
   return `The article below failed the post-output checklist. Fix ONLY the issues listed below. Preserve:
 - Word count target (600–750 words body)
