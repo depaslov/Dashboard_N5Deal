@@ -18,6 +18,8 @@ const UpdateSchema = z.object({
   // Operator notes / review comments — never sent to the LLM, just a
   // sticky sidebar where the user can write down feedback or to-dos.
   notes: z.string().max(100_000).nullable().optional(),
+  // Manual status colour — one of the palette keys, or null to clear.
+  colorTag: z.enum(['gray', 'red', 'orange', 'amber', 'emerald', 'sky', 'violet']).nullable().optional(),
 })
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {

@@ -293,6 +293,12 @@ model GeneratedContent {
   briefData      Json?    // Structured SEO brief spec (TZ-style): pageUrl, wordCount, structure[], mainKeywords[], lsiKeywords[], redFlags[], language, uniqueness, etc.
   folderId       String?  // optional ContentFolder — null = uncategorised
   notes          String?  @db.Text // free-form operator notes / review comments — never sent to the LLM
+  // Manual status colour the operator sets from the list/detail view —
+  // null = no tag, otherwise one of the palette keys (gray, red, orange,
+  // amber, emerald, sky, violet). Rendered as a coloured dot next to the
+  // title so the operator can spot review-pending / done / blocked
+  // items without opening each one.
+  colorTag       String?
   createdAt      DateTime @default(now())
 
   project     Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)

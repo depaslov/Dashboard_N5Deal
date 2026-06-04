@@ -15,6 +15,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+import { ColorTagDot } from './color-tag-dot'
 
 const TYPES: Record<string, { label: string; icon: any }> = {
   article: { label: 'Article', icon: FileText },
@@ -315,6 +316,9 @@ export function ContentListClient({ items, folders: initialFolders }: { items: I
                 <div key={c?.id} className="flex items-start gap-4 px-5 py-4 hover:bg-secondary/50 transition-colors">
                   <div className="flex h-10 w-10 items-center justify-center bg-secondary shrink-0">
                     <Icon className="h-4 w-4" />
+                  </div>
+                  <div className="flex items-center pt-0.5">
+                    <ColorTagDot contentId={c.id} initialColor={(c as any).colorTag ?? null} size="md" />
                   </div>
                   <Link href={`/content/${c?.id}`} className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">

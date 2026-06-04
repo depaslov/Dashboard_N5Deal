@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, FileText, BookOpen, Linkedin, Send, Clock, Globe, Target, ShieldAlert, Link2, Star, ExternalLink } from 'lucide-react'
 import { ContentActions } from './content-actions'
+import { ColorTagDot, type ColorTag } from '../color-tag-dot'
 import { ContentEditor } from './content-editor'
 import { AnnotationsProvider, AnnotationsList } from './content-annotations'
 import { format } from 'date-fns'
@@ -60,6 +61,13 @@ export default async function ContentDetailPage({ params }: { params: { id: stri
             <ArrowLeft className="h-3.5 w-3.5" /> Back to Content Studio
           </Link>
         </Button>
+      </div>
+
+      {/* Status colour — manual tag the operator sets to track review state
+          across the list / detail view without opening each piece. */}
+      <div className="flex items-center gap-2 mt-2 mb-1">
+        <ColorTagDot contentId={content.id} initialColor={((content as any).colorTag as ColorTag | null) ?? null} size="md" />
+        <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Status colour</span>
       </div>
 
       <PageHeader
