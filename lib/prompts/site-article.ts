@@ -401,11 +401,18 @@ Then output the SEO METADATA block.`
  * Topic is required; keyword slots stay as `{{primary_keyword}}` etc. unless
  * the operator wants to lock them externally — the spec already tells the
  * model to derive them in Step 1 when not pre-filled.
+ *
+ * `correctionMemory` carries forward project-level "remembered corrections"
+ * the operator built up by clicking Regenerate-from-notes on past articles.
+ * They get injected at the very top of the user prompt so the model sees
+ * them BEFORE the per-call brief — LLMs anchor more reliably on instructions
+ * that appear early in the user message.
  */
 export function buildSiteArticleUserPrompt(input: {
   topic: string
   primaryKeyword?: string
   secondaryKeywords?: string[]
+  correctionMemory?: string[]
 }): string {
   let prompt = USER_PROMPT_TEMPLATE.replace('{{topic}}', input.topic.trim())
   if (input.primaryKeyword) {
@@ -418,5 +425,31 @@ export function buildSiteArticleUserPrompt(input: {
       if (sks[i]) prompt = prompt.replace(placeholder, sks[i])
     }
   }
+
+  // Prepend project memory as a hard-rules block. These come from past
+  // Regenerate-from-notes runs and represent corrections the operator has
+  // already had to make once — applying them now prevents the same
+  // mistake on the new piece.
+  const memos = (input.correctionMemory ?? []).map((m) => m.trim()).filter(Boolean)
+  if (memos.length > 0) {
+    const block = `## PROJECT-LEVEL CORRECTIONS — apply to EVERY sentence
+
+The operator previously flagged these issues on earlier articles in
+this project. Treat each line as a hard rule on top of the system
+prompt — they take precedence over inferred style and must be
+applied throughout the article you're about to write:
+
+${memos.map((m, i) => `${i + 1}. ${m}`).join('\n')}
+
+When you finish drafting, re-scan the article once more and rewrite
+any sentence that still violates one of these. Do this BEFORE
+outputting.
+
+────────────────────────────────────────
+
+`
+    prompt = block + prompt
+  }
+
   return prompt
 }

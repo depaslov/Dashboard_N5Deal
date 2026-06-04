@@ -54,6 +54,7 @@ model Project {
   seoKeywords       SeoKeyword[]
   companyInfoSections CompanyInfoSection[]
   contentFolders    ContentFolder[]
+  correctionMemos   CorrectionMemo[]
 
   @@index([ownerId])
 }
@@ -311,6 +312,26 @@ model GeneratedContent {
   @@index([createdById])
   @@index([contentType])
   @@index([folderId])
+}
+
+// Project-level "remembered corrections". Populated automatically when the
+// operator clicks Regenerate-from-notes on a content piece — every
+// annotation note becomes a memo that gets injected into the system
+// prompt of EVERY subsequent generation in this project, so the same
+// mistakes don't repeat. Operator can deactivate / delete entries later
+// if a rule turns out to be too narrow.
+model CorrectionMemo {
+  id              String   @id @default(cuid())
+  projectId       String
+  note            String   @db.Text // the corrective principle
+  selectedText    String?  @db.Text // optional excerpt that originally triggered it
+  sourceContentId String?  // which GeneratedContent this came from
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
 }
 
 // Inline annotation: a comment / correction attached to a specific text

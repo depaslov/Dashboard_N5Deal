@@ -112,10 +112,19 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     )
   }
 
+  // Pull project memory so every generation gets the operator's accumulated
+  // "don't do this again" rules injected before the per-call brief.
+  const memos = await prisma.correctionMemo.findMany({
+    where: { projectId: post.projectId, active: true },
+    select: { note: true },
+    orderBy: { createdAt: 'asc' },
+  })
+
   const userPrompt = buildSiteArticleUserPrompt({
     topic: parsed.data.topic,
     primaryKeyword: parsed.data.primaryKeyword,
     secondaryKeywords: parsed.data.secondaryKeywords,
+    correctionMemory: memos.map((m) => m.note),
   })
 
   let raw: string

@@ -9,9 +9,10 @@ export const runtime = 'nodejs'
 
 // POST /api/content/[id]/duplicate — clone a GeneratedContent row into a new
 // draft. Used when the operator wants a copy to iterate on without disturbing
-// the original. Skips annotations on purpose (they're anchored to specific
-// text positions in the source and would either match by accident on the
-// copy or drift the moment the copy is edited).
+// the original. The copy carries forward EVERY annotation too — selectedText,
+// note, contextBefore/After, and resolved state — because the duplicated body
+// is identical at the moment of cloning so every anchor still matches. The
+// operator can edit / resolve / delete annotations on the copy independently.
 export async function POST(_req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
   const userId = session?.user?.id as string | undefined
@@ -19,7 +20,13 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
 
   const original = await prisma.generatedContent.findUnique({
     where: { id: params.id },
-    include: { icps: { select: { icpId: true } } },
+    include: {
+      icps: { select: { icpId: true } },
+      annotations: {
+        select: { selectedText: true, note: true, contextBefore: true, contextAfter: true, resolved: true },
+        orderBy: { createdAt: 'asc' },
+      },
+    },
   })
   if (!original) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   const ok = await assertProjectAccess(userId, original.projectId)
@@ -69,9 +76,20 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
       icps: original.icps.length
         ? { create: original.icps.map((i) => ({ icpId: i.icpId })) }
         : undefined,
+      annotations: original.annotations.length
+        ? {
+            create: original.annotations.map((a) => ({
+              selectedText: a.selectedText,
+              note: a.note,
+              contextBefore: a.contextBefore,
+              contextAfter: a.contextAfter,
+              resolved: a.resolved,
+            })),
+          }
+        : undefined,
     },
-    select: { id: true },
+    select: { id: true, _count: { select: { annotations: true } } },
   })
 
-  return NextResponse.json({ id: copy.id, topic })
+  return NextResponse.json({ id: copy.id, topic, annotationsCopied: copy._count.annotations })
 }

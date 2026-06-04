@@ -28,7 +28,14 @@ export default async function ContentPage() {
     prisma.generatedContent.findMany({
       where: { projectId: project.id },
       orderBy: { createdAt: 'desc' },
-      include: { createdBy: true },
+      include: {
+        createdBy: true,
+        // Need both counts to drive the orange status dot: total notes
+        // give the tooltip ("3 notes, 1 resolved") and the unresolved
+        // count decides whether the dot is orange or dashed.
+        _count: { select: { annotations: true } },
+        annotations: { where: { resolved: false }, select: { id: true } },
+      },
     }),
     prisma.contentFolder.findMany({
       where: { projectId: project.id },
@@ -78,6 +85,8 @@ export default async function ContentPage() {
           createdAt: c.createdAt.toISOString(),
           createdByName: c?.createdBy?.name ?? '',
           folderId: c.folderId ?? null,
+          annotationCount: c._count?.annotations ?? 0,
+          unresolvedAnnotationCount: c.annotations?.length ?? 0,
         }))}
         folders={folders.map((f: any) => ({
           id: f.id,

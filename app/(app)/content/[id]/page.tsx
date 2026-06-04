@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, FileText, BookOpen, Linkedin, Send, Clock, Globe, Target, ShieldAlert, Link2, Star, ExternalLink } from 'lucide-react'
 import { ContentActions } from './content-actions'
-import { ColorTagDot, type ColorTag } from '../color-tag-dot'
+import { AnnotationStatusDot } from '../color-tag-dot'
 import { ContentEditor } from './content-editor'
 import { AnnotationsProvider, AnnotationsList } from './content-annotations'
 import { format } from 'date-fns'
@@ -63,17 +63,34 @@ export default async function ContentDetailPage({ params }: { params: { id: stri
         </Button>
       </div>
 
-      {/* Status colour — manual tag the operator sets to track review state
-          across the list / detail view without opening each piece. */}
-      <div className="flex items-center gap-2 mt-2 mb-1">
-        <ColorTagDot contentId={content.id} initialColor={((content as any).colorTag as ColorTag | null) ?? null} size="md" />
-        <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Status colour</span>
-      </div>
+      {/* Auto status dot — orange when there are unresolved annotations on
+          this piece, dashed placeholder otherwise. Pure function of the
+          annotations array; operator clears it by resolving the notes (or
+          by clicking Regenerate-from-notes which resolves them in bulk). */}
+      {(() => {
+        const total = content.annotations.length
+        const unresolved = content.annotations.filter((a: any) => !a.resolved).length
+        return (
+          <div className="flex items-center gap-2 mt-2 mb-1">
+            <AnnotationStatusDot unresolvedCount={unresolved} totalCount={total} size="md" />
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
+              {unresolved > 0 ? `${unresolved} pending note${unresolved === 1 ? '' : 's'}` : 'No pending notes'}
+            </span>
+          </div>
+        )
+      })()}
 
       <PageHeader
         title={content.topic}
         description={`${meta.label} for ${content.targetAudience}`}
-        actions={<ContentActions id={content.id} brief={content.generatedBrief} topic={content.topic} />}
+        actions={(
+          <ContentActions
+            id={content.id}
+            brief={content.generatedBrief}
+            topic={content.topic}
+            unresolvedAnnotationCount={content.annotations.filter((a: any) => !a.resolved).length}
+          />
+        )}
       />
 
       <AnnotationsProvider contentId={content.id} initialAnnotations={initialAnnotations}>
