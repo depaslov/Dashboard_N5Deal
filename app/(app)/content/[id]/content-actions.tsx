@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Copy, Download, Files, MessageSquareQuote, Sparkles, Trash2 } from 'lucide-react'
+import { Copy, Download, Files, MessageSquareQuote, Sparkles, Trash2, FileType2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { copyMarkdownAsRich } from '@/lib/markdown'
 
@@ -145,6 +145,38 @@ export function ContentActions({
     }
   }
 
+  // "Open in Google Docs" — copy the article to the clipboard as rich text
+  // (HTML + plain markdown fallback), then open a fresh Google Doc in a new
+  // tab. The operator pastes with ⌘V; Google Docs preserves headings, bold,
+  // links, lists, tables on paste. If the article has notes attached we
+  // include the annotated variant so reviewers see inline [1] / [2] markers
+  // and a Review-notes section at the end — same payload Copy + notes uses.
+  // Zero OAuth, zero new deps; same pattern as the Reports page.
+  const openInGoogleDocs = async () => {
+    const payload = annotations.length > 0
+      ? buildAnnotatedMarkdown(brief ?? '', annotations)
+      : (brief ?? '')
+    if (!payload) {
+      toast.error('Nothing to open — article is empty.')
+      return
+    }
+    // Open the tab synchronously inside the click handler so popup blockers
+    // let it through; the clipboard write races alongside.
+    const tab = window.open('https://docs.google.com/document/create', '_blank', 'noopener,noreferrer')
+    try {
+      await copyMarkdownAsRich(payload)
+      const notesNote = annotations.length > 0
+        ? ` (with ${annotations.length} note${annotations.length === 1 ? '' : 's'})`
+        : ''
+      toast.success(`Article copied${notesNote} — paste in the new tab with ⌘V`, { duration: 6000 })
+    } catch {
+      toast.error('Could not copy article — open Google Docs and try again.')
+    }
+    if (!tab) {
+      toast.message('Popup blocked — open docs.google.com/document/create manually, then paste.', { duration: 8000 })
+    }
+  }
+
   const download = () => {
     try {
       const blob = new Blob([brief ?? ''], { type: 'text/markdown;charset=utf-8' })
@@ -264,6 +296,18 @@ export function ContentActions({
           Copy + notes ({annotations.length})
         </Button>
       ) : null}
+      <Button
+        variant="outline"
+        onClick={openInGoogleDocs}
+        disabled={disabled}
+        title={
+          annotations.length > 0
+            ? `Copy article + ${annotations.length} note${annotations.length === 1 ? '' : 's'} and open a new Google Doc`
+            : 'Copy article and open a new Google Doc'
+        }
+      >
+        <FileType2 className="h-4 w-4" /> Open in Google Docs
+      </Button>
       <Button variant="outline" onClick={download} disabled={disabled}>
         <Download className="h-4 w-4" /> Download
       </Button>
