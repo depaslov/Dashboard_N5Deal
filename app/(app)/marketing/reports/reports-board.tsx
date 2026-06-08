@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
-import { Upload, Sparkles, X, Trash2, BarChart3, FileText, Loader2, Download, ArrowLeftRight, TrendingUp, TrendingDown } from 'lucide-react'
+import { Upload, Sparkles, X, Trash2, BarChart3, FileText, Loader2, Download, ArrowLeftRight, TrendingUp, TrendingDown, Image as ImageIcon, FileUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -90,6 +90,15 @@ const CHANNEL_FIELDS: Record<string, { k: string; label: string; prefix?: string
   ],
 }
 
+type SourceMode = 'screenshots' | 'document'
+
+interface PendingDoc {
+  name: string
+  kind: 'html' | 'markdown' | 'text' | 'pdf'
+  // For text-ish kinds — raw string content. For pdf — base64 data URL.
+  content: string
+}
+
 export function ReportsBoard({
   reports,
   selected,
@@ -102,8 +111,13 @@ export function ReportsBoard({
   const router = useRouter()
   const params = useSearchParams()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const docInputRef = useRef<HTMLInputElement>(null)
   const [pending, setPending] = useState<{ name: string; dataUrl: string }[]>([])
+  const [pendingDoc, setPendingDoc] = useState<PendingDoc | null>(null)
+  const [pastedText, setPastedText] = useState('')
   const [generating, setGenerating] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [sourceMode, setSourceMode] = useState<SourceMode>('screenshots')
   const [title, setTitle] = useState('')
   const [periodLabel, setPeriodLabel] = useState('')
   const [tab, setTab] = useState('overview')
@@ -128,6 +142,82 @@ export function ReportsBoard({
       }
     }
     setPending((prev) => [...prev, ...added].slice(0, 9))
+  }
+
+  async function handleDocFile(file: File | null) {
+    if (!file) return
+    const name = file.name.toLowerCase()
+    const isPdf = name.endsWith('.pdf') || file.type === 'application/pdf'
+    const isHtml = name.endsWith('.html') || name.endsWith('.htm') || file.type === 'text/html'
+    const isMd = name.endsWith('.md') || name.endsWith('.markdown') || file.type === 'text/markdown'
+    const isTxt = name.endsWith('.txt') || file.type === 'text/plain'
+    if (!isPdf && !isHtml && !isMd && !isTxt) {
+      toast.error('Supported: .html, .md, .pdf, .txt')
+      return
+    }
+    try {
+      if (isPdf) {
+        const dataUrl = await fileToDataUrl(file)
+        setPendingDoc({ name: file.name, kind: 'pdf', content: dataUrl })
+      } else {
+        const text = await file.text()
+        const kind: PendingDoc['kind'] = isHtml ? 'html' : isMd ? 'markdown' : 'text'
+        setPendingDoc({ name: file.name, kind, content: text })
+      }
+      setPastedText('')
+    } catch {
+      toast.error(`Could not read ${file.name}`)
+    }
+  }
+
+  async function importDoc() {
+    // Either a file is queued or paste textarea has content. File wins.
+    const fromPaste = !pendingDoc && pastedText.trim().length > 20
+    if (!pendingDoc && !fromPaste) return
+    setImporting(true)
+    try {
+      const body: Record<string, unknown> = {
+        title: title || undefined,
+        periodLabel: periodLabel || undefined,
+      }
+      if (pendingDoc?.kind === 'pdf') {
+        body.kind = 'pdf'
+        body.dataUrl = pendingDoc.content
+      } else if (pendingDoc) {
+        body.kind = pendingDoc.kind
+        body.content = pendingDoc.content
+      } else {
+        // Heuristic for pasted text: starts with '<' → html; '# '/'## ' → markdown; else text.
+        const trimmed = pastedText.trim()
+        const looksHtml = trimmed.startsWith('<')
+        const looksMd = /^#{1,6}\s|\n#{1,6}\s/.test(trimmed)
+        body.kind = looksHtml ? 'html' : looksMd ? 'markdown' : 'text'
+        body.content = pastedText
+      }
+      const res = await fetch('/api/marketing/reports/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data?.error ?? 'Import failed')
+        return
+      }
+      setPendingDoc(null)
+      setPastedText('')
+      setTitle('')
+      setPeriodLabel('')
+      toast.success('Report imported')
+      router.refresh()
+      if (data.report?.id) {
+        const q = new URLSearchParams(params.toString())
+        q.set('id', data.report.id)
+        router.push('/marketing/reports?' + q.toString())
+      }
+    } finally {
+      setImporting(false)
+    }
   }
 
   async function generate() {
@@ -184,72 +274,190 @@ export function ReportsBoard({
           <header className="px-4 py-3 border-b border-border">
             <h2 className="font-semibold text-sm">Generate new report</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Drop analytics screenshots — Anthropic Claude reads them and writes the report.
+              From raw analytics screenshots OR an existing report doc — Claude builds the structured report.
             </p>
           </header>
-          <div className="p-3 space-y-3">
-            <div
-              onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-primary', 'bg-primary/5') }}
-              onDragLeave={(e) => { e.currentTarget.classList.remove('border-primary', 'bg-primary/5') }}
-              onDrop={(e) => {
-                e.preventDefault()
-                e.currentTarget.classList.remove('border-primary', 'bg-primary/5')
-                handleFiles(e.dataTransfer.files)
-              }}
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
+
+          {/* Mode switcher — Screenshots vs Document */}
+          <div className="flex gap-1 px-3 pt-3" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={sourceMode === 'screenshots'}
+              onClick={() => setSourceMode('screenshots')}
+              className={cn(
+                'flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-1.5 text-[11px] font-semibold rounded border transition-colors',
+                sourceMode === 'screenshots'
+                  ? 'border-primary bg-primary/10 text-foreground'
+                  : 'border-border bg-muted/30 text-muted-foreground hover:bg-muted/50',
+              )}
             >
-              <Upload className="h-5 w-5 mx-auto text-muted-foreground mb-1.5" />
-              <p className="text-xs font-semibold">Drop screenshots here</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Or click to choose · max 9</p>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                hidden
-                onChange={(e) => { handleFiles(e.target.files); e.target.value = '' }}
-              />
-            </div>
+              <ImageIcon className="h-3 w-3" /> Screenshots
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={sourceMode === 'document'}
+              onClick={() => setSourceMode('document')}
+              className={cn(
+                'flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-1.5 text-[11px] font-semibold rounded border transition-colors',
+                sourceMode === 'document'
+                  ? 'border-primary bg-primary/10 text-foreground'
+                  : 'border-border bg-muted/30 text-muted-foreground hover:bg-muted/50',
+              )}
+            >
+              <FileText className="h-3 w-3" /> Document
+            </button>
+          </div>
 
-            {pending.length > 0 ? (
+          <div className="p-3 space-y-3">
+            {sourceMode === 'screenshots' ? (
               <>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {pending.map((p, i) => (
-                    <div key={i} className="relative aspect-square rounded overflow-hidden border border-border bg-muted">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={p.dataUrl} alt={p.name} className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); setPending((prev) => prev.filter((_, idx) => idx !== i)) }}
-                        className="absolute top-0.5 right-0.5 h-5 w-5 inline-flex items-center justify-center bg-black/60 text-white rounded text-xs"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+                <div
+                  onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-primary', 'bg-primary/5') }}
+                  onDragLeave={(e) => { e.currentTarget.classList.remove('border-primary', 'bg-primary/5') }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    e.currentTarget.classList.remove('border-primary', 'bg-primary/5')
+                    handleFiles(e.dataTransfer.files)
+                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
+                >
+                  <Upload className="h-5 w-5 mx-auto text-muted-foreground mb-1.5" />
+                  <p className="text-xs font-semibold">Drop screenshots here</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Or click to choose · max 9</p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    hidden
+                    onChange={(e) => { handleFiles(e.target.files); e.target.value = '' }}
+                  />
+                </div>
+
+                {pending.length > 0 ? (
+                  <>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {pending.map((p, i) => (
+                        <div key={i} className="relative aspect-square rounded overflow-hidden border border-border bg-muted">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={p.dataUrl} alt={p.name} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setPending((prev) => prev.filter((_, idx) => idx !== i)) }}
+                            className="absolute top-0.5 right-0.5 h-5 w-5 inline-flex items-center justify-center bg-black/60 text-white rounded text-xs"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
 
-                <div className="space-y-2">
-                  <div>
-                    <Label htmlFor="rpt-title" className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Title (optional)</Label>
-                    <Input id="rpt-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. May 2026 Marketing Report" className="text-xs h-8" />
-                  </div>
-                  <div>
-                    <Label htmlFor="rpt-period" className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Period (optional)</Label>
-                    <Input id="rpt-period" value={periodLabel} onChange={(e) => setPeriodLabel(e.target.value)} placeholder="e.g. May 2026" className="text-xs h-8" />
-                  </div>
-                </div>
+                    <div className="space-y-2">
+                      <div>
+                        <Label htmlFor="rpt-title" className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Title (optional)</Label>
+                        <Input id="rpt-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. May 2026 Marketing Report" className="text-xs h-8" />
+                      </div>
+                      <div>
+                        <Label htmlFor="rpt-period" className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Period (optional)</Label>
+                        <Input id="rpt-period" value={periodLabel} onChange={(e) => setPeriodLabel(e.target.value)} placeholder="e.g. May 2026" className="text-xs h-8" />
+                      </div>
+                    </div>
 
-                <Button onClick={generate} disabled={generating} className="w-full gap-1.5">
-                  {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                  {generating ? 'Analyzing…' : `Generate (${pending.length})`}
-                </Button>
-                <p className="text-[10px] text-muted-foreground">
-                  Generation typically takes 30–90s. The browser cannot show progress — please wait.
-                </p>
+                    <Button onClick={generate} disabled={generating} className="w-full gap-1.5">
+                      {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                      {generating ? 'Analyzing…' : `Generate (${pending.length})`}
+                    </Button>
+                    <p className="text-[10px] text-muted-foreground">
+                      Generation typically takes 30–90s. The browser cannot show progress — please wait.
+                    </p>
+                  </>
+                ) : null}
               </>
-            ) : null}
+            ) : (
+              <>
+                {/* Document mode — file picker + paste textarea */}
+                <div
+                  onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-primary', 'bg-primary/5') }}
+                  onDragLeave={(e) => { e.currentTarget.classList.remove('border-primary', 'bg-primary/5') }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    e.currentTarget.classList.remove('border-primary', 'bg-primary/5')
+                    handleDocFile(e.dataTransfer.files?.[0] ?? null)
+                  }}
+                  onClick={() => docInputRef.current?.click()}
+                  className="border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
+                >
+                  <FileUp className="h-5 w-5 mx-auto text-muted-foreground mb-1.5" />
+                  <p className="text-xs font-semibold">Drop a report doc</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">.html · .md · .pdf · .txt</p>
+                  <input
+                    ref={docInputRef}
+                    type="file"
+                    accept=".html,.htm,.md,.markdown,.pdf,.txt,text/html,text/markdown,text/plain,application/pdf"
+                    hidden
+                    onChange={(e) => { handleDocFile(e.target.files?.[0] ?? null); e.target.value = '' }}
+                  />
+                </div>
+
+                {pendingDoc ? (
+                  <div className="flex items-center gap-2 border border-border rounded px-3 py-2 bg-muted/30">
+                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium truncate">{pendingDoc.name}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{pendingDoc.kind}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPendingDoc(null)}
+                      className="h-6 w-6 inline-flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-accent"
+                      aria-label="Remove"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <Label htmlFor="rpt-paste" className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      Or paste report text
+                    </Label>
+                    <Textarea
+                      id="rpt-paste"
+                      value={pastedText}
+                      onChange={(e) => setPastedText(e.target.value)}
+                      rows={4}
+                      placeholder="Paste raw HTML, markdown, or plain text…"
+                      className="mt-1.5 text-xs font-mono"
+                    />
+                  </div>
+                )}
+
+                {(pendingDoc || pastedText.trim().length > 20) ? (
+                  <>
+                    <div className="space-y-2">
+                      <div>
+                        <Label htmlFor="imp-title" className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Title (optional)</Label>
+                        <Input id="imp-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Late May 2026 Report" className="text-xs h-8" />
+                      </div>
+                      <div>
+                        <Label htmlFor="imp-period" className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Period (optional)</Label>
+                        <Input id="imp-period" value={periodLabel} onChange={(e) => setPeriodLabel(e.target.value)} placeholder="e.g. 8 May – 6 Jun 2026" className="text-xs h-8" />
+                      </div>
+                    </div>
+
+                    <Button onClick={importDoc} disabled={importing} className="w-full gap-1.5">
+                      {importing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                      {importing ? 'Reading…' : 'Import & extract stats'}
+                    </Button>
+                    <p className="text-[10px] text-muted-foreground">
+                      Claude re-renders the doc in the dashboard template and extracts per-channel metrics for the Compare tab.
+                    </p>
+                  </>
+                ) : null}
+              </>
+            )}
           </div>
         </div>
 
