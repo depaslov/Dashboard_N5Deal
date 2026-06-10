@@ -36,56 +36,92 @@ const BodySchema = z.union([
   }),
 ])
 
-// Inline stylesheet wrapped around report HTML so the Google Doc inherits
-// the dashboard's visual structure (headings, metric cards, insight blocks,
-// table styling). Google Docs strips display:grid and a lot of CSS on
-// import, but it DOES preserve font weight, font size, color, padding,
+// Google Docs HTML importer has TWO quirks that drive the choices below:
+//   1) `font-family` declared on <body> doesn't reliably inherit to nested
+//      block elements — Docs assigns the Doc's default font (often Times
+//      New Roman) to elements that don't carry an explicit family.
+//   2) Inline `style="…"` attributes are honoured more consistently than
+//      stylesheet rules in <style>. Some CSS that survives in <style> is
+//      lost on inline elements unless restated.
+// So we (a) put `font-family: Arial, sans-serif` on EVERY block rule, and
+// (b) wrap the imported body in an inline-styled <div> as a defensive
+// second layer. The `code` / `pre` rules are the only exception — those
+// keep monospace because that's what they should be in a Doc too.
+
+const ARIAL = 'Arial, Helvetica, sans-serif'
+
+// Inline-styled wrapper applied at the outermost level — second line of
+// defence for elements whose family Docs would otherwise reset to Times.
+function withRootWrapper(body: string): string {
+  return `<div style="font-family: ${ARIAL}; color: #111827; line-height: 1.6;">${body}</div>`
+}
+
+// Inline stylesheet wrapped around REPORT HTML (from the dashboard
+// reports module). Google Docs preserves font weight/size/color, padding,
 // borders, table layout, and block backgrounds — enough that the imported
-// Doc looks like the dashboard view, not a wall of plain text.
+// Doc looks like the dashboard view, not a wall of plain text. display:grid
+// and box-shadow get stripped on import; that's expected.
 function wrapReportHtml(title: string, body: string): string {
   const safeTitle = title.replace(/[<>]/g, '')
   const css = `
-    body { font-family: Arial, sans-serif; color: #111827; }
-    h1 { font-size: 22pt; font-weight: 700; }
-    h2 { font-size: 16pt; font-weight: 700; margin-top: 18pt; }
-    h3 { font-size: 10pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6B7280; margin-top: 12pt; }
-    .rp { font-size: 10pt; color: #6B7280; margin-bottom: 12pt; }
-    .mg { margin: 8pt 0; }
-    .mc { display: inline-block; min-width: 130pt; background: #F4F5F7; border: 1px solid #E5E7EB; padding: 8pt 12pt; margin: 4pt; text-align: center; vertical-align: top; }
-    .mv { font-size: 18pt; font-weight: 700; }
-    .ml { font-size: 8pt; color: #6B7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
-    .md.up { color: #059669; font-size: 9pt; font-weight: 600; }
-    .md.dn { color: #DC2626; font-size: 9pt; font-weight: 600; }
-    .ins { background: #EEF4FF; border-left: 3px solid #2563EB; padding: 8pt 12pt; margin: 8pt 0; font-size: 11pt; }
-    table { width: 100%; border-collapse: collapse; margin: 8pt 0; font-size: 10pt; }
-    th { background: #F4F5F7; text-align: left; padding: 6pt 8pt; border-bottom: 1px solid #E5E7EB; font-size: 9pt; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 0.04em; }
-    td { padding: 6pt 8pt; border-bottom: 1px solid #E5E7EB; }
+    body { font-family: ${ARIAL}; color: #111827; }
+    div, p, span, li, td, th { font-family: ${ARIAL}; }
+    h1 { font-family: ${ARIAL}; font-size: 22pt; font-weight: 700; color: #111827; }
+    h2 { font-family: ${ARIAL}; font-size: 16pt; font-weight: 700; margin-top: 18pt; color: #111827; }
+    h3 { font-family: ${ARIAL}; font-size: 10pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6B7280; margin-top: 12pt; }
+    .rp { font-family: ${ARIAL}; font-size: 10pt; color: #6B7280; margin-bottom: 12pt; }
+    .mg { font-family: ${ARIAL}; margin: 8pt 0; }
+    .mc { font-family: ${ARIAL}; display: inline-block; min-width: 130pt; background: #F4F5F7; border: 1px solid #E5E7EB; padding: 8pt 12pt; margin: 4pt; text-align: center; vertical-align: top; }
+    .mv { font-family: ${ARIAL}; font-size: 18pt; font-weight: 700; color: #111827; }
+    .ml { font-family: ${ARIAL}; font-size: 8pt; color: #6B7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+    .md { font-family: ${ARIAL}; font-size: 9pt; font-weight: 600; }
+    .md.up { font-family: ${ARIAL}; color: #059669; font-size: 9pt; font-weight: 600; }
+    .md.dn { font-family: ${ARIAL}; color: #DC2626; font-size: 9pt; font-weight: 600; }
+    .md.nu { font-family: ${ARIAL}; color: #6B7280; font-size: 9pt; font-weight: 600; }
+    .ins { font-family: ${ARIAL}; background: #EEF4FF; border-left: 3px solid #2563EB; padding: 8pt 12pt; margin: 8pt 0; font-size: 11pt; color: #111827; }
+    .ins.warn { background: #FEF3C7; border-left-color: #D97706; }
+    .ins.alert { background: #FEE2E2; border-left-color: #DC2626; }
+    .ins.win { background: #D1FAE5; border-left-color: #059669; }
+    ul, ol { font-family: ${ARIAL}; padding-left: 24pt; }
+    li { font-family: ${ARIAL}; margin: 4pt 0; font-size: 11pt; }
+    strong, b { font-weight: 700; }
+    em, i { font-style: italic; }
+    a { font-family: ${ARIAL}; color: #2563EB; text-decoration: underline; }
+    table { font-family: ${ARIAL}; width: 100%; border-collapse: collapse; margin: 8pt 0; font-size: 10pt; }
+    th { font-family: ${ARIAL}; background: #F4F5F7; text-align: left; padding: 6pt 8pt; border-bottom: 1px solid #E5E7EB; font-size: 9pt; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 0.04em; }
+    td { font-family: ${ARIAL}; padding: 6pt 8pt; border-bottom: 1px solid #E5E7EB; color: #111827; }
   `
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${safeTitle}</title><style>${css}</style></head><body>${body}</body></html>`
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${safeTitle}</title><style>${css}</style></head><body>${withRootWrapper(body)}</body></html>`
 }
 
-// Wrap article HTML (from markdown) — simpler styling than reports since
-// articles are mostly prose + headings + lists + inline emphasis. We pad
-// h1/h2/h3 sizing so the imported Doc matches an editorial article look.
+// Wrap ARTICLE HTML (from markdown) — prose + headings + lists + inline
+// emphasis. Arial throughout per operator request (was Georgia before, but
+// the dashboard's editorial preference is sans-serif). code / pre stay
+// monospace because that's the conventional formatting for those tokens.
 function wrapArticleHtml(title: string, body: string): string {
   const safeTitle = title.replace(/[<>]/g, '')
   const css = `
-    body { font-family: Georgia, 'Times New Roman', serif; color: #111827; line-height: 1.6; }
-    h1 { font-size: 24pt; font-weight: 700; margin-bottom: 4pt; font-family: Arial, sans-serif; }
-    h2 { font-size: 16pt; font-weight: 700; margin-top: 18pt; font-family: Arial, sans-serif; }
-    h3 { font-size: 13pt; font-weight: 700; margin-top: 12pt; font-family: Arial, sans-serif; }
-    p { margin: 8pt 0; font-size: 12pt; }
-    strong { font-weight: 700; }
-    em { font-style: italic; }
-    ul, ol { padding-left: 24pt; }
-    li { margin: 4pt 0; font-size: 12pt; }
-    blockquote { border-left: 3pt solid #E5E7EB; padding-left: 12pt; color: #6B7280; margin: 8pt 0; }
-    code { font-family: 'Courier New', monospace; background: #F4F5F7; padding: 1pt 4pt; font-size: 11pt; }
-    pre { background: #F4F5F7; padding: 8pt; font-family: 'Courier New', monospace; font-size: 10pt; }
-    a { color: #2563EB; text-decoration: underline; }
+    body { font-family: ${ARIAL}; color: #111827; line-height: 1.6; }
+    div, p, span, li, td, th, blockquote { font-family: ${ARIAL}; }
+    h1 { font-family: ${ARIAL}; font-size: 24pt; font-weight: 700; margin-bottom: 4pt; color: #111827; }
+    h2 { font-family: ${ARIAL}; font-size: 16pt; font-weight: 700; margin-top: 18pt; color: #111827; }
+    h3 { font-family: ${ARIAL}; font-size: 13pt; font-weight: 700; margin-top: 12pt; color: #111827; }
+    h4 { font-family: ${ARIAL}; font-size: 11pt; font-weight: 700; margin-top: 10pt; color: #111827; }
+    p { font-family: ${ARIAL}; margin: 8pt 0; font-size: 12pt; color: #111827; }
+    strong, b { font-weight: 700; }
+    em, i { font-style: italic; }
+    ul, ol { font-family: ${ARIAL}; padding-left: 24pt; }
+    li { font-family: ${ARIAL}; margin: 4pt 0; font-size: 12pt; color: #111827; }
+    blockquote { font-family: ${ARIAL}; border-left: 3pt solid #E5E7EB; padding-left: 12pt; color: #6B7280; margin: 8pt 0; font-style: italic; }
+    code { font-family: 'Courier New', Courier, monospace; background: #F4F5F7; padding: 1pt 4pt; font-size: 11pt; }
+    pre { font-family: 'Courier New', Courier, monospace; background: #F4F5F7; padding: 8pt; font-size: 10pt; white-space: pre-wrap; }
+    a { font-family: ${ARIAL}; color: #2563EB; text-decoration: underline; }
     hr { border: 0; border-top: 1pt solid #E5E7EB; margin: 12pt 0; }
+    table { font-family: ${ARIAL}; width: 100%; border-collapse: collapse; margin: 8pt 0; font-size: 11pt; }
+    th { font-family: ${ARIAL}; background: #F4F5F7; text-align: left; padding: 6pt 8pt; border-bottom: 1px solid #E5E7EB; font-weight: 700; color: #6B7280; }
+    td { font-family: ${ARIAL}; padding: 6pt 8pt; border-bottom: 1px solid #E5E7EB; color: #111827; }
   `
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${safeTitle}</title><style>${css}</style></head><body>${body}</body></html>`
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${safeTitle}</title><style>${css}</style></head><body>${withRootWrapper(body)}</body></html>`
 }
 
 export async function POST(req: Request) {
