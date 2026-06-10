@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import { StrategyImporter } from './strategy-import'
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
@@ -143,6 +144,13 @@ export function StrategyEditor({
 
   return (
     <div className="space-y-6">
+      {/* Import strategy doc — top-right action. Loads a strategy doc and
+          tops up the editor's JSON fields with only the missing pieces;
+          never overwrites existing values. */}
+      <div className="flex justify-end -mb-3">
+        <StrategyImporter />
+      </div>
+
       {/* Current State / Baseline card — top of the editor */}
       {initial.currentState ? <CurrentStateCard data={initial.currentState} /> : null}
 
