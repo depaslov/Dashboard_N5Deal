@@ -56,6 +56,23 @@ function withRootWrapper(body: string): string {
   return `<div style="font-family: ${ARIAL}; color: #111827; line-height: 1.6;">${body}</div>`
 }
 
+// Inline-style strong / b tags so the bold survives Google Docs' import
+// flattening. <strong> alone is supposed to be enough (Docs recognises
+// the semantic), but in practice when a <strong> is nested inside a <p>
+// that carries an explicit font-family inline style, Docs sometimes
+// resolves the weight from the parent's "regular" Arial entry and drops
+// the bold. The inline style="font-weight:700;..." on the tag itself
+// stays put because Docs honours inline styles before stylesheet ones.
+// Re-asserting font-family inside the tag prevents the importer from
+// falling back to Times New Roman for the bolded run only.
+function inlineBoldStyles(html: string): string {
+  return html
+    .replace(/<strong(\s[^>]*)?>/gi, (_m, attrs) => `<strong${attrs ?? ''} style="font-weight:700;font-family:${ARIAL};">`)
+    .replace(/<b(\s[^>]*)?>/gi, (_m, attrs) => `<b${attrs ?? ''} style="font-weight:700;font-family:${ARIAL};">`)
+    .replace(/<em(\s[^>]*)?>/gi, (_m, attrs) => `<em${attrs ?? ''} style="font-style:italic;font-family:${ARIAL};">`)
+    .replace(/<i(\s[^>]*)?>/gi, (_m, attrs) => `<i${attrs ?? ''} style="font-style:italic;font-family:${ARIAL};">`)
+}
+
 // Inline stylesheet wrapped around REPORT HTML (from the dashboard
 // reports module). Google Docs preserves font weight/size/color, padding,
 // borders, table layout, and block backgrounds — enough that the imported
@@ -84,14 +101,14 @@ function wrapReportHtml(title: string, body: string): string {
     .ins.win { background: #D1FAE5; border-left-color: #059669; }
     ul, ol { font-family: ${ARIAL}; padding-left: 24pt; }
     li { font-family: ${ARIAL}; margin: 4pt 0; font-size: 11pt; }
-    strong, b { font-weight: 700; }
-    em, i { font-style: italic; }
+    strong, b { font-family: ${ARIAL}; font-weight: 700; }
+    em, i { font-family: ${ARIAL}; font-style: italic; }
     a { font-family: ${ARIAL}; color: #2563EB; text-decoration: underline; }
     table { font-family: ${ARIAL}; width: 100%; border-collapse: collapse; margin: 8pt 0; font-size: 10pt; }
     th { font-family: ${ARIAL}; background: #F4F5F7; text-align: left; padding: 6pt 8pt; border-bottom: 1px solid #E5E7EB; font-size: 9pt; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 0.04em; }
     td { font-family: ${ARIAL}; padding: 6pt 8pt; border-bottom: 1px solid #E5E7EB; color: #111827; }
   `
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${safeTitle}</title><style>${css}</style></head><body>${withRootWrapper(body)}</body></html>`
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${safeTitle}</title><style>${css}</style></head><body>${withRootWrapper(inlineBoldStyles(body))}</body></html>`
 }
 
 // Wrap ARTICLE HTML (from markdown) — prose + headings + lists + inline
@@ -108,8 +125,8 @@ function wrapArticleHtml(title: string, body: string): string {
     h3 { font-family: ${ARIAL}; font-size: 13pt; font-weight: 700; margin-top: 12pt; color: #111827; }
     h4 { font-family: ${ARIAL}; font-size: 11pt; font-weight: 700; margin-top: 10pt; color: #111827; }
     p { font-family: ${ARIAL}; margin: 8pt 0; font-size: 12pt; color: #111827; }
-    strong, b { font-weight: 700; }
-    em, i { font-style: italic; }
+    strong, b { font-family: ${ARIAL}; font-weight: 700; }
+    em, i { font-family: ${ARIAL}; font-style: italic; }
     ul, ol { font-family: ${ARIAL}; padding-left: 24pt; }
     li { font-family: ${ARIAL}; margin: 4pt 0; font-size: 12pt; color: #111827; }
     blockquote { font-family: ${ARIAL}; border-left: 3pt solid #E5E7EB; padding-left: 12pt; color: #6B7280; margin: 8pt 0; font-style: italic; }
@@ -121,7 +138,7 @@ function wrapArticleHtml(title: string, body: string): string {
     th { font-family: ${ARIAL}; background: #F4F5F7; text-align: left; padding: 6pt 8pt; border-bottom: 1px solid #E5E7EB; font-weight: 700; color: #6B7280; }
     td { font-family: ${ARIAL}; padding: 6pt 8pt; border-bottom: 1px solid #E5E7EB; color: #111827; }
   `
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${safeTitle}</title><style>${css}</style></head><body>${withRootWrapper(body)}</body></html>`
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${safeTitle}</title><style>${css}</style></head><body>${withRootWrapper(inlineBoldStyles(body))}</body></html>`
 }
 
 export async function POST(req: Request) {
