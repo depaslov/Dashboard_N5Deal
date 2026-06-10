@@ -29,10 +29,18 @@ const ImportPostSchema = z.object({
   message: 'Each post needs `acc` slug or `accountId`',
 })
 
-// Accept either a bare array or an object wrapping it.
+// Accept either a bare array or an object wrapping it. The object form
+// supports `replaceInRange: true` — when set, every existing post for the
+// AFFECTED accounts (the accountIds the new payload targets) within the
+// payload's date span gets deleted before the new posts are inserted.
+// Lets the operator "replace this plan" without surfacing a dedicated
+// nuke endpoint. Bare-array form keeps the original auto-dedup behaviour.
 const BodySchema = z.union([
   z.array(ImportPostSchema),
-  z.object({ posts: z.array(ImportPostSchema) }),
+  z.object({
+    posts: z.array(ImportPostSchema),
+    replaceInRange: z.boolean().optional(),
+  }),
 ])
 
 function parseDate(input: string): Date | null {
@@ -50,6 +58,7 @@ interface ImportResult {
   inserted: number
   skipped: number
   failed: number
+  wiped: number            // posts deleted because replaceInRange === true (0 otherwise)
   skippedKeys: string[]   // first 20 skipped (yyyy-mm-dd|title) for the operator
   failures: { index: number; reason: string }[] // first 20 failures
 }
@@ -73,6 +82,7 @@ export async function POST(req: Request) {
     }, { status: 400 })
   }
   const items = Array.isArray(parsed.data) ? parsed.data : parsed.data.posts
+  const replaceInRange = !Array.isArray(parsed.data) && parsed.data.replaceInRange === true
   if (items.length === 0) {
     return NextResponse.json({ error: 'No posts in payload' }, { status: 400 })
   }
@@ -88,12 +98,44 @@ export async function POST(req: Request) {
   const accBySlug = new Map(accounts.map((a) => [a.slug, a.id]))
   const accIds = new Set(accounts.map((a) => a.id))
 
-  // De-dupe key: yyyy-mm-dd|title. Build once from current DB rows so a
-  // re-run of the same plan never creates duplicates.
+  // Date bounds of the incoming payload — used both for the dedup window
+  // below and the replaceInRange wipe just above it.
   const dateBounds = items
     .map((p) => parseDate(p.date))
     .filter((d): d is Date => d !== null)
     .sort((a, b) => a.getTime() - b.getTime())
+
+  // ─── replaceInRange wipe ─────────────────────────────────────────────
+  // Only deletes posts in the AFFECTED accounts (the union of accountIds
+  // the new payload targets), scoped to the payload's date span widened
+  // by a day on either side to absorb timezone drift. Wipes happen BEFORE
+  // dedup-key generation so the dedup map below reflects post-wipe state
+  // and we don't accidentally skip a fresh row that matches one we just
+  // deleted.
+  let wiped = 0
+  if (replaceInRange && dateBounds.length > 0) {
+    const affectedAccountIds = new Set<string>()
+    for (const p of items) {
+      const id = p.accountId ?? (p.acc ? accBySlug.get(p.acc) : undefined)
+      if (id && accIds.has(id)) affectedAccountIds.add(id)
+    }
+    if (affectedAccountIds.size > 0) {
+      const min = new Date(dateBounds[0].getTime() - 24 * 60 * 60 * 1000)
+      const max = new Date(dateBounds[dateBounds.length - 1].getTime() + 24 * 60 * 60 * 1000)
+      const del = await prisma.socialPost.deleteMany({
+        where: {
+          projectId: project.id,
+          accountId: { in: [...affectedAccountIds] },
+          scheduledFor: { gte: min, lte: max },
+        },
+      })
+      wiped = del.count
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────
+
+  // De-dupe key: yyyy-mm-dd|title. Built AFTER the optional wipe so dedup
+  // reflects the post-wipe DB state.
   let existingKeys = new Set<string>()
   if (dateBounds.length > 0) {
     const min = new Date(dateBounds[0].getTime() - 24 * 60 * 60 * 1000)
@@ -115,6 +157,7 @@ export async function POST(req: Request) {
     inserted: 0,
     skipped: 0,
     failed: 0,
+    wiped,
     skippedKeys: [],
     failures: [],
   }

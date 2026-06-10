@@ -34,6 +34,7 @@ interface ImportResult {
   inserted: number
   skipped: number
   failed: number
+  wiped?: number
   skippedKeys: string[]
   failures: { index: number; reason: string }[]
 }
@@ -78,6 +79,11 @@ export function ImportPlanModal({ open, onOpenChange, accountSlugs }: Props) {
   const [pendingDoc, setPendingDoc] = useState<PendingDoc | null>(null)
   const [pastedDoc, setPastedDoc] = useState('')
   const [extracting, setExtracting] = useState(false)
+  // When the operator wants to wipe + re-insert (e.g. "delete the old June
+  // plan and replace it with this one") this flag rides on the bulk-import
+  // call. Server-side it deletes every post for the AFFECTED accounts in
+  // the payload's date span before inserting; see bulk-import/route.ts.
+  const [replaceInRange, setReplaceInRange] = useState(false)
 
   // Best-effort parse for the live preview. Doesn't block the user — we let
   // the server do the authoritative validation on Import.
@@ -180,13 +186,25 @@ export function ImportPlanModal({ open, onOpenChange, accountSlugs }: Props) {
 
   const handleImport = async () => {
     if (preview.items.length === 0) { toast.error('Nothing to import'); return }
+    if (replaceInRange) {
+      const ok = window.confirm(
+        `This will DELETE every existing post for the accounts in this plan within the plan's date range, then insert the ${preview.items.length} new post(s).\n\nContinue?`,
+      )
+      if (!ok) return
+    }
     setImporting(true)
     setResult(null)
     try {
+      // When replaceInRange is on we switch the body shape from a bare
+      // array to the wrapper object so we can carry the flag. Server-side
+      // accepts both shapes.
+      const body = replaceInRange
+        ? JSON.stringify({ posts: preview.items, replaceInRange: true })
+        : text
       const res = await fetch('/api/marketing/posts/bulk-import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: text,
+        body,
       })
       const data = await res.json()
       if (!res.ok) { toast.error(data?.error ?? 'Import failed'); return }
@@ -194,7 +212,8 @@ export function ImportPlanModal({ open, onOpenChange, accountSlugs }: Props) {
       const success = data.inserted ?? 0
       const dup = data.skipped ?? 0
       const fail = data.failed ?? 0
-      toast.success(`Imported ${success} new post${success === 1 ? '' : 's'}${dup ? ` · ${dup} already in calendar` : ''}${fail ? ` · ${fail} failed` : ''}`)
+      const wiped: number = data.wiped ?? 0
+      toast.success(`Imported ${success} new post${success === 1 ? '' : 's'}${wiped ? ` · ${wiped} old post${wiped === 1 ? '' : 's'} wiped` : ''}${dup ? ` · ${dup} already in calendar` : ''}${fail ? ` · ${fail} failed` : ''}`)
       if (success > 0) router.refresh()
     } finally {
       setImporting(false)
@@ -378,6 +397,39 @@ export function ImportPlanModal({ open, onOpenChange, accountSlugs }: Props) {
             ) : null}
           </div>
 
+          {/* Replace-in-range toggle. Off by default: bulk-import behaves
+              like before (skip duplicates by date+title, keep everything
+              else). On: deletes every existing post for the accounts in
+              this payload, within the payload's date span, BEFORE
+              inserting. Useful for "wipe last month's plan and replace
+              with the new one" flows where the operator wants a clean
+              slate instead of cumulative drift. */}
+          {preview.items.length > 0 ? (
+            <label className={cn(
+              'flex items-start gap-3 px-3 py-2.5 rounded-md border cursor-pointer transition-colors',
+              replaceInRange
+                ? 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30'
+                : 'border-border bg-muted/30 hover:bg-muted/50',
+            )}>
+              <input
+                type="checkbox"
+                checked={replaceInRange}
+                onChange={(e) => setReplaceInRange(e.target.checked)}
+                className="h-4 w-4 mt-0.5 shrink-0"
+              />
+              <div className="min-w-0 flex-1 text-xs">
+                <p className={cn('font-semibold', replaceInRange ? 'text-amber-900 dark:text-amber-200' : 'text-foreground')}>
+                  Replace existing posts in this date range
+                </p>
+                <p className={cn('mt-0.5', replaceInRange ? 'text-amber-800 dark:text-amber-300' : 'text-muted-foreground')}>
+                  {replaceInRange
+                    ? '⚠ Existing posts for the accounts in this plan, scheduled within the plan\'s date span, will be DELETED before import.'
+                    : 'Off — duplicate rows (same date + title) are skipped; everything else stays untouched.'}
+                </p>
+              </div>
+            </label>
+          ) : null}
+
           {previewStats ? (
             <div className="rounded-md border border-border bg-card p-3 text-sm">
               <div className="flex items-center gap-2 mb-2 font-semibold">
@@ -408,9 +460,12 @@ export function ImportPlanModal({ open, onOpenChange, accountSlugs }: Props) {
           {result ? (
             <div className="rounded-md border border-emerald-500/40 bg-emerald-500/5 p-3 text-sm space-y-1.5">
               <div className="font-semibold inline-flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-emerald-600" /> Import complete</div>
-              <div className="grid grid-cols-4 gap-2 text-xs tabular-nums">
+              <div className={cn('grid gap-2 text-xs tabular-nums', result.wiped ? 'grid-cols-5' : 'grid-cols-4')}>
                 <div><div className="text-muted-foreground">Total</div><div className="font-bold">{result.total}</div></div>
                 <div className="text-emerald-700 dark:text-emerald-300"><div className="text-muted-foreground">New</div><div className="font-bold">{result.inserted}</div></div>
+                {result.wiped ? (
+                  <div className="text-amber-700 dark:text-amber-300"><div className="text-muted-foreground">Wiped</div><div className="font-bold">{result.wiped}</div></div>
+                ) : null}
                 <div className="text-muted-foreground"><div>Already in cal</div><div className="font-bold">{result.skipped}</div></div>
                 <div className="text-destructive"><div>Failed</div><div className="font-bold">{result.failed}</div></div>
               </div>
