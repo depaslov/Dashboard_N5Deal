@@ -23,10 +23,16 @@ const PdfBody = z.object({
 })
 const BodySchema = z.union([TextBody, PdfBody])
 
+// IMPORTANT: unlike other importers we KEEP <script> blocks here. Content-
+// plan exports (e.g. the operator's HTML tables built in ChatGPT) routinely
+// embed every post as a JS object literal inside a single `<script>` tag
+// (the DOM is hydrated at runtime), so stripping scripts would leave the
+// LLM staring at an empty `<tbody>` and yield zero posts. We still drop
+// <head>, <style>, and HTML comments — they're purely cosmetic and waste
+// tokens without carrying post data.
 function sanitizeHtml(raw: string): string {
   return raw
     .replace(/<head\b[^>]*>[\s\S]*?<\/head>/gi, '')
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
     .replace(/<!--[\s\S]*?-->/g, '')
 }
@@ -50,6 +56,13 @@ function userPrompt(
 ): string {
   const slugList = accounts.map((a) => `  "${a.slug}" — ${a.name}`).join('\n')
   return `Below is a content plan (${sourceLabel}). Extract every post entry into a JSON array. Output ONLY the JSON, no markdown fences, no prose.
+
+IMPORTANT: the source may embed posts in different shapes. Read all of them:
+- A visible HTML table with one row per post
+- An inline JavaScript array literal (e.g. \`const P = [ { d: 'Jun 1', hook: '…' }, … ]\`) — common in ChatGPT-exported plan pages where the DOM is hydrated at runtime. Treat entries in this array as posts.
+- A markdown list / table with one row per post
+- A bare plaintext list with date-prefixed lines
+You must extract from whichever shape the source uses. If both a static table and a script-side array exist, the SCRIPT-SIDE array is authoritative (the table is usually a static skeleton).
 
 Each post must have this exact shape:
 {
@@ -161,7 +174,10 @@ export async function POST(req: Request) {
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: userPrompt(sourceText, sourceLabel, accounts, inferredYear) },
       ],
-      { maxTokens: 8192 },
+      // 90-post plans easily exceed 8K output tokens once `content` keeps
+      // the full hook + operator note. Bumped to 16K — comfortably fits a
+      // monthly calendar for a single founder.
+      { maxTokens: 16384 },
     )
   } catch (err) {
     if (err instanceof MissingLLMKey) {
