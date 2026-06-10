@@ -228,8 +228,14 @@ export function ContentActions({
       }
       // Open the tab synchronously BEFORE the await so popup blockers let
       // it through; we point it at about:blank first, then redirect once
-      // the doc id comes back.
-      const tab = window.open('about:blank', '_blank', 'noopener,noreferrer')
+      // the doc id comes back. IMPORTANT: do NOT pass noopener/noreferrer
+      // on the placeholder — modern browsers (Chrome 88+, Firefox 79+)
+      // intentionally return null from window.open() when noopener is
+      // set, which would leave us unable to navigate the tab afterwards.
+      // The cross-origin navigation to docs.google.com restores the
+      // security boundary automatically (the Doc can't reach back into
+      // our window via opener once it's on a different origin).
+      const tab = window.open('about:blank', '_blank')
       const res = await fetch('/api/google/docs/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -253,9 +259,15 @@ export function ContentActions({
       }
       if (tab) {
         tab.location.href = data.docUrl
+        // Sever the opener back-reference once the tab is on docs.google.com
+        // so the Google Doc can't read our window. (Cross-origin would block
+        // most things anyway; this is belt-and-braces.)
+        try { tab.opener = null } catch { /* about:blank navigation already in flight */ }
       } else {
-        // Popup blocked — open via location instead.
-        window.open(data.docUrl, '_blank', 'noopener,noreferrer')
+        // The placeholder tab failed to open (popup blocker even on the
+        // synchronous call, very rare). Try opening directly — also likely
+        // blocked but at least the docUrl is the right destination.
+        window.open(data.docUrl, '_blank')
       }
       const notesNote = annotations.length > 0
         ? ` (with ${annotations.length} note${annotations.length === 1 ? '' : 's'})`

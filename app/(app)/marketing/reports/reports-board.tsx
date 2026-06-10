@@ -610,7 +610,11 @@ function ReportDetailView({
         window.location.href = `/api/auth/google/start?returnTo=${encodeURIComponent(returnTo)}`
         return
       }
-      const tab = window.open('about:blank', '_blank', 'noopener,noreferrer')
+      // Drop noopener/noreferrer — modern browsers return null from
+      // window.open() when noopener is set, which breaks our placeholder-
+      // then-navigate pattern. The cross-origin navigation to
+      // docs.google.com restores the security boundary automatically.
+      const tab = window.open('about:blank', '_blank')
       const res = await fetch('/api/google/docs/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -630,8 +634,12 @@ function ReportDetailView({
         toast.error(data?.error ?? 'Could not create Google Doc')
         return
       }
-      if (tab) tab.location.href = data.docUrl
-      else window.open(data.docUrl, '_blank', 'noopener,noreferrer')
+      if (tab) {
+        tab.location.href = data.docUrl
+        try { tab.opener = null } catch { /* navigation in flight */ }
+      } else {
+        window.open(data.docUrl, '_blank')
+      }
       toast.success('Google Doc created — opening now…')
     } finally {
       setCreatingDoc(false)
