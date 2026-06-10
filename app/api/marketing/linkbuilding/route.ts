@@ -13,6 +13,11 @@ const TYPES = ['outreach', 'guest_post', 'resource', 'partner', 'directory', 'ha
 // LB_STATUSES in lib/marketing/constants.ts for the workflow narrative.
 const STATUSES = ['planned', 'in_progress', 'approved', 'followup', 'published', 'declined'] as const
 
+// Title is the only required field — everything else falls back to a sane
+// default (planned status, today's date, outreach type) so the operator
+// can dump a quick idea into the system without filling the whole form,
+// then expand it later. Matches how operators actually work — they think
+// of a task before they think of the date and the destination URL.
 const CreateSchema = z.object({
   title: z.string().min(1).max(300),
   targetSite: z.string().max(300).optional().nullable(),
@@ -22,7 +27,7 @@ const CreateSchema = z.object({
   destinationUrl: z.string().max(500).optional().nullable(),
   type: z.enum(TYPES).default('outreach'),
   status: z.enum(STATUSES).default('planned'),
-  scheduledFor: z.string(),
+  scheduledFor: z.string().optional().nullable(),
   publishedDate: z.string().optional().nullable(),
   liveUrl: z.string().max(500).optional().nullable(),
   dr: z.number().int().min(0).max(100).optional().nullable(),
@@ -79,7 +84,13 @@ export async function POST(req: Request) {
       destinationUrl: parsed.data.destinationUrl || null,
       type: parsed.data.type,
       status: parsed.data.status,
-      scheduledFor: new Date(parsed.data.scheduledFor),
+      // No date supplied? Default to today — operator can refine later.
+      // We keep the column NOT NULL because half the views (Calendar,
+      // upcoming-this-week filters) depend on it; today is a safer
+      // default than "epoch" or "year 9999".
+      scheduledFor: typeof parsed.data.scheduledFor === 'string' && parsed.data.scheduledFor
+        ? new Date(parsed.data.scheduledFor)
+        : new Date(),
       publishedDate: parsed.data.publishedDate ? new Date(parsed.data.publishedDate) : null,
       liveUrl: parsed.data.liveUrl || null,
       dr: parsed.data.dr ?? null,

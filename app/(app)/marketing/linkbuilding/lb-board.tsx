@@ -430,13 +430,71 @@ function CalendarView({
 // Board (kanban by status)
 // ============================================================================
 function BoardView({ items, onClick }: { items: LbItem[]; onClick: (i: LbItem) => void }) {
+  const router = useRouter()
+  // Cards being dragged + the column hovered as a drop target. Stored as
+  // refs in state so React re-renders draw the highlighted column outline
+  // and the source card's "ghost" opacity. We use native HTML5 drag-and-drop
+  // (draggable / onDragOver / onDrop) — no library needed, plays nicely
+  // with shadcn buttons.
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [dropTarget, setDropTarget] = useState<string | null>(null)
+  const [updating, setUpdating] = useState(false)
+
+  async function moveTo(itemId: string, newStatus: string) {
+    setUpdating(true)
+    try {
+      const res = await fetch(`/api/marketing/linkbuilding/${itemId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { toast.error(data?.error ?? 'Could not move'); return }
+      // Status-change PATCH also writes an Activity row when transitioning
+      // into/out of "approved" — see [id]/route.ts. router.refresh re-runs
+      // the server component and re-fetches the list with the new status.
+      router.refresh()
+    } finally {
+      setUpdating(false)
+    }
+  }
+
   if (items.length === 0) return <FilteredEmpty />
   return (
-    <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+    <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-6">
       {LB_STATUSES.map((s) => {
         const cards = items.filter((i) => i.status === s.k)
+        const isDropTarget = dropTarget === s.k
         return (
-          <div key={s.k} className="bg-muted/30 border border-border rounded-lg p-3">
+          <div
+            key={s.k}
+            onDragOver={(e) => {
+              // Required to make the column a valid drop target — without
+              // preventDefault here, onDrop never fires.
+              e.preventDefault()
+              if (dropTarget !== s.k) setDropTarget(s.k)
+            }}
+            onDragLeave={(e) => {
+              // Only clear when the pointer leaves the column itself (not
+              // when it crosses an inner card). relatedTarget being null
+              // means it left the window.
+              if (e.currentTarget.contains(e.relatedTarget as Node | null)) return
+              if (dropTarget === s.k) setDropTarget(null)
+            }}
+            onDrop={(e) => {
+              e.preventDefault()
+              const itemId = e.dataTransfer.getData('text/plain') || draggingId
+              setDropTarget(null); setDraggingId(null)
+              if (!itemId) return
+              const item = items.find((i) => i.id === itemId)
+              if (!item || item.status === s.k) return
+              moveTo(itemId, s.k)
+            }}
+            className={cn(
+              'bg-muted/30 border border-border rounded-lg p-3 transition-colors',
+              isDropTarget && 'border-primary border-2 bg-primary/5',
+            )}
+          >
             <header className="flex items-center gap-2 mb-3 px-1">
               <span className={cn('h-2 w-2 rounded-full', s.dot)} />
               <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{s.label}</h3>
@@ -446,11 +504,21 @@ function BoardView({ items, onClick }: { items: LbItem[]; onClick: (i: LbItem) =
             </header>
             <div className="space-y-1.5">
               {cards.map((i) => (
-                <button
+                <div
                   key={i.id}
-                  type="button"
+                  draggable
+                  onDragStart={(e) => {
+                    setDraggingId(i.id)
+                    e.dataTransfer.setData('text/plain', i.id)
+                    e.dataTransfer.effectAllowed = 'move'
+                  }}
+                  onDragEnd={() => { setDraggingId(null); setDropTarget(null) }}
                   onClick={() => onClick(i)}
-                  className="w-full text-left bg-card border border-border rounded p-2.5 hover:bg-accent/50 transition-colors"
+                  className={cn(
+                    'w-full text-left bg-card border border-border rounded p-2.5 hover:bg-accent/50 transition-all cursor-grab active:cursor-grabbing',
+                    draggingId === i.id && 'opacity-40',
+                    updating && 'pointer-events-none opacity-70',
+                  )}
                 >
                   <div className="text-xs font-medium line-clamp-2">{i.title}</div>
                   {i.targetSite ? (
@@ -461,10 +529,15 @@ function BoardView({ items, onClick }: { items: LbItem[]; onClick: (i: LbItem) =
                     {i.dr ? <span>· DR {i.dr}</span> : null}
                     {typeof i.cost === 'number' && i.cost > 0 ? <span>· ${i.cost}</span> : null}
                   </div>
-                </button>
+                </div>
               ))}
               {cards.length === 0 ? (
-                <div className="text-[11px] text-muted-foreground text-center py-3 font-medium">— empty —</div>
+                <div className={cn(
+                  'text-[11px] text-center py-3 font-medium border border-dashed rounded',
+                  isDropTarget ? 'border-primary text-primary bg-primary/5' : 'border-transparent text-muted-foreground',
+                )}>
+                  {isDropTarget ? 'Drop here' : '— empty —'}
+                </div>
               ) : null}
             </div>
           </div>

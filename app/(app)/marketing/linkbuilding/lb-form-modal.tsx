@@ -58,8 +58,11 @@ export function LbFormModal({ mode, onClose }: { mode: Mode; onClose: () => void
   }, [mode])
 
   async function save() {
+    // Title is the only field the operator MUST supply — everything else
+    // either defaults server-side (status → planned, type → outreach,
+    // scheduledFor → today) or stays null. Lets the operator drop a quick
+    // idea into the system without filling the whole form.
     if (!title.trim()) { toast.error('Title is required'); return }
-    if (!scheduledFor) { toast.error('Date is required'); return }
     setSaving(true)
     try {
       const body = {
@@ -71,7 +74,9 @@ export function LbFormModal({ mode, onClose }: { mode: Mode; onClose: () => void
         destinationUrl: destinationUrl.trim() || undefined,
         type,
         status,
-        scheduledFor: new Date(scheduledFor + 'T12:00:00').toISOString(),
+        // Send scheduledFor only when the operator actually picked a date —
+        // empty string means "let the server default it to today".
+        scheduledFor: scheduledFor ? new Date(scheduledFor + 'T12:00:00').toISOString() : undefined,
         publishedDate: publishedDate ? new Date(publishedDate + 'T12:00:00').toISOString() : null,
         liveUrl: liveUrl.trim() || undefined,
         dr: dr ? parseInt(dr, 10) : null,
@@ -195,8 +200,8 @@ export function LbFormModal({ mode, onClose }: { mode: Mode; onClose: () => void
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="lb-scheduled">Scheduled / outreach date <span className="text-destructive">*</span></Label>
-              <Input id="lb-scheduled" type="date" value={scheduledFor} onChange={(e) => setScheduledFor(e.target.value)} />
+              <Label htmlFor="lb-scheduled">Scheduled / outreach date</Label>
+              <Input id="lb-scheduled" type="date" value={scheduledFor} onChange={(e) => setScheduledFor(e.target.value)} placeholder="Defaults to today" />
             </div>
             <div>
               <Label htmlFor="lb-published">Published date (if live)</Label>
