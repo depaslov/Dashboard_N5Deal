@@ -23,6 +23,27 @@ model User {
   linkBuildingItems LinkBuildingItem[] @relation("LinkBuildingAuthor")
   seoKeywords       SeoKeyword[]       @relation("SeoKeywordAuthor")
   googleAuth        GoogleAuthToken?
+  passwordResets    PasswordResetToken[]
+}
+
+// One-time, hashed token issued when the operator requests a password
+// reset. Lifetime is short (1 hour) and the row is marked `usedAt` after a
+// successful redemption so the same link cannot be replayed. We store only
+// the SHA-256 hash of the token — the raw value lives in the email link
+// and in the operator's browser, never in our DB. That way a database
+// dump can't be used to take over accounts.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 // Per-user OAuth tokens for the Google Drive API. Lets the "Open in Google
