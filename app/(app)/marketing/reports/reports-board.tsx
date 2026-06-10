@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -525,6 +525,25 @@ function ReportDetailView({
   setTab: (t: string) => void
 }) {
   const [savingNotes, setSavingNotes] = useState(false)
+  const [creatingDoc, setCreatingDoc] = useState(false)
+  const router = useRouter()
+  const params = useSearchParams()
+
+  // Same OAuth-return handler the content page has — pick up ?g_oauth=ok or
+  // ?g_oauth_error=… after the consent screen redirects back here, surface
+  // it as a toast, and strip the noisy param so it doesn't survive refresh.
+  useEffect(() => {
+    const ok = params.get('g_oauth')
+    const err = params.get('g_oauth_error')
+    if (!ok && !err) return
+    if (ok === 'ok') toast.success('Google account connected — click "Open in Google Docs" again to create the doc.', { duration: 6000 })
+    if (err) toast.error(`Google connection failed: ${err}`)
+    const next = new URLSearchParams(params.toString())
+    next.delete('g_oauth')
+    next.delete('g_oauth_error')
+    const qs = next.toString()
+    router.replace(qs ? `/marketing/reports?${qs}` : '/marketing/reports')
+  }, [params, router])
 
   async function saveNotes(notes: string, channel?: string) {
     setSavingNotes(true)
@@ -545,73 +564,48 @@ function ReportDetailView({
     }
   }
 
-  // Build the full standalone HTML document — used by both downloadHtml and
-  // openInGoogleDocs. Inlining the dashboard's stylesheet so the doc looks
-  // the same outside the dashboard (and so Google Docs preserves headings,
-  // metric cards, tables, insight blocks when the HTML is pasted in).
-  function buildFullDoc(): string {
-    const stylesheet = `
-      body { font-family: 'Inter', system-ui, sans-serif; max-width: 880px; margin: 2rem auto; padding: 0 2rem; color: #111827; background: #F4F5F7; }
-      .rv { background: #fff; border-radius: 12px; padding: 2rem; box-shadow: 0 2px 16px rgba(0,0,0,.08); }
-      h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: .25rem; }
-      .rp { font-size: .75rem; color: #6B7280; font-weight: 500; margin-bottom: 1rem; padding-bottom: .75rem; border-bottom: 1px solid #E5E7EB; }
-      h2 { font-size: 1.15rem; font-weight: 700; margin: 1.5rem 0 .75rem; }
-      h3 { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #6B7280; margin: .85rem 0 .4rem; }
-      .mg { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .5rem; margin: .5rem 0 1rem; }
-      .mc { background: #F4F5F7; border: 1px solid #E5E7EB; border-radius: .5rem; padding: .75rem; text-align: center; }
-      .mv { font-size: 1.4rem; font-weight: 700; }
-      .ml { font-size: .65rem; color: #6B7280; font-weight: 600; margin-top: .15rem; text-transform: uppercase; letter-spacing: .04em; }
-      .md.up { color: #059669; font-size: .7rem; font-weight: 600; margin-top: .25rem; }
-      .md.dn { color: #DC2626; font-size: .7rem; font-weight: 600; margin-top: .25rem; }
-      .ins { background: hsla(217,91%,51%,.08); border-left: 3px solid #2563EB; padding: .6rem .9rem; border-radius: 0 .5rem .5rem 0; font-size: .85rem; margin: .6rem 0; line-height: 1.55; }
-      table { width: 100%; border-collapse: collapse; font-size: .8rem; margin: .5rem 0 1rem; }
-      th { text-align: left; padding: .4rem .6rem; background: #F4F5F7; border-bottom: 1px solid #E5E7EB; font-size: .65rem; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: .04em; }
-      td { padding: .4rem .6rem; border-bottom: 1px solid #E5E7EB; }
-    `
-    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${report.title.replace(/[<>]/g, '')}</title><style>${stylesheet}</style></head><body>${report.html}</body></html>`
-  }
-
-  // "Open in Google Docs" — copies the styled HTML to the clipboard as both
-  // text/html and text/plain, then opens a blank Google Doc in a new tab.
-  // The operator pastes with ⌘V; Google Docs preserves the HTML formatting
-  // (headings, metric cards, tables, insight blocks) on paste. Zero OAuth,
-  // zero dependencies — this is the pattern Mailchimp / HubSpot use for the
-  // same flow. ClipboardItem isn't in Firefox stable yet; we fall back to a
-  // text-only clipboard write and warn the operator if HTML isn't supported.
+  // "Open in Google Docs" — server-side create via Drive API. First call
+  // checks /api/google/status; if not connected, kicks off OAuth (consent
+  // screen) with returnTo set to this same Reports URL so the operator
+  // lands back where they were. If already connected, POSTs the rendered
+  // report HTML to /api/google/docs/create — Drive converts it into a
+  // Google Doc in the operator's Drive and returns the doc URL, which we
+  // open in a new tab.
   async function openInGoogleDocs() {
-    const fullDoc = buildFullDoc()
-    // Plain-text fallback — strip tags and collapse whitespace so paste-as-text
-    // is at least readable when the browser doesn't support HTML clipboard.
-    const plain = report.html
-      .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
-      .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
+    setCreatingDoc(true)
     try {
-      // Open the tab synchronously, BEFORE the await — some browsers block
-      // window.open if it isn't directly inside the click handler's first
-      // microtask. We open early and let the paste happen at the user's
-      // pace; the clipboard write races alongside.
-      const tab = window.open('https://docs.google.com/document/create', '_blank', 'noopener,noreferrer')
-      if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
-        const item = new ClipboardItem({
-          'text/html': new Blob([fullDoc], { type: 'text/html' }),
-          'text/plain': new Blob([plain], { type: 'text/plain' }),
-        })
-        await navigator.clipboard.write([item])
-        toast.success('Report HTML copied — paste in the new tab with ⌘V', { duration: 6000 })
-      } else if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(plain)
-        toast.message('Copied as plain text — your browser doesn\'t support HTML clipboard.', { duration: 6000 })
-      } else {
-        toast.error('Clipboard not supported in this browser.')
+      const status = await fetch('/api/google/status').then((r) => r.json()).catch(() => null)
+      if (!status?.configured) {
+        toast.error('Google Drive integration is not configured. Ask the admin to set GOOGLE_CLIENT_ID / SECRET / REDIRECT_URI.')
+        return
       }
-      if (!tab) {
-        toast.message('Popup blocked — open docs.google.com/document/create manually, then paste.', { duration: 8000 })
+      if (!status.connected) {
+        const returnTo = '/marketing/reports' + (params.toString() ? `?${params.toString()}` : '')
+        window.location.href = `/api/auth/google/start?returnTo=${encodeURIComponent(returnTo)}`
+        return
       }
-    } catch (err) {
-      toast.error(`Could not copy: ${(err as Error).message ?? 'unknown error'}`)
+      const tab = window.open('about:blank', '_blank', 'noopener,noreferrer')
+      const res = await fetch('/api/google/docs/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'html', title: report.title, html: report.html }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data?.docUrl) {
+        if (tab) tab.close()
+        if (data?.code === 'not_connected') {
+          const returnTo = '/marketing/reports' + (params.toString() ? `?${params.toString()}` : '')
+          window.location.href = `/api/auth/google/start?returnTo=${encodeURIComponent(returnTo)}`
+          return
+        }
+        toast.error(data?.error ?? 'Could not create Google Doc')
+        return
+      }
+      if (tab) tab.location.href = data.docUrl
+      else window.open(data.docUrl, '_blank', 'noopener,noreferrer')
+      toast.success('Google Doc created — opening now…')
+    } finally {
+      setCreatingDoc(false)
     }
   }
 
@@ -653,8 +647,9 @@ function ReportDetailView({
           <p className="text-xs text-muted-foreground mt-1">Generated {format(new Date(report.createdAt), 'd LLL yyyy, HH:mm')}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Button variant="outline" size="sm" onClick={openInGoogleDocs} className="gap-1.5">
-            <FileType2 className="h-3.5 w-3.5" /> Open in Google Docs
+          <Button variant="outline" size="sm" onClick={openInGoogleDocs} disabled={creatingDoc} className="gap-1.5">
+            {creatingDoc ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileType2 className="h-3.5 w-3.5" />}
+            {creatingDoc ? 'Creating…' : 'Open in Google Docs'}
           </Button>
           <Button variant="outline" size="sm" onClick={downloadHtml} className="gap-1.5">
             <Download className="h-3.5 w-3.5" /> Download

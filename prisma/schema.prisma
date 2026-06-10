@@ -22,6 +22,26 @@ model User {
   socialPosts       SocialPost[]       @relation("SocialPostAuthor")
   linkBuildingItems LinkBuildingItem[] @relation("LinkBuildingAuthor")
   seoKeywords       SeoKeyword[]       @relation("SeoKeywordAuthor")
+  googleAuth        GoogleAuthToken?
+}
+
+// Per-user OAuth tokens for the Google Drive API. Lets the "Open in Google
+// Docs" action create a Google Doc directly in the operator's own Drive
+// (scope: drive.file — only files the dashboard creates, never read of the
+// user's existing Drive). One row per user; refreshToken is the long-lived
+// credential, accessToken/expiresAt get rotated on demand.
+model GoogleAuthToken {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  accessToken  String   @db.Text
+  refreshToken String   @db.Text
+  expiresAt    DateTime
+  scope        String
+  googleEmail  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Project {
