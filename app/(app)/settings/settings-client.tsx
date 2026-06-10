@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
-import { User, Building2, Users, UserPlus, Save, Trash2, Shield } from 'lucide-react'
+import { User, Building2, Users, UserPlus, Save, Trash2, Shield, KeyRound, Eye, EyeOff, Copy } from 'lucide-react'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { format } from 'date-fns'
 
 interface User { id: string; name: string; email: string }
@@ -49,6 +50,21 @@ export function SettingsClient({ user, project, myRole, members }: Props) {
   const [inviteRole, setInviteRole] = useState('member')
   const [inviting, setInviting] = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
+
+  // change my password
+  const [currentPw, setCurrentPw] = useState('')
+  const [newPw, setNewPw] = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
+  const [showPw, setShowPw] = useState(false)
+  const [savingPw, setSavingPw] = useState(false)
+
+  // admin reset-password modal — when admin clicks Reset password on a
+  // member row, we open a modal that lets them type the new password and
+  // shows it back so they can copy + share it out-of-band with the user.
+  const [resetTarget, setResetTarget] = useState<Member | null>(null)
+  const [resetPw, setResetPw] = useState('')
+  const [resetShow, setResetShow] = useState(false)
+  const [resetting, setResetting] = useState(false)
 
   const isAdmin = myRole === 'admin'
 
@@ -155,6 +171,70 @@ export function SettingsClient({ user, project, myRole, members }: Props) {
     }
   }
 
+  const changeMyPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (newPw.length < 8) { toast.error('New password must be at least 8 characters'); return }
+    if (newPw !== confirmPw) { toast.error("Passwords don't match"); return }
+    setSavingPw(true)
+    try {
+      const res = await fetch('/api/profile/password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { toast.error(data?.error ?? 'Could not change password'); return }
+      toast.success('Password updated')
+      setCurrentPw(''); setNewPw(''); setConfirmPw(''); setShowPw(false)
+    } finally { setSavingPw(false) }
+  }
+
+  // Generates a memorable-but-decent 16-char password so the admin doesn't
+  // have to invent one on the spot. Mix of upper/lower/digit ensures the
+  // bcrypt entropy is fine. Operator can edit or replace it freely.
+  function generatePassword(): string {
+    const lower = 'abcdefghjkmnpqrstuvwxyz'
+    const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
+    const digit = '23456789'
+    const all = lower + upper + digit
+    let out = ''
+    const arr = new Uint32Array(16)
+    crypto.getRandomValues(arr)
+    for (let i = 0; i < 16; i++) out += all[arr[i] % all.length]
+    return out
+  }
+
+  const submitAdminReset = async () => {
+    if (!resetTarget) return
+    if (resetPw.length < 8) { toast.error('Password must be at least 8 characters'); return }
+    setResetting(true)
+    try {
+      const res = await fetch(`/api/users/${resetTarget.userId}/password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPassword: resetPw }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { toast.error(data?.error ?? 'Could not reset password'); return }
+      toast.success(`Password reset for ${resetTarget.name || resetTarget.email}`)
+      // Leave modal open with the password visible so admin can copy it.
+      setResetShow(true)
+    } finally { setResetting(false) }
+  }
+
+  function closeReset() {
+    setResetTarget(null); setResetPw(''); setResetShow(false); setResetting(false)
+  }
+
+  async function copyResetPw() {
+    try {
+      await navigator.clipboard.writeText(resetPw)
+      toast.success('Password copied to clipboard')
+    } catch {
+      toast.error('Could not copy')
+    }
+  }
+
   const removeMember = async (memberId: string) => {
     if (!confirm('Remove this member?')) return
     setRemovingId(memberId)
@@ -192,6 +272,37 @@ export function SettingsClient({ user, project, myRole, members }: Props) {
           <div className="md:col-span-2 flex justify-end">
             <Button type="submit" loading={savingProfile}>
               <Save className="h-4 w-4" /> Save profile
+            </Button>
+          </div>
+        </form>
+      </section>
+
+      {/* Change my password */}
+      <section className="bg-card border border-border shadow-sm">
+        <div className="px-6 py-4 border-b border-border flex items-center gap-2">
+          <KeyRound className="h-4 w-4 text-muted-foreground" />
+          <h2 className="font-display font-semibold text-lg tracking-tight">Change password</h2>
+        </div>
+        <form onSubmit={changeMyPassword} className="p-6 grid gap-4 md:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor="currentPw">Current password</Label>
+            <Input id="currentPw" type={showPw ? 'text' : 'password'} value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} autoComplete="current-password" required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="newPw">New password</Label>
+            <Input id="newPw" type={showPw ? 'text' : 'password'} value={newPw} onChange={(e) => setNewPw(e.target.value)} autoComplete="new-password" placeholder="At least 8 characters" required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPw">Confirm new</Label>
+            <Input id="confirmPw" type={showPw ? 'text' : 'password'} value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} autoComplete="new-password" required />
+          </div>
+          <div className="md:col-span-3 flex items-center justify-between">
+            <button type="button" onClick={() => setShowPw((v) => !v)} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+              {showPw ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              {showPw ? 'Hide passwords' : 'Show passwords'}
+            </button>
+            <Button type="submit" loading={savingPw}>
+              <Save className="h-4 w-4" /> Update password
             </Button>
           </div>
         </form>
@@ -308,16 +419,28 @@ export function SettingsClient({ user, project, myRole, members }: Props) {
                     Since {m?.createdAt ? format(new Date(m.createdAt), 'MMM d, yyyy') : ''}
                   </span>
                   {isAdmin && m?.userId !== user?.id ? (
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => removeMember(m?.id)}
-                      disabled={removingId === m?.id}
-                      aria-label="Remove member"
-                      className="text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => { setResetTarget(m); setResetPw(generatePassword()); setResetShow(false) }}
+                        aria-label="Reset password"
+                        title="Reset password"
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <KeyRound className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => removeMember(m?.id)}
+                        disabled={removingId === m?.id}
+                        aria-label="Remove member"
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </>
                   ) : null}
                 </div>
               ))}
@@ -325,6 +448,72 @@ export function SettingsClient({ user, project, myRole, members }: Props) {
           </div>
         </div>
       </section>
+
+      {/* Admin: reset another user's password.  Stays open after the
+          server confirms so the admin can copy the password and share it
+          out-of-band (chat / verbally) with the user — we never email it. */}
+      <Dialog open={resetTarget !== null} onOpenChange={(o) => { if (!o) closeReset() }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-4 w-4" />
+              Reset password
+            </DialogTitle>
+            <DialogDescription>
+              Set a new password for <strong>{resetTarget?.name || resetTarget?.email}</strong>. Share it with them through a private channel — we don't email it.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="resetPw">New password</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="resetPw"
+                  type={resetShow ? 'text' : 'password'}
+                  value={resetPw}
+                  onChange={(e) => setResetPw(e.target.value)}
+                  className="font-mono"
+                  autoComplete="new-password"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setResetShow((v) => !v)}
+                  aria-label={resetShow ? 'Hide password' : 'Show password'}
+                >
+                  {resetShow ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={copyResetPw}
+                  aria-label="Copy password"
+                  title="Copy"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setResetPw(generatePassword()); setResetShow(true) }}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Generate a new random password
+              </button>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeReset} disabled={resetting}>Cancel</Button>
+            <Button onClick={submitAdminReset} loading={resetting}>
+              <KeyRound className="h-4 w-4" /> Set password
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
