@@ -8,7 +8,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, Upload, FileJson, Check, AlertTriangle } from 'lucide-react'
+import { Loader2, Upload, FileJson, Check, AlertTriangle, FileUp, Sparkles, FileText, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
 interface Props {
@@ -64,11 +65,19 @@ const SAMPLE = `[
   }
 ]`
 
+type SourceMode = 'json' | 'doc'
+interface PendingDoc { name: string; kind: 'html' | 'markdown' | 'text' | 'pdf'; content: string }
+
 export function ImportPlanModal({ open, onOpenChange, accountSlugs }: Props) {
   const router = useRouter()
   const [text, setText] = useState('')
   const [importing, setImporting] = useState(false)
   const [result, setResult] = useState<ImportResult | null>(null)
+  // Doc-extract mode state.
+  const [sourceMode, setSourceMode] = useState<SourceMode>('json')
+  const [pendingDoc, setPendingDoc] = useState<PendingDoc | null>(null)
+  const [pastedDoc, setPastedDoc] = useState('')
+  const [extracting, setExtracting] = useState(false)
 
   // Best-effort parse for the live preview. Doesn't block the user — we let
   // the server do the authoritative validation on Import.
@@ -100,6 +109,74 @@ export function ImportPlanModal({ open, onOpenChange, accountSlugs }: Props) {
     }
     return { byAcc, unknownAcc, badDate, missingTitle }
   }, [preview.items, slugSet])
+
+  // Read a chosen doc into the pendingDoc state. Same file-type detection
+  // pattern the Reports importer uses; PDFs go as base64 data URLs because
+  // pdf-parse runs server-side.
+  async function handleDocFile(file: File | null) {
+    if (!file) return
+    const name = file.name.toLowerCase()
+    const isPdf = name.endsWith('.pdf') || file.type === 'application/pdf'
+    const isHtml = name.endsWith('.html') || name.endsWith('.htm') || file.type === 'text/html'
+    const isMd = name.endsWith('.md') || name.endsWith('.markdown') || file.type === 'text/markdown'
+    const isTxt = name.endsWith('.txt') || file.type === 'text/plain'
+    if (!isPdf && !isHtml && !isMd && !isTxt) { toast.error('Supported: .html, .md, .pdf, .txt'); return }
+    try {
+      if (isPdf) {
+        const dataUrl: string = await new Promise((resolve, reject) => {
+          const r = new FileReader()
+          r.onload = () => resolve(String(r.result))
+          r.onerror = () => reject(new Error('FileReader failed'))
+          r.readAsDataURL(file)
+        })
+        setPendingDoc({ name: file.name, kind: 'pdf', content: dataUrl })
+      } else {
+        const content = await file.text()
+        const kind: PendingDoc['kind'] = isHtml ? 'html' : isMd ? 'markdown' : 'text'
+        setPendingDoc({ name: file.name, kind, content })
+      }
+      setPastedDoc('')
+    } catch { toast.error(`Could not read ${file.name}`) }
+  }
+
+  // Ship the doc to /extract → LLM returns a JSON array → we drop the
+  // array straight into the JSON textarea and switch the mode to "json"
+  // so the operator can review before hitting Import. Existing bulk-import
+  // does the actual dedup (skip if date|title is already on the calendar).
+  async function extractFromDoc() {
+    const fromPaste = !pendingDoc && pastedDoc.trim().length > 20
+    if (!pendingDoc && !fromPaste) { toast.error('Pick a file or paste a doc first'); return }
+    setExtracting(true)
+    try {
+      const body: Record<string, unknown> = {}
+      if (pendingDoc?.kind === 'pdf') {
+        body.kind = 'pdf'; body.dataUrl = pendingDoc.content
+      } else if (pendingDoc) {
+        body.kind = pendingDoc.kind; body.content = pendingDoc.content
+      } else {
+        const trimmed = pastedDoc.trim()
+        body.kind = trimmed.startsWith('<') ? 'html' : /^#{1,6}\s|\n#{1,6}\s/.test(trimmed) ? 'markdown' : 'text'
+        body.content = pastedDoc
+      }
+      const res = await fetch('/api/marketing/posts/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { toast.error(data?.error ?? 'Extract failed'); return }
+      const posts = Array.isArray(data?.posts) ? data.posts : []
+      if (posts.length === 0) {
+        toast.error('AI couldn\'t find any posts in the doc.')
+        return
+      }
+      setText(JSON.stringify(posts, null, 2))
+      setSourceMode('json')
+      setPendingDoc(null)
+      setPastedDoc('')
+      toast.success(`Extracted ${posts.length} post${posts.length === 1 ? '' : 's'} — review and import.`)
+    } finally { setExtracting(false) }
+  }
 
   const handleImport = async () => {
     if (preview.items.length === 0) { toast.error('Nothing to import'); return }
@@ -141,11 +218,111 @@ export function ImportPlanModal({ open, onOpenChange, accountSlugs }: Props) {
             <Upload className="h-4 w-4" /> Import content plan
           </DialogTitle>
           <DialogDescription>
-            Paste a JSON array of posts and drop them straight into the calendar. Safe to re-run — posts already scheduled on the same date with the same title are skipped.
+            Drop a content-plan doc (HTML / Markdown / PDF) and AI will extract the posts, OR paste raw JSON. Safe to re-run — posts already scheduled on the same date with the same title are skipped.
           </DialogDescription>
         </DialogHeader>
 
+        {/* Source toggle: Doc → AI-extract, or paste raw JSON. */}
+        <div className="flex gap-1 -mb-1">
+          <button
+            type="button"
+            onClick={() => setSourceMode('doc')}
+            className={cn(
+              'flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-t border-b-2 transition-colors',
+              sourceMode === 'doc'
+                ? 'border-primary text-foreground bg-primary/5'
+                : 'border-transparent text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <FileUp className="h-3.5 w-3.5" /> Upload doc (HTML · MD · PDF)
+          </button>
+          <button
+            type="button"
+            onClick={() => setSourceMode('json')}
+            className={cn(
+              'flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-t border-b-2 transition-colors',
+              sourceMode === 'json'
+                ? 'border-primary text-foreground bg-primary/5'
+                : 'border-transparent text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <FileJson className="h-3.5 w-3.5" /> Paste JSON
+          </button>
+        </div>
+
         <div className="space-y-3">
+          {sourceMode === 'doc' ? (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Drop a plan doc — AI extracts every post and fills the JSON for you. Then switch to "Paste JSON" to review and Import. Posts already on the calendar (same date + title) are silently skipped on import.
+              </p>
+              <div
+                onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-primary', 'bg-primary/5') }}
+                onDragLeave={(e) => { e.currentTarget.classList.remove('border-primary', 'bg-primary/5') }}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  e.currentTarget.classList.remove('border-primary', 'bg-primary/5')
+                  handleDocFile(e.dataTransfer.files?.[0] ?? null)
+                }}
+                onClick={() => document.getElementById('plan-doc-file')?.click()}
+                className="border-2 border-dashed border-border rounded-lg p-5 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
+              >
+                <FileUp className="h-5 w-5 mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm font-semibold">Drop a content-plan doc</p>
+                <p className="text-xs text-muted-foreground mt-0.5">.html · .md · .pdf · .txt</p>
+                <input
+                  id="plan-doc-file"
+                  type="file"
+                  accept=".html,.htm,.md,.markdown,.pdf,.txt,text/html,text/markdown,text/plain,application/pdf"
+                  hidden
+                  onChange={(e) => { handleDocFile(e.target.files?.[0] ?? null); e.target.value = '' }}
+                />
+              </div>
+
+              {pendingDoc ? (
+                <div className="flex items-center gap-2 border border-border rounded px-3 py-2 bg-muted/30">
+                  <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{pendingDoc.name}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{pendingDoc.kind}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPendingDoc(null)}
+                    className="h-6 w-6 inline-flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-accent"
+                    aria-label="Remove"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    Or paste plan text
+                  </label>
+                  <Textarea
+                    value={pastedDoc}
+                    onChange={(e) => setPastedDoc(e.target.value)}
+                    rows={6}
+                    placeholder="Paste a content-plan HTML / Markdown / plain text…"
+                    className="mt-1.5 font-mono text-xs"
+                  />
+                </div>
+              )}
+
+              {(pendingDoc || pastedDoc.trim().length > 20) ? (
+                <Button onClick={extractFromDoc} disabled={extracting} className="w-full gap-1.5">
+                  {extracting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                  {extracting ? 'AI is reading…' : 'Extract posts'}
+                </Button>
+              ) : null}
+              <p className="text-[10px] text-muted-foreground">
+                Extraction may take 30–60s for a 90-post plan. AI will pick the right account slug, type, platforms, and date for each entry.
+              </p>
+            </div>
+          ) : null}
+
+          {sourceMode === 'json' ? <>
           <div className="flex items-center gap-2 flex-wrap">
             <label className="inline-flex items-center gap-1.5 cursor-pointer text-sm text-muted-foreground hover:text-foreground">
               <input type="file" accept=".json,application/json" onChange={fileUpload} className="hidden" />
@@ -247,14 +424,16 @@ export function ImportPlanModal({ open, onOpenChange, accountSlugs }: Props) {
               ) : null}
             </div>
           ) : null}
+          </> : null}
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={importing}>Close</Button>
           <Button
             onClick={handleImport}
-            disabled={importing || preview.items.length === 0 || !!preview.err}
+            disabled={importing || preview.items.length === 0 || !!preview.err || sourceMode === 'doc'}
             className="gap-1.5"
+            title={sourceMode === 'doc' ? 'Switch to Paste JSON tab to import the extracted posts.' : undefined}
           >
             {importing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
             {importing ? 'Importing…' : `Import ${preview.items.length || ''} post${preview.items.length === 1 ? '' : 's'}`}
