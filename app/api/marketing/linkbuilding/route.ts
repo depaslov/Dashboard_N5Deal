@@ -4,11 +4,14 @@ import { z } from 'zod'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { getOrCreateCurrentProject } from '@/lib/project'
+import { logLbActivity } from '@/lib/marketing/lb-activity'
 
 export const dynamic = 'force-dynamic'
 
 const TYPES = ['outreach', 'guest_post', 'resource', 'partner', 'directory', 'hari', 'other'] as const
-const STATUSES = ['planned', 'in_progress', 'followup', 'published', 'declined'] as const
+// `approved` is the explicit gate between in_progress and published — see
+// LB_STATUSES in lib/marketing/constants.ts for the workflow narrative.
+const STATUSES = ['planned', 'in_progress', 'approved', 'followup', 'published', 'declined'] as const
 
 const CreateSchema = z.object({
   title: z.string().min(1).max(300),
@@ -84,5 +87,27 @@ export async function POST(req: Request) {
       notes: parsed.data.notes || null,
     },
   })
+
+  // Two events at once if the task was created already-approved (rare but
+  // possible via Import plan or operator picking 'approved' in the modal):
+  // record the creation and then a separate 'approved' line so the timeline
+  // shows the approval step explicitly.
+  await logLbActivity({
+    projectId: project.id,
+    itemId: item.id,
+    itemTitle: item.title,
+    action: 'created',
+    userId,
+  })
+  if (item.status === 'approved') {
+    await logLbActivity({
+      projectId: project.id,
+      itemId: item.id,
+      itemTitle: item.title,
+      action: 'approved',
+      userId,
+    })
+  }
+
   return NextResponse.json({ item })
 }

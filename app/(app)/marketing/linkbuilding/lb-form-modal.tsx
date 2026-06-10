@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Trash2 } from 'lucide-react'
+import { Trash2, CheckCircle2, Undo2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -87,6 +87,31 @@ export function LbFormModal({ mode, onClose }: { mode: Mode; onClose: () => void
       if (!res.ok) { toast.error(data?.error ?? 'Save failed'); return }
       toast.success(isEdit ? 'Updated' : 'Added')
       router.refresh(); onClose()
+    } finally { setSaving(false) }
+  }
+
+  // Quick-approve action in the edit modal: flip the task status to
+  // "approved" and PATCH straight away. The dedicated route handler picks
+  // up the transition and writes an 'approved' row into the activity log
+  // (see [id]/route.ts). Same handler covers the inverse case — moving
+  // away from "approved" logs an 'unapproved' entry. Mirrors what an
+  // operator would do by hand: change status, hit save — collapsed into
+  // one button so the workflow is obvious.
+  async function toggleApprove() {
+    if (!isEdit) return
+    const nextStatus = status === 'approved' ? 'in_progress' : 'approved'
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/marketing/linkbuilding/${mode!.item.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { toast.error(data?.error ?? 'Could not update status'); return }
+      setStatus(nextStatus)
+      toast.success(nextStatus === 'approved' ? 'Approved' : 'Approval reverted')
+      router.refresh()
     } finally { setSaving(false) }
   }
 
@@ -203,9 +228,32 @@ export function LbFormModal({ mode, onClose }: { mode: Mode; onClose: () => void
 
         <DialogFooter className="gap-2 sm:gap-2">
           {isEdit ? (
-            <Button variant="destructive" onClick={remove} disabled={saving || deleting} className="mr-auto gap-1.5">
-              <Trash2 className="h-3.5 w-3.5" /> {deleting ? 'Deleting…' : 'Delete'}
-            </Button>
+            <>
+              <Button variant="destructive" onClick={remove} disabled={saving || deleting} className="mr-auto gap-1.5">
+                <Trash2 className="h-3.5 w-3.5" /> {deleting ? 'Deleting…' : 'Delete'}
+              </Button>
+              {status === 'approved' ? (
+                <Button
+                  variant="outline"
+                  onClick={toggleApprove}
+                  disabled={saving || deleting}
+                  className="gap-1.5"
+                  title="Revert this task back to In Progress"
+                >
+                  <Undo2 className="h-3.5 w-3.5" /> Revert approval
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={toggleApprove}
+                  disabled={saving || deleting}
+                  className="gap-1.5 border-violet-300 text-violet-700 hover:bg-violet-50 dark:border-violet-700 dark:text-violet-300 dark:hover:bg-violet-950"
+                  title="Mark this task as approved (logs an Approved event)"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+                </Button>
+              )}
+            </>
           ) : null}
           <Button variant="outline" onClick={onClose} disabled={saving || deleting}>Cancel</Button>
           <Button onClick={save} disabled={saving || deleting}>{saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add item'}</Button>

@@ -70,8 +70,9 @@ model Project {
   marketingReports  MarketingReport[]
   marketingStrategy MarketingStrategy?
   brands            Brand[]
-  linkBuildingItems LinkBuildingItem[]
-  seoKeywords       SeoKeyword[]
+  linkBuildingItems      LinkBuildingItem[]
+  linkBuildingActivities LinkBuildingActivity[]
+  seoKeywords            SeoKeyword[]
   companyInfoSections CompanyInfoSection[]
   contentFolders    ContentFolder[]
   correctionMemos   CorrectionMemo[]
@@ -491,7 +492,7 @@ model LinkBuildingItem {
   anchorText     String?
   destinationUrl String?   // The page on n5deal.com we want linked
   type           String    @default("outreach") // outreach | guest_post | resource | partner | directory | hari | other
-  status         String    @default("planned")  // planned | in_progress | published | declined | followup
+  status         String    @default("planned")  // planned | in_progress | approved | published | declined | followup
   scheduledFor   DateTime  // When this activity is planned / executed
   publishedDate  DateTime?
   liveUrl        String?   // Final URL where the link appears
@@ -502,11 +503,36 @@ model LinkBuildingItem {
   updatedAt      DateTime  @updatedAt
   createdById    String?
 
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdBy User?   @relation("LinkBuildingAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  project    Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy  User?                  @relation("LinkBuildingAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  activities LinkBuildingActivity[]
 
   @@index([projectId, scheduledFor])
   @@index([projectId, status])
+}
+
+// Audit trail for the Link Building module — every Add / Delete / Approve
+// (and any future explicit user action) lands here so the operator can see
+// in one place "what happened on this project in the last week" and drill
+// into any one task's history. itemId is nullable so deletes still show in
+// the feed after the item itself is gone; itemTitle is snapshotted at
+// write-time so the row stays readable even when the original item is gone.
+model LinkBuildingActivity {
+  id        String   @id @default(cuid())
+  projectId String
+  itemId    String?
+  itemTitle String
+  action    String   // created | deleted | approved | unapproved
+  metadata  Json?    // small extras (e.g. for unapproved: previous status the item is going back to)
+  userId    String?
+  userName  String?
+  createdAt DateTime @default(now())
+
+  project Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  item    LinkBuildingItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, createdAt])
+  @@index([itemId])
 }
 
 // =============================================================================

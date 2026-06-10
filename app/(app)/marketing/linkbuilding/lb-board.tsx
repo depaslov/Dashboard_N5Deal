@@ -1,11 +1,12 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { format, isSameDay, isSameMonth, startOfMonth, endOfMonth } from 'date-fns'
+import { format, formatDistanceToNow, isSameDay, isSameMonth, startOfMonth, endOfMonth } from 'date-fns'
 import { toast } from 'sonner'
 import {
   CalendarDays, List as ListIcon, Layers, Plus, ChevronLeft, ChevronRight, Link2, ExternalLink, Upload,
+  Activity as ActivityIcon, CheckCircle2, PlusCircle, Trash2, RotateCcw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -34,12 +35,23 @@ export interface LbItem {
   notes: string
 }
 
-type View = 'list' | 'calendar' | 'board'
+type View = 'list' | 'calendar' | 'board' | 'activity'
 const VIEWS: { v: View; label: string; icon: typeof ListIcon }[] = [
   { v: 'list', label: 'List', icon: ListIcon },
   { v: 'calendar', label: 'Calendar', icon: CalendarDays },
   { v: 'board', label: 'Board', icon: Layers },
+  { v: 'activity', label: 'Activity', icon: ActivityIcon },
 ]
+
+interface LbActivityEvent {
+  id: string
+  itemId: string | null
+  itemTitle: string
+  action: 'created' | 'deleted' | 'approved' | 'unapproved'
+  metadata: Record<string, unknown> | null
+  userName: string | null
+  createdAt: string
+}
 
 type Mode = { kind: 'create'; defaultDate?: string } | { kind: 'edit'; item: LbItem } | null
 
@@ -184,7 +196,13 @@ export function LinkBuildingBoard({
       </div>
 
       {/* Views */}
-      {items.length === 0 ? (
+      {view === 'activity' ? (
+        // The Activity feed is its own thing — doesn't share the items
+        // grid, doesn't honour the status filter (those are about tasks),
+        // and is useful even when items.length === 0 (e.g. all created
+        // tasks were deleted — the deletions still live in the log).
+        <ActivityView itemsById={Object.fromEntries(items.map((i) => [i.id, i]))} onClickItem={(it) => setMode({ kind: 'edit', item: it })} />
+      ) : items.length === 0 ? (
         <EmptyState onAdd={() => setMode({ kind: 'create' })} />
       ) : (
         <>
@@ -460,6 +478,184 @@ function FilteredEmpty() {
   return (
     <div className="rounded-lg border border-dashed border-border bg-card py-12 text-center text-sm text-muted-foreground">
       No items match the current filter.
+    </div>
+  )
+}
+
+// ============================================================================
+// Activity (audit-trail timeline)
+// ============================================================================
+
+const ACTION_META: Record<LbActivityEvent['action'], { label: string; icon: typeof CheckCircle2; tone: string; verb: string }> = {
+  created: { label: 'Created', icon: PlusCircle, tone: 'text-blue-600 bg-blue-50 dark:text-blue-300 dark:bg-blue-950 border-blue-200 dark:border-blue-900', verb: 'created' },
+  approved: { label: 'Approved', icon: CheckCircle2, tone: 'text-violet-600 bg-violet-50 dark:text-violet-300 dark:bg-violet-950 border-violet-200 dark:border-violet-900', verb: 'approved' },
+  unapproved: { label: 'Approval reverted', icon: RotateCcw, tone: 'text-amber-600 bg-amber-50 dark:text-amber-300 dark:bg-amber-950 border-amber-200 dark:border-amber-900', verb: 'reverted approval on' },
+  deleted: { label: 'Deleted', icon: Trash2, tone: 'text-red-600 bg-red-50 dark:text-red-300 dark:bg-red-950 border-red-200 dark:border-red-900', verb: 'deleted' },
+}
+
+type ActionFilter = 'all' | LbActivityEvent['action']
+
+function ActivityView({
+  itemsById,
+  onClickItem,
+}: {
+  itemsById: Record<string, LbItem>
+  onClickItem: (i: LbItem) => void
+}) {
+  const [events, setEvents] = useState<LbActivityEvent[] | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [actionFilter, setActionFilter] = useState<ActionFilter>('all')
+
+  // Pull the last 100 events for this project. Refresh on filter change so
+  // the server-side `?action=` is the source of truth (we could filter on
+  // the client but doing it server-side keeps the count honest when the
+  // list eventually exceeds the limit).
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true); setError(null)
+    const qs = actionFilter === 'all' ? '' : `?action=${actionFilter}`
+    fetch(`/api/marketing/linkbuilding/activity${qs}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return
+        if (data?.error) { setError(data.error); setEvents([]); return }
+        setEvents(data.events ?? [])
+      })
+      .catch((e) => { if (!cancelled) setError(String(e?.message ?? e)) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [actionFilter])
+
+  // Group events by calendar day so the timeline reads chronologically
+  // ("Today", "Yesterday", "3 Jun 2026", …) instead of as one undifferentiated
+  // stream. Same pattern Linear / Notion use for their activity feeds.
+  const grouped = useMemo(() => {
+    if (!events) return [] as { dayKey: string; dayLabel: string; rows: LbActivityEvent[] }[]
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1)
+    const out: Record<string, LbActivityEvent[]> = {}
+    const order: string[] = []
+    for (const e of events) {
+      const d = new Date(e.createdAt); d.setHours(0, 0, 0, 0)
+      const key = d.toISOString().slice(0, 10)
+      if (!out[key]) { out[key] = []; order.push(key) }
+      out[key].push(e)
+    }
+    return order.map((key) => {
+      const d = new Date(key + 'T00:00:00')
+      const label = isSameDay(d, today) ? 'Today' : isSameDay(d, yesterday) ? 'Yesterday' : format(d, 'd LLLL yyyy')
+      return { dayKey: key, dayLabel: label, rows: out[key] }
+    })
+  }, [events])
+
+  const counts = useMemo(() => {
+    const c = { created: 0, approved: 0, unapproved: 0, deleted: 0 }
+    for (const e of events ?? []) c[e.action]++
+    return c
+  }, [events])
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs font-semibold text-muted-foreground mr-1">Filter:</span>
+        {([
+          { k: 'all', label: 'All', count: (events ?? []).length },
+          { k: 'created', label: 'Created', count: counts.created },
+          { k: 'approved', label: 'Approved', count: counts.approved },
+          { k: 'unapproved', label: 'Reverted', count: counts.unapproved },
+          { k: 'deleted', label: 'Deleted', count: counts.deleted },
+        ] as { k: ActionFilter; label: string; count: number }[]).map((f) => (
+          <button
+            key={f.k}
+            type="button"
+            onClick={() => setActionFilter(f.k)}
+            className={cn(
+              'text-xs font-semibold px-2.5 py-1 rounded-full border transition-colors inline-flex items-center gap-1.5',
+              actionFilter === f.k ? 'border-foreground bg-foreground text-background' : 'border-border bg-card text-muted-foreground hover:bg-accent',
+            )}
+          >
+            {f.label}
+            <span className={cn(
+              'text-[10px] px-1.5 py-0 rounded-full tabular-nums',
+              actionFilter === f.k ? 'bg-background/20' : 'bg-muted',
+            )}>{f.count}</span>
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="rounded-lg border border-border bg-card py-12 text-center text-sm text-muted-foreground">
+          Loading activity…
+        </div>
+      ) : error ? (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/5 py-6 px-4 text-sm text-destructive">
+          Could not load activity: {error}
+        </div>
+      ) : events && events.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border bg-card py-12 px-6 text-center">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-3">
+            <ActivityIcon className="h-6 w-6 text-primary" />
+          </div>
+          <h3 className="font-semibold">No activity yet</h3>
+          <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
+            Add, approve, or delete a task and it will show up here as a timeline event with the user, time, and the task it relates to.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {grouped.map((g) => (
+            <div key={g.dayKey}>
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2 sticky top-0 bg-background/90 backdrop-blur-sm py-1 z-10">
+                {g.dayLabel}
+              </h3>
+              <div className="rounded-lg border border-border bg-card divide-y divide-border">
+                {g.rows.map((ev) => {
+                  const meta = ACTION_META[ev.action]
+                  const Icon = meta.icon
+                  const linkedItem = ev.itemId ? itemsById[ev.itemId] : null
+                  const clickable = Boolean(linkedItem)
+                  return (
+                    <div
+                      key={ev.id}
+                      onClick={clickable ? () => onClickItem(linkedItem!) : undefined}
+                      className={cn(
+                        'flex items-start gap-3 px-4 py-3 transition-colors',
+                        clickable && 'cursor-pointer hover:bg-accent/30',
+                      )}
+                    >
+                      <div className={cn('flex h-7 w-7 items-center justify-center rounded-full border shrink-0', meta.tone)}>
+                        <Icon className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm leading-snug">
+                          <span className="font-semibold">{ev.userName ?? 'Someone'}</span>
+                          <span className="text-muted-foreground"> {meta.verb} </span>
+                          <span className={cn('font-medium', !linkedItem && 'line-through text-muted-foreground')} title={!linkedItem ? 'Task no longer exists' : undefined}>
+                            {ev.itemTitle}
+                          </span>
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted-foreground">
+                          <span>{format(new Date(ev.createdAt), 'HH:mm')}</span>
+                          <span>·</span>
+                          <span>{formatDistanceToNow(new Date(ev.createdAt), { addSuffix: true })}</span>
+                          {ev.action === 'unapproved' && (ev.metadata as { newStatus?: string } | null)?.newStatus ? (
+                            <>
+                              <span>·</span>
+                              <span>moved to <strong className="text-foreground">{(ev.metadata as { newStatus?: string }).newStatus}</strong></span>
+                            </>
+                          ) : null}
+                          {!linkedItem ? <><span>·</span><span className="italic">task deleted</span></> : null}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

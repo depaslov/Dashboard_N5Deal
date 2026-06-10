@@ -4,11 +4,12 @@ import { z } from 'zod'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { assertProjectAccess } from '@/lib/project'
+import { logLbActivity } from '@/lib/marketing/lb-activity'
 
 export const dynamic = 'force-dynamic'
 
 const TYPES = ['outreach', 'guest_post', 'resource', 'partner', 'directory', 'hari', 'other'] as const
-const STATUSES = ['planned', 'in_progress', 'followup', 'published', 'declined'] as const
+const STATUSES = ['planned', 'in_progress', 'approved', 'followup', 'published', 'declined'] as const
 
 const PatchSchema = z.object({
   title: z.string().min(1).max(300).optional(),
@@ -54,6 +55,35 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (parsed.data.contactEmail === '') data.contactEmail = null
 
   const item = await prisma.linkBuildingItem.update({ where: { id: params.id }, data })
+
+  // Log status transitions in/out of 'approved' so the Activity timeline
+  // shows when each task was signed off. Other field edits are intentionally
+  // not logged — operator asked for only key events (created/deleted/approved)
+  // to keep the feed signal-to-noise high.
+  if (parsed.data.status && parsed.data.status !== existing.status) {
+    if (parsed.data.status === 'approved') {
+      await logLbActivity({
+        projectId: existing.projectId,
+        itemId: item.id,
+        itemTitle: item.title,
+        action: 'approved',
+        userId,
+      })
+    } else if (existing.status === 'approved') {
+      // Moving AWAY from approved — useful to see in the log because it
+      // means someone reverted an approval (e.g. caught a problem before
+      // publishing).
+      await logLbActivity({
+        projectId: existing.projectId,
+        itemId: item.id,
+        itemTitle: item.title,
+        action: 'unapproved',
+        userId,
+        metadata: { newStatus: parsed.data.status },
+      })
+    }
+  }
+
   return NextResponse.json({ item })
 }
 
@@ -67,6 +97,18 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
   const ok = await assertProjectAccess(userId, existing.projectId)
   if (!ok) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
+  // Log BEFORE the delete so we capture the title snapshot while we still
+  // have the row. itemId is left non-null here so the activity row stays
+  // linked to whatever's left of the item (Prisma onDelete: SetNull on
+  // LinkBuildingActivity.itemId nulls it automatically when the item row
+  // is then removed by the cascade — see schema).
+  await logLbActivity({
+    projectId: existing.projectId,
+    itemId: existing.id,
+    itemTitle: existing.title,
+    action: 'deleted',
+    userId,
+  })
   await prisma.linkBuildingItem.delete({ where: { id: params.id } })
   return NextResponse.json({ ok: true })
 }
