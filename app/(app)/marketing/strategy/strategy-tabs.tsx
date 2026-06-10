@@ -4,13 +4,14 @@ import { useState, type ReactNode } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
-type TabKey = 'strategy' | 'four-path' | 'social' | 'link-building'
+type TabKey = 'strategy' | 'four-path' | 'social' | 'link-building' | 'notes'
 
 const TABS: { k: TabKey; label: string; hint: string }[] = [
   { k: 'strategy',      label: 'Strategy',         hint: 'Q2-Q4 plan: budgets, goals, directives, authority layer' },
   { k: 'four-path',     label: 'Four-path',        hint: 'DR · Awareness · Lead Gen · Product Promotion — channel matrix' },
   { k: 'social',        label: 'Social Media',     hint: 'Platform-by-platform mechanics + winning formats (Jun 2026)' },
   { k: 'link-building', label: 'Link Building',    hint: 'Earning links across Medium, Reddit, Web 2.0, guest sites' },
+  { k: 'notes',         label: 'Notes',            hint: 'Free-form HTML notes — agency briefs, meeting recaps, references' },
 ]
 
 export function StrategyTabs({
@@ -18,11 +19,13 @@ export function StrategyTabs({
   fourPathContent,
   socialContent,
   linkBuildingContent,
+  notesContent,
 }: {
   strategyContent: ReactNode
   fourPathContent: ReactNode
   socialContent: ReactNode
   linkBuildingContent: ReactNode
+  notesContent: ReactNode
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -70,6 +73,7 @@ export function StrategyTabs({
       {tab === 'four-path' ? fourPathContent : null}
       {tab === 'social' ? socialContent : null}
       {tab === 'link-building' ? linkBuildingContent : null}
+      {tab === 'notes' ? notesContent : null}
     </div>
   )
 }

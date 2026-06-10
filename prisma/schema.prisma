@@ -90,6 +90,7 @@ model Project {
   socialPosts       SocialPost[]
   marketingReports  MarketingReport[]
   marketingStrategy MarketingStrategy?
+  strategyNotes     StrategyNote[]
   brands            Brand[]
   linkBuildingItems      LinkBuildingItem[]
   linkBuildingActivities LinkBuildingActivity[]
@@ -181,6 +182,28 @@ model MarketingStrategy {
   updatedAt        DateTime @updatedAt
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+// Operator-authored notes attached to the Strategy section. Lets the team
+// dump HTML excerpts (decks, agency hand-offs, meeting recaps, reference
+// documents) without spinning up a separate doc tool. Title + HTML body
+// pair; sortOrder for manual reordering. One row per note, many per
+// project — kept as its own table rather than a Json column on
+// MarketingStrategy because notes accumulate and we want per-note edits
+// without round-tripping the entire array.
+model StrategyNote {
+  id        String   @id @default(cuid())
+  projectId String
+  title     String
+  html      String   @db.Text
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, sortOrder])
+  @@index([projectId, updatedAt])
 }
 
 model Brand {

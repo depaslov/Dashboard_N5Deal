@@ -8,6 +8,7 @@ import { StrategyTabs } from './strategy-tabs'
 import { FourPathView } from './four-path-view'
 import { SocialMediaGuide } from './social-media-guide'
 import { LinkBuildingGuide } from './link-building-guide'
+import { StrategyNotes } from './strategy-notes'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,6 +56,7 @@ export default async function MarketingStrategyPage() {
       fourPathContent={<FourPathView />}
       socialContent={<SocialMediaGuide />}
       linkBuildingContent={<LinkBuildingGuide />}
+      notesContent={<StrategyNotes />}
     />
   )
 }
