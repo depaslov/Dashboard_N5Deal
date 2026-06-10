@@ -529,20 +529,43 @@ function ReportDetailView({
   const router = useRouter()
   const params = useSearchParams()
 
-  // Same OAuth-return handler the content page has — pick up ?g_oauth=ok or
-  // ?g_oauth_error=… after the consent screen redirects back here, surface
-  // it as a toast, and strip the noisy param so it doesn't survive refresh.
+  // Ref to the latest openInGoogleDocs closure — lets the OAuth-return
+  // useEffect auto-resume doc creation after consent instead of forcing
+  // the operator to click "Open in Google Docs" a second time. See the
+  // matching pattern in app/(app)/content/[id]/content-actions.tsx.
+  const openInGoogleDocsRef = useRef<() => Promise<void> | undefined>(() => undefined)
+
+  // After the operator returns from the Google consent screen the callback
+  // appends ?g_oauth=ok|?g_oauth_error=… to this URL. Toast the outcome,
+  // strip the noisy params, and — if a pending-action flag is set in
+  // sessionStorage — auto-fire openInGoogleDocs so the doc opens without
+  // a second click.
   useEffect(() => {
     const ok = params.get('g_oauth')
     const err = params.get('g_oauth_error')
     if (!ok && !err) return
-    if (ok === 'ok') toast.success('Google account connected — click "Open in Google Docs" again to create the doc.', { duration: 6000 })
+
+    const wasPending = typeof window !== 'undefined' && window.sessionStorage.getItem('n5_open_in_docs_pending') === '1'
+    if (typeof window !== 'undefined') window.sessionStorage.removeItem('n5_open_in_docs_pending')
+
+    if (ok === 'ok') {
+      if (wasPending) {
+        toast.success('Connected — creating Google Doc…', { duration: 4000 })
+      } else {
+        toast.success('Google account connected — click "Open in Google Docs" again to create the doc.', { duration: 6000 })
+      }
+    }
     if (err) toast.error(`Google connection failed: ${err}`)
+
     const next = new URLSearchParams(params.toString())
     next.delete('g_oauth')
     next.delete('g_oauth_error')
     const qs = next.toString()
     router.replace(qs ? `/marketing/reports?${qs}` : '/marketing/reports')
+
+    if (ok === 'ok' && wasPending) {
+      setTimeout(() => { void openInGoogleDocsRef.current?.() }, 200)
+    }
   }, [params, router])
 
   async function saveNotes(notes: string, channel?: string) {
@@ -580,6 +603,9 @@ function ReportDetailView({
         return
       }
       if (!status.connected) {
+        // Remember the operator's intent so the OAuth-return useEffect can
+        // auto-resume after consent — no second click required.
+        try { window.sessionStorage.setItem('n5_open_in_docs_pending', '1') } catch { /* private mode */ }
         const returnTo = '/marketing/reports' + (params.toString() ? `?${params.toString()}` : '')
         window.location.href = `/api/auth/google/start?returnTo=${encodeURIComponent(returnTo)}`
         return
@@ -594,6 +620,9 @@ function ReportDetailView({
       if (!res.ok || !data?.docUrl) {
         if (tab) tab.close()
         if (data?.code === 'not_connected') {
+          // Same auto-resume mechanism — covers the token-revoked-between-
+          // status-and-create race so the operator still gets one click.
+          try { window.sessionStorage.setItem('n5_open_in_docs_pending', '1') } catch { /* private mode */ }
           const returnTo = '/marketing/reports' + (params.toString() ? `?${params.toString()}` : '')
           window.location.href = `/api/auth/google/start?returnTo=${encodeURIComponent(returnTo)}`
           return
@@ -608,6 +637,10 @@ function ReportDetailView({
       setCreatingDoc(false)
     }
   }
+
+  // Keep the ref pointed at the latest closure so the OAuth-return useEffect
+  // can invoke the up-to-date version (current report.id, latest params).
+  openInGoogleDocsRef.current = openInGoogleDocs
 
   function downloadHtml() {
     const stylesheet = `

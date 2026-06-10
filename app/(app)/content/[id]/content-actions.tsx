@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Copy, Download, Files, MessageSquareQuote, Sparkles, Trash2, FileType2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -120,23 +120,49 @@ export function ContentActions({
   const [regenerating, setRegenerating] = useState(false)
   const [creatingDoc, setCreatingDoc] = useState(false)
 
+  // Ref to the latest openInGoogleDocs closure — used by the OAuth-return
+  // useEffect to auto-resume the doc-creation flow after consent without
+  // forcing the operator to click the button a second time. Pattern: store
+  // a flag in sessionStorage BEFORE the OAuth redirect; once we land back
+  // here with ?g_oauth=ok and the flag is present, fire openInGoogleDocs
+  // immediately. This time the status call returns connected: true so the
+  // server-side create runs and the doc opens in a fresh tab.
+  const openInGoogleDocsRef = useRef<() => Promise<void> | undefined>(() => undefined)
+
   // After the operator returns from the Google consent screen the callback
-  // appends ?g_oauth=ok|?g_oauth_error=… to the current URL. Surface the
-  // outcome as a toast and strip the noisy param so it doesn't survive a
-  // refresh. The Open-in-Docs button picks up the new connection state the
-  // next time it's clicked.
+  // appends ?g_oauth=ok|?g_oauth_error=… to the current URL. We surface the
+  // outcome as a toast, strip the noisy param, and — if there was an action
+  // pending from before the OAuth redirect — auto-resume it.
   useEffect(() => {
     const ok = searchParams.get('g_oauth')
     const err = searchParams.get('g_oauth_error')
     if (!ok && !err) return
-    if (ok === 'ok') toast.success('Google account connected — click "Open in Google Docs" again to create the doc.', { duration: 6000 })
+
+    const wasPending = typeof window !== 'undefined' && window.sessionStorage.getItem('n5_open_in_docs_pending') === '1'
+    if (typeof window !== 'undefined') window.sessionStorage.removeItem('n5_open_in_docs_pending')
+
+    if (ok === 'ok') {
+      if (wasPending) {
+        toast.success('Connected — creating Google Doc…', { duration: 4000 })
+      } else {
+        toast.success('Google account connected — click "Open in Google Docs" again to create the doc.', { duration: 6000 })
+      }
+    }
     if (err) toast.error(`Google connection failed: ${err}`)
-    // Strip the query param without firing a navigation event.
+
+    // Strip the query param so it doesn't survive a refresh / re-trigger.
     const next = new URLSearchParams(searchParams.toString())
     next.delete('g_oauth')
     next.delete('g_oauth_error')
     const qs = next.toString()
     router.replace(qs ? `${pathname}?${qs}` : pathname)
+
+    // Auto-resume the doc-creation flow. Delay slightly so the URL strip
+    // commits first and the toast has time to render before the popup tab
+    // opens (browsers focus the new tab and can hide the toast otherwise).
+    if (ok === 'ok' && wasPending) {
+      setTimeout(() => { void openInGoogleDocsRef.current?.() }, 200)
+    }
   }, [searchParams, pathname, router])
 
   const copy = async () => {
@@ -191,6 +217,11 @@ export function ContentActions({
         return
       }
       if (!status.connected) {
+        // Remember the operator's intent so the OAuth-return useEffect can
+        // auto-resume the doc creation after the consent screen — no need
+        // for a second click. sessionStorage is per-tab so a stray flag
+        // from another window doesn't fire here.
+        try { window.sessionStorage.setItem('n5_open_in_docs_pending', '1') } catch { /* private mode */ }
         const returnTo = pathname + (searchParams.toString() ? `?${searchParams.toString()}` : '')
         window.location.href = `/api/auth/google/start?returnTo=${encodeURIComponent(returnTo)}`
         return
@@ -209,7 +240,10 @@ export function ContentActions({
         if (tab) tab.close()
         if (data?.code === 'not_connected') {
           // Edge case: status said connected but the create call disagreed
-          // (token revoked between calls). Kick OAuth again.
+          // (token revoked between calls). Kick OAuth again, and remember
+          // the intent so the OAuth-return auto-resume covers this branch
+          // too.
+          try { window.sessionStorage.setItem('n5_open_in_docs_pending', '1') } catch { /* private mode */ }
           const returnTo = pathname + (searchParams.toString() ? `?${searchParams.toString()}` : '')
           window.location.href = `/api/auth/google/start?returnTo=${encodeURIComponent(returnTo)}`
           return
@@ -321,6 +355,11 @@ export function ContentActions({
       setDuplicating(false)
     }
   }
+
+  // Keep the ref pointed at the latest closure every render so the
+  // OAuth-return useEffect can invoke the up-to-date version (which sees
+  // current pathname / searchParams / annotations).
+  openInGoogleDocsRef.current = openInGoogleDocs
 
   const disabled = deleting || duplicating || regenerating || creatingDoc
   return (
