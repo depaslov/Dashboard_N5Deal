@@ -6,7 +6,7 @@ import { format, formatDistanceToNow, isSameDay, isSameMonth, startOfMonth, endO
 import { toast } from 'sonner'
 import {
   CalendarDays, List as ListIcon, Layers, Plus, ChevronLeft, ChevronRight, Link2, ExternalLink, Upload,
-  Activity as ActivityIcon, CheckCircle2, PlusCircle, Trash2, RotateCcw,
+  Activity as ActivityIcon, CheckCircle2, PlusCircle, Trash2, RotateCcw, ClipboardList,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -53,7 +53,7 @@ interface LbActivityEvent {
   createdAt: string
 }
 
-type Mode = { kind: 'create'; defaultDate?: string } | { kind: 'edit'; item: LbItem } | null
+type Mode = { kind: 'create'; defaultDate?: string; defaultType?: string } | { kind: 'edit'; item: LbItem } | null
 
 export function LinkBuildingBoard({
   items,
@@ -188,6 +188,12 @@ export function LinkBuildingBoard({
           ) : null}
           <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-1.5">
             <Upload className="h-3.5 w-3.5" /> Import plan
+          </Button>
+          {/* Two distinct quick-add affordances. Both open the same modal
+              but pre-pick the type so the link-only fields hide for the
+              Task variant without the operator touching the dropdown. */}
+          <Button variant="outline" onClick={() => setMode({ kind: 'create', defaultType: 'task' })} className="gap-1.5">
+            <ClipboardList className="h-4 w-4" /> Add task
           </Button>
           <Button onClick={() => setMode({ kind: 'create' })}>
             <Plus className="h-4 w-4 mr-1.5" /> Add link

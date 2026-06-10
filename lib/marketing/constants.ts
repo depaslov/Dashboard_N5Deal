@@ -86,6 +86,11 @@ export const MARKETING_NAV = [
 // =============================================================================
 
 export const LB_TYPES = [
+  // General task — anything that isn't a link placement. Hides the link-
+  // specific fields in the form (targetSite / anchor / DR / cost / live
+  // URL etc.) so operators can use the same board as a general tracker,
+  // not just a link-building one.
+  { k: 'task', label: 'Task' },
   // Daily content-cadence tactics (added to support monthly plans)
   { k: 'profile', label: 'Profile link' },
   { k: 'web20', label: 'Web 2.0' },
@@ -103,6 +108,18 @@ export const LB_TYPES = [
   { k: 'other', label: 'Other' },
 ] as const
 export type LBType = (typeof LB_TYPES)[number]['k']
+
+// Types where the "link placement" fields (target site, anchor text, DR,
+// cost, live URL, contact info) are meaningful. Tasks aren't linkable, so
+// the form trims those fields when type === 'task' and views can fall back
+// to a simpler card. Centralised here so route handlers, the form modal,
+// and the views all agree without duplicating the list.
+export const LB_LINK_TYPES: ReadonlySet<LBType> = new Set(
+  LB_TYPES.filter((t) => t.k !== 'task').map((t) => t.k),
+)
+export function isLinkType(type: string): boolean {
+  return LB_LINK_TYPES.has(type as LBType)
+}
 
 // Workflow:  planned → in_progress → approved → published
 //            (followup and declined are side branches)

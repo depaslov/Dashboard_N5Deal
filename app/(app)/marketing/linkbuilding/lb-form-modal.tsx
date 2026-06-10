@@ -10,11 +10,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { LB_TYPES, LB_STATUSES } from '@/lib/marketing/constants'
+import { LB_TYPES, LB_STATUSES, isLinkType } from '@/lib/marketing/constants'
 import type { LbItem } from './lb-board'
 
 type Mode =
-  | { kind: 'create'; defaultDate?: string }
+  | { kind: 'create'; defaultDate?: string; defaultType?: string }
   | { kind: 'edit'; item: LbItem }
   | null
 
@@ -51,7 +51,9 @@ export function LbFormModal({ mode, onClose }: { mode: Mode; onClose: () => void
       setLiveUrl(i.liveUrl); setDr(i.dr !== null ? String(i.dr) : ''); setCost(i.cost !== null ? String(i.cost) : ''); setNotes(i.notes)
     } else {
       setTitle(''); setTargetSite(''); setContactName(''); setContactEmail('')
-      setAnchorText(''); setDestinationUrl(''); setType('outreach'); setStatus('planned')
+      setAnchorText(''); setDestinationUrl('')
+      setType(mode.defaultType ?? 'outreach')
+      setStatus('planned')
       setScheduledFor((mode.defaultDate ?? new Date().toISOString()).slice(0, 10))
       setPublishedDate(''); setLiveUrl(''); setDr(''); setCost(''); setNotes('')
     }
@@ -136,7 +138,11 @@ export function LbFormModal({ mode, onClose }: { mode: Mode; onClose: () => void
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit link building item' : 'New link building item'}</DialogTitle>
+          <DialogTitle>
+            {isEdit
+              ? (type === 'task' ? 'Edit task' : 'Edit link building item')
+              : (type === 'task' ? 'New task' : 'New link building item')}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -150,32 +156,40 @@ export function LbFormModal({ mode, onClose }: { mode: Mode; onClose: () => void
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label htmlFor="lb-site">Target site / domain</Label>
-              <Input id="lb-site" value={targetSite} onChange={(e) => setTargetSite(e.target.value)} placeholder="sifted.eu" />
-            </div>
-            <div>
-              <Label htmlFor="lb-anchor">Anchor text</Label>
-              <Input id="lb-anchor" value={anchorText} onChange={(e) => setAnchorText(e.target.value)} placeholder="fintech M&A platform" />
-            </div>
-          </div>
+          {/* Link-only fields. Tasks skip these — operators using the
+              board as a general tracker don't need a "target site /
+              anchor text" form. The data stays nullable in the DB so
+              hidden fields just don't get a value. */}
+          {isLinkType(type) ? (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="lb-site">Target site / domain</Label>
+                  <Input id="lb-site" value={targetSite} onChange={(e) => setTargetSite(e.target.value)} placeholder="sifted.eu" />
+                </div>
+                <div>
+                  <Label htmlFor="lb-anchor">Anchor text</Label>
+                  <Input id="lb-anchor" value={anchorText} onChange={(e) => setAnchorText(e.target.value)} placeholder="fintech M&A platform" />
+                </div>
+              </div>
 
-          <div>
-            <Label htmlFor="lb-dest">Destination URL on n5deal.com</Label>
-            <Input id="lb-dest" value={destinationUrl} onChange={(e) => setDestinationUrl(e.target.value)} placeholder="https://n5deal.com/buyer" />
-          </div>
+              <div>
+                <Label htmlFor="lb-dest">Destination URL on n5deal.com</Label>
+                <Input id="lb-dest" value={destinationUrl} onChange={(e) => setDestinationUrl(e.target.value)} placeholder="https://n5deal.com/buyer" />
+              </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label htmlFor="lb-contact-name">Contact name</Label>
-              <Input id="lb-contact-name" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Editor name" />
-            </div>
-            <div>
-              <Label htmlFor="lb-contact-email">Contact email</Label>
-              <Input id="lb-contact-email" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="editor@..." />
-            </div>
-          </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="lb-contact-name">Contact name</Label>
+                  <Input id="lb-contact-name" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Editor name" />
+                </div>
+                <div>
+                  <Label htmlFor="lb-contact-email">Contact email</Label>
+                  <Input id="lb-contact-email" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="editor@..." />
+                </div>
+              </div>
+            </>
+          ) : null}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -198,32 +212,38 @@ export function LbFormModal({ mode, onClose }: { mode: Mode; onClose: () => void
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className={isLinkType(type) ? 'grid grid-cols-2 gap-3' : ''}>
             <div>
-              <Label htmlFor="lb-scheduled">Scheduled / outreach date</Label>
+              <Label htmlFor="lb-scheduled">{type === 'task' ? 'Due date' : 'Scheduled / outreach date'}</Label>
               <Input id="lb-scheduled" type="date" value={scheduledFor} onChange={(e) => setScheduledFor(e.target.value)} placeholder="Defaults to today" />
             </div>
-            <div>
-              <Label htmlFor="lb-published">Published date (if live)</Label>
-              <Input id="lb-published" type="date" value={publishedDate} onChange={(e) => setPublishedDate(e.target.value)} />
-            </div>
+            {isLinkType(type) ? (
+              <div>
+                <Label htmlFor="lb-published">Published date (if live)</Label>
+                <Input id="lb-published" type="date" value={publishedDate} onChange={(e) => setPublishedDate(e.target.value)} />
+              </div>
+            ) : null}
           </div>
 
-          <div>
-            <Label htmlFor="lb-live">Live URL (after publication)</Label>
-            <Input id="lb-live" type="url" value={liveUrl} onChange={(e) => setLiveUrl(e.target.value)} placeholder="https://sifted.eu/articles/..." />
-          </div>
+          {isLinkType(type) ? (
+            <>
+              <div>
+                <Label htmlFor="lb-live">Live URL (after publication)</Label>
+                <Input id="lb-live" type="url" value={liveUrl} onChange={(e) => setLiveUrl(e.target.value)} placeholder="https://sifted.eu/articles/..." />
+              </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label htmlFor="lb-dr">Domain Rating (DR)</Label>
-              <Input id="lb-dr" type="number" min="0" max="100" value={dr} onChange={(e) => setDr(e.target.value)} placeholder="0–100" />
-            </div>
-            <div>
-              <Label htmlFor="lb-cost">Cost ($)</Label>
-              <Input id="lb-cost" type="number" min="0" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0" />
-            </div>
-          </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="lb-dr">Domain Rating (DR)</Label>
+                  <Input id="lb-dr" type="number" min="0" max="100" value={dr} onChange={(e) => setDr(e.target.value)} placeholder="0–100" />
+                </div>
+                <div>
+                  <Label htmlFor="lb-cost">Cost ($)</Label>
+                  <Input id="lb-cost" type="number" min="0" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0" />
+                </div>
+              </div>
+            </>
+          ) : null}
 
           <div>
             <Label htmlFor="lb-notes">Notes</Label>

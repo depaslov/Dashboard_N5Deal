@@ -8,7 +8,12 @@ import { logLbActivity } from '@/lib/marketing/lb-activity'
 
 export const dynamic = 'force-dynamic'
 
-const TYPES = ['outreach', 'guest_post', 'resource', 'partner', 'directory', 'hari', 'other'] as const
+// Keep in sync with LB_TYPES in lib/marketing/constants.ts.
+const TYPES = [
+  'task',
+  'profile', 'web20', 'crowd', 'medium', 'article', 'market_news',
+  'outreach', 'guest_post', 'resource', 'partner', 'directory', 'hari', 'other',
+] as const
 const STATUSES = ['planned', 'in_progress', 'approved', 'followup', 'published', 'declined'] as const
 
 const PatchSchema = z.object({
