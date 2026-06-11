@@ -75,6 +75,11 @@ export const MARKETING_NAV = [
   { slug: 'home', label: 'Home', href: '/marketing' },
   { slug: 'calendar', label: 'Calendar', href: '/marketing/calendar' },
   { slug: 'linkbuilding', label: 'Link Building', href: '/marketing/linkbuilding' },
+  // Tasks Andrew uses the SAME LinkBuildingItem table as Link Building,
+  // just filtered to type === 'task'. Keeps the form + activity log + board
+  // views in one place; the two pages diverge only on the type filter and
+  // the "Add link" vs "Add task" labels.
+  { slug: 'tasks-andrew', label: 'Tasks Andrew', href: '/marketing/tasks-andrew' },
   { slug: 'analytics', label: 'Analytics', href: '/marketing/analytics' },
   { slug: 'reports', label: 'Reports', href: '/marketing/reports' },
   { slug: 'strategy', label: 'Strategy', href: '/marketing/strategy' },

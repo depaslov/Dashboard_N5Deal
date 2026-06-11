@@ -2,11 +2,15 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { getOrCreateCurrentProject } from '@/lib/project'
-import { LinkBuildingBoard, type LbItem } from './lb-board'
+import { LinkBuildingBoard, type LbItem } from '../linkbuilding/lb-board'
 
 export const dynamic = 'force-dynamic'
 
-export default async function MarketingLinkBuildingPage({
+// Tasks Andrew is the non-link side of the LinkBuildingItem table. Same
+// model, same form, same activity log, same views — just type === 'task'
+// so the team can use the board as a general work tracker without
+// muddying the Link Building section that's specifically about placements.
+export default async function MarketingTasksAndrewPage({
   searchParams,
 }: {
   searchParams: { view?: string; month?: string }
@@ -15,11 +19,8 @@ export default async function MarketingLinkBuildingPage({
   const userId = session?.user?.id as string
   const project = await getOrCreateCurrentProject(userId)
 
-  // Only true link-placement items here — anything typed as a general
-  // 'task' lives on the Tasks Andrew page so this view stays focused on
-  // outreach / guest posts / placements.
   const items = await prisma.linkBuildingItem.findMany({
-    where: { projectId: project.id, NOT: { type: 'task' } },
+    where: { projectId: project.id, type: 'task' },
     orderBy: { scheduledFor: 'asc' },
   })
 
@@ -43,7 +44,7 @@ export default async function MarketingLinkBuildingPage({
 
   return (
     <LinkBuildingBoard
-      mode="links"
+      mode="tasks"
       items={data}
       initialView={(searchParams.view as 'list' | 'calendar' | 'board') ?? 'list'}
       anchorMonthISO={searchParams.month ?? new Date().toISOString()}

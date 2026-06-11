@@ -55,19 +55,35 @@ interface LbActivityEvent {
 
 type Mode = { kind: 'create'; defaultDate?: string; defaultType?: string } | { kind: 'edit'; item: LbItem } | null
 
+// Page mode — same component drives /linkbuilding (link placements) and
+// /tasks-andrew (general tasks). The pages diverge on:
+//   • the "Add link" vs "Add task" button label
+//   • the default `type` for new items (outreach vs task)
+//   • the empty-state copy
+//   • whether the Import-plan button is shown (links only — task plans
+//     are a different shape)
+export type LbMode = 'links' | 'tasks'
+
 export function LinkBuildingBoard({
   items,
   initialView,
   anchorMonthISO,
+  mode = 'links',
 }: {
   items: LbItem[]
   initialView: View
   anchorMonthISO: string
+  mode?: LbMode
 }) {
+  const isTasks = mode === 'tasks'
+  const addLabel = isTasks ? 'Add task' : 'Add link'
+  const defaultType = isTasks ? 'task' : 'outreach'
   const router = useRouter()
   const params = useSearchParams()
   const [view, setView] = useState<View>(initialView)
-  const [mode, setMode] = useState<Mode>(null)
+  // Form-modal state. Renamed from `mode` to `formMode` to avoid colliding
+  // with the LbMode `mode` prop above ('links' | 'tasks').
+  const [formMode, setFormMode] = useState<Mode>(null)
   const [importOpen, setImportOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string>('all')
 
@@ -186,17 +202,17 @@ export function LinkBuildingBoard({
               </Button>
             </>
           ) : null}
-          <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-1.5">
-            <Upload className="h-3.5 w-3.5" /> Import plan
-          </Button>
-          {/* Two distinct quick-add affordances. Both open the same modal
-              but pre-pick the type so the link-only fields hide for the
-              Task variant without the operator touching the dropdown. */}
-          <Button variant="outline" onClick={() => setMode({ kind: 'create', defaultType: 'task' })} className="gap-1.5">
-            <ClipboardList className="h-4 w-4" /> Add task
-          </Button>
-          <Button onClick={() => setMode({ kind: 'create' })}>
-            <Plus className="h-4 w-4 mr-1.5" /> Add link
+          {/* Import-plan and the secondary "Add task" only make sense on the
+              link-building page. Tasks Andrew is a focused task tracker —
+              one primary "Add task" button, no link-only affordances. */}
+          {!isTasks ? (
+            <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-1.5">
+              <Upload className="h-3.5 w-3.5" /> Import plan
+            </Button>
+          ) : null}
+          <Button onClick={() => setFormMode({ kind: 'create', defaultType })}>
+            {isTasks ? <ClipboardList className="h-4 w-4 mr-1.5" /> : <Plus className="h-4 w-4 mr-1.5" />}
+            {addLabel}
           </Button>
         </div>
       </div>
@@ -207,25 +223,25 @@ export function LinkBuildingBoard({
         // grid, doesn't honour the status filter (those are about tasks),
         // and is useful even when items.length === 0 (e.g. all created
         // tasks were deleted — the deletions still live in the log).
-        <ActivityView itemsById={Object.fromEntries(items.map((i) => [i.id, i]))} onClickItem={(it) => setMode({ kind: 'edit', item: it })} />
+        <ActivityView itemsById={Object.fromEntries(items.map((i) => [i.id, i]))} onClickItem={(it) => setFormMode({ kind: 'edit', item: it })} />
       ) : items.length === 0 ? (
-        <EmptyState onAdd={() => setMode({ kind: 'create' })} />
+        <EmptyState mode={mode} onAdd={() => setFormMode({ kind: 'create', defaultType })} />
       ) : (
         <>
-          {view === 'list' && <ListView items={filtered} onClick={(it) => setMode({ kind: 'edit', item: it })} />}
+          {view === 'list' && <ListView items={filtered} onClick={(it) => setFormMode({ kind: 'edit', item: it })} />}
           {view === 'calendar' && (
             <CalendarView
               items={filtered}
               anchor={anchor}
-              onClickItem={(it) => setMode({ kind: 'edit', item: it })}
-              onClickCell={(d) => setMode({ kind: 'create', defaultDate: d.toISOString() })}
+              onClickItem={(it) => setFormMode({ kind: 'edit', item: it })}
+              onClickCell={(d) => setFormMode({ kind: 'create', defaultDate: d.toISOString() })}
             />
           )}
-          {view === 'board' && <BoardView items={filtered} onClick={(it) => setMode({ kind: 'edit', item: it })} />}
+          {view === 'board' && <BoardView items={filtered} onClick={(it) => setFormMode({ kind: 'edit', item: it })} />}
         </>
       )}
 
-      <LbFormModal mode={mode} onClose={() => setMode(null)} />
+      <LbFormModal mode={formMode} onClose={() => setFormMode(null)} />
       <LbImportModal open={importOpen} onOpenChange={setImportOpen} />
     </div>
   )
@@ -241,19 +257,22 @@ function KpiCard({ label, value, hint, accent }: { label: string; value: number 
   )
 }
 
-function EmptyState({ onAdd }: { onAdd: () => void }) {
+function EmptyState({ onAdd, mode = 'links' }: { onAdd: () => void; mode?: LbMode }) {
+  const isTasks = mode === 'tasks'
   return (
     <div className="rounded-lg border border-dashed border-border bg-card py-16 px-6 text-center">
       <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-4">
-        <Link2 className="h-6 w-6 text-primary" />
+        {isTasks ? <ClipboardList className="h-6 w-6 text-primary" /> : <Link2 className="h-6 w-6 text-primary" />}
       </div>
-      <h3 className="font-semibold">No link building activity yet</h3>
+      <h3 className="font-semibold">{isTasks ? 'No tasks yet' : 'No link building activity yet'}</h3>
       <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
-        Track every outreach, guest post, resource-page pitch, and partner placement. Calendar
-        shows what's planned, the board shows status, the list is the master record.
+        {isTasks
+          ? 'Drop in any work item that isn\'t a link placement. Same board + list + calendar views as Link Building — just for general tasks.'
+          : 'Track every outreach, guest post, resource-page pitch, and partner placement. Calendar shows what\'s planned, the board shows status, the list is the master record.'}
       </p>
       <Button className="mt-4" onClick={onAdd}>
-        <Plus className="h-4 w-4 mr-1.5" /> Add your first item
+        {isTasks ? <ClipboardList className="h-4 w-4 mr-1.5" /> : <Plus className="h-4 w-4 mr-1.5" />}
+        {isTasks ? 'Add your first task' : 'Add your first item'}
       </Button>
     </div>
   )
