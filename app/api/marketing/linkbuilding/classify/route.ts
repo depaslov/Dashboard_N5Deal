@@ -6,6 +6,32 @@ import { getOrCreateCurrentProject } from '@/lib/project'
 import { callLLM, MissingLLMKey } from '@/lib/marketing/llm'
 import { LB_TASK_LIKE_TYPES } from '@/lib/marketing/constants'
 
+// Deterministic title-prefix → task-like-type map. Items whose title starts
+// with one of these bracketed tags get force-classified before the LLM
+// sees them — no point asking the model to re-judge something the
+// operator has already tagged explicitly. Per-row suggestedType matches
+// the bracket: [SEO] → 'seo', [Article] → 'article', and so on, so the
+// bulk-update step writes the right type code rather than collapsing
+// every flagged row to 'task'.
+const TITLE_PREFIX_TYPE: { rx: RegExp; type: string }[] = [
+  { rx: /^\s*\[\s*seo\s*\]/i, type: 'seo' },
+  { rx: /^\s*\[\s*market\s*news\s*\]/i, type: 'market_news' },
+  { rx: /^\s*\[\s*news\s*\]/i, type: 'market_news' },
+  { rx: /^\s*\[\s*articles?\s*\]/i, type: 'article' },
+  { rx: /^\s*\[\s*site\s*article\s*\]/i, type: 'article' },
+  { rx: /^\s*\[\s*medium\s*\]/i, type: 'medium' },
+  { rx: /^\s*\[\s*medium\s*article\s*\]/i, type: 'medium' },
+  { rx: /^\s*\[\s*task\s*\]/i, type: 'task' },
+  { rx: /^\s*\[\s*todo\s*\]/i, type: 'task' },
+]
+
+function taskTypeFromTitlePrefix(title: string): string | null {
+  for (const { rx, type } of TITLE_PREFIX_TYPE) {
+    if (rx.test(title)) return type
+  }
+  return null
+}
+
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 export const maxDuration = 120
@@ -94,9 +120,22 @@ export async function POST() {
     return NextResponse.json({ items: [], proposed: [], totalProposed: 0 })
   }
 
+  // Deterministic pre-pass: rows whose title starts with [SEO] / [Article]
+  // / [Market News] / [Medium] / [Task] are slam-dunks — the operator has
+  // already tagged the intent in the title. Pull them out before the LLM
+  // call so we (a) don't waste tokens re-judging them and (b) can suggest
+  // the EXACT type code from the prefix (seo, article, market_news, …)
+  // rather than collapsing everything to 'task'.
+  const prefixHits = new Map<string, string>()
+  for (const r of rows) {
+    const t = taskTypeFromTitlePrefix(r.title)
+    if (t) prefixHits.set(r.id, t)
+  }
+  const llmRows = rows.filter((r) => !prefixHits.has(r.id))
+
   // Trim notes to keep prompt size bounded — most of the signal lives in
   // the title + targetSite/anchor/destination columns.
-  const trimmed: ItemForClassify[] = rows.map((r) => ({
+  const trimmed: ItemForClassify[] = llmRows.map((r) => ({
     id: r.id,
     title: r.title,
     type: r.type,
@@ -108,7 +147,8 @@ export async function POST() {
   }))
 
   let raw: string
-  try {
+  if (trimmed.length === 0) raw = '{"verdicts":[]}' // every row was a prefix hit; skip the LLM
+  else try {
     raw = await callLLM(
       [
         { role: 'system', content: SYSTEM_PROMPT },
@@ -143,21 +183,43 @@ export async function POST() {
   // "proposed migrations"; the rest are returned for context but the UI
   // doesn't have to pre-tick them.
   const byId = new Map(rows.map((r) => [r.id, r]))
-  const enriched = verdicts
+  const llmEnriched = verdicts
     .map((v) => {
       const r = byId.get(v.id)
       if (!r) return null
+      // The LLM was instructed to emit 'task' as the catch-all task type;
+      // we honour that here. (Title-prefix rows are handled separately
+      // below with per-row suggestedTypes from the regex map.)
+      const isFlag = v.suggestedType === 'task'
       return {
         id: r.id,
         title: r.title,
         currentType: r.type,
-        suggestedType: v.suggestedType === 'task' ? 'task' : r.type,
-        flagged: v.suggestedType === 'task',
+        suggestedType: isFlag ? 'task' : r.type,
+        flagged: isFlag,
         reason: (v.reason ?? '').slice(0, 200),
         targetSite: r.targetSite,
       }
     })
     .filter((x): x is NonNullable<typeof x> => x !== null)
+
+  // Prefix-hit rows are appended with their deterministic type code +
+  // a high-confidence reason. The UI doesn't need to distinguish them
+  // from LLM verdicts — both render the same way in the modal.
+  const prefixEnriched = [...prefixHits.entries()].map(([id, type]) => {
+    const r = byId.get(id)!
+    return {
+      id,
+      title: r.title,
+      currentType: r.type,
+      suggestedType: type,
+      flagged: true,
+      reason: `Title prefix tags this as ${type} work — not link-building.`,
+      targetSite: r.targetSite,
+    }
+  })
+
+  const enriched = [...prefixEnriched, ...llmEnriched]
 
   const proposed = enriched.filter((e) => e.flagged)
 

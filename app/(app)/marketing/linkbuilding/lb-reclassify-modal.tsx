@@ -87,18 +87,24 @@ export function LbReclassifyModal({
   }
 
   async function apply() {
-    const ids = Object.keys(selected).filter((id) => selected[id])
-    if (ids.length === 0) { toast.error('Nothing selected'); return }
+    // Send per-row updates so [SEO]-prefixed rows land on 'seo', [Article]
+    // on 'article', etc. — instead of collapsing everything to 'task'.
+    // The classify endpoint suggested a specific type per row; we honour
+    // it here.
+    const updates = (items ?? [])
+      .filter((v) => selected[v.id])
+      .map((v) => ({ id: v.id, newType: v.suggestedType }))
+    if (updates.length === 0) { toast.error('Nothing selected'); return }
     setApplying(true)
     try {
       const res = await fetch('/api/marketing/linkbuilding/bulk-set-type', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids, newType: 'task' }),
+        body: JSON.stringify({ updates }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { toast.error(data?.error ?? 'Move failed'); return }
-      toast.success(`Moved ${data.updated} item${data.updated === 1 ? '' : 's'} to Tasks Andrew`)
+      toast.success(`Moved ${data.updated} item${data.updated === 1 ? '' : 's'} to Tasks`)
       router.refresh()
       onOpenChange(false)
     } finally { setApplying(false) }
@@ -116,9 +122,9 @@ export function LbReclassifyModal({
             <Wand2 className="h-4 w-4" /> Reclassify items
           </DialogTitle>
           <DialogDescription>
-            AI scans every non-task row in Link Building and flags the ones that look like general tasks
-            (anything not aimed at earning a backlink). Tick the ones you want to move; they'll show up
-            on Tasks Andrew instead.
+            AI scans every link-building row and flags the ones that look like general tasks
+            (anything not aimed at earning a backlink). Tick the ones you want to move; they'll
+            show up on the Tasks page instead.
           </DialogDescription>
         </DialogHeader>
 
@@ -220,7 +226,7 @@ export function LbReclassifyModal({
             className="gap-1.5"
           >
             {applying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ClipboardList className="h-3.5 w-3.5" />}
-            {applying ? 'Moving…' : `Move ${selectedCount} to Tasks Andrew`}
+            {applying ? 'Moving…' : `Move ${selectedCount} to Tasks`}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -261,7 +267,7 @@ function ItemRow({
               ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
               : 'bg-muted text-muted-foreground',
           )}>
-            {v.currentType} → task
+            {v.currentType} → {v.suggestedType}
           </span>
         </div>
         {v.targetSite ? (

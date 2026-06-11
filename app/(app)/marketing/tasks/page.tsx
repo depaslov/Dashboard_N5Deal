@@ -7,13 +7,13 @@ import { LinkBuildingBoard, type LbItem } from '../linkbuilding/lb-board'
 
 export const dynamic = 'force-dynamic'
 
-// Tasks Andrew is the non-link-building side of the LinkBuildingItem
+// Tasks page is the non-link-building side of the LinkBuildingItem
 // table. Same model, same form, same activity log, same views — just
 // filtered to the task-like type family (task, article, market_news,
 // medium, seo) so the team can use the board as a general work tracker
 // without muddying the Link Building section that's specifically about
 // outreach / placements / earning backlinks.
-export default async function MarketingTasksAndrewPage({
+export default async function MarketingTasksPage({
   searchParams,
 }: {
   searchParams: { view?: string; month?: string }
