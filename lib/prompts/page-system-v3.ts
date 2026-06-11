@@ -128,11 +128,16 @@ Total internal links on the page: exactly 2 or 3. Never more, never fewer.
       }
     }
 
-    lines.push(`\nABSOLUTE RULES:
+    lines.push(`\nABSOLUTE RULES — INTERNAL LINKS ARE NOT OPTIONAL:
 - The visible anchor text inside \`[...]\` MUST match the brief verbatim (character-for-character). NO synonyms, NO paraphrasing, NO "more natural" alternatives.
 - You MUST NOT invent any URL not listed above. If you find yourself writing a Markdown link to a URL not in this list (e.g. "/crypto-license", "/about-us", "/help") → REMOVE it. The page can ONLY link to URLs explicitly in this list.
-- Each MUST link appears at least once. Missing a MUST link = output rejected.
-- Spread links across different H2 sections — never stack two in one paragraph.`)
+- Each MUST link appears AT LEAST ONCE as a fully-formed Markdown link \`[anchor](url)\`. Plain-text mentions of the anchor without the \`[...](url)\` wrapper DO NOT COUNT. Missing a MUST link = output rejected.
+- BEFORE outputting the page, mentally re-scan and check: every URL in the MUST list above appears at least once in your draft as \`](URL)\`. If even one is missing, GO BACK and weave it in naturally inside an H2 section. Do not finish until every MUST URL is present.
+- Spread links across different H2 sections — never stack two in one paragraph.
+
+CHECKLIST you must satisfy before ending the page:
+${must.map((l) => `  [ ] ${l.url} — anchored as "${l.anchor}"`).join('\n')}
+`)
   }
 
   // ── BLOCK 4: Mandatory H3 subsections that keep getting skipped

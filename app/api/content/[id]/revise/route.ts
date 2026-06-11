@@ -132,6 +132,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         ? brief.internalLinks.map((l: any) => ({
             url: String(l?.url ?? ''),
             anchor: String(l?.anchor ?? ''),
+            anchorAlts: Array.isArray(l?.anchorAlts) ? l.anchorAlts.map(String) : [],
             priority: l?.priority === 'must' ? 'must' : 'nice',
           }))
         : [],

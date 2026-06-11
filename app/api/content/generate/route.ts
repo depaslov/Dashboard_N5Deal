@@ -439,20 +439,31 @@ export async function POST(req: Request) {
         // Only run on pages (article/catalog) — linkedin/telegram don't
         // share the same structural rules.
         let finalText = fullText
+        let postFixes: string[] = []
         if (usePageSystem) {
           const primary = (brief.mainKeywords ?? [])[0]
           const post = postProcessPage(fullText, {
             primaryKeyword: primary ? { term: primary.term, minCount: primary.minCount } : undefined,
             secondaryKeywords: (brief.mainKeywords ?? []).slice(1),
             lsiKeywords: brief.lsiKeywords ?? [],
-            internalLinks: mergedInternalLinks.map((l) => ({ url: l.url, anchor: l.anchor, priority: l.priority })),
+            internalLinks: mergedInternalLinks.map((l) => ({
+              url: l.url,
+              anchor: l.anchor,
+              anchorAlts: (l as { anchorAlts?: string[] }).anchorAlts ?? [],
+              priority: l.priority,
+            })),
             topic,
           })
           if (post.fixes.length) console.log('[generate] postprocess fixes:', post.fixes)
           finalText = post.text
+          postFixes = post.fixes
         }
 
-        send({ status: 'completed', result: finalText })
+        // Surface the postprocess fixes alongside the final text so the UI can
+        // show the operator "AI missed link X, we injected it as See-also" or
+        // "link Y is still missing — please add it manually". The studio form
+        // already renders postFixes as a collapsible warnings panel.
+        send({ status: 'completed', result: finalText, postFixes })
         controller.enqueue(encoder.encode(`data: [DONE]\n\n`))
       } catch (err: any) {
         console.error('generation stream error', err)

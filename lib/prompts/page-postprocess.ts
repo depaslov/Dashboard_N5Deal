@@ -24,7 +24,7 @@ export interface PagePostProcessBrief {
   primaryKeyword?: { term: string; minCount: number; maxCount?: number }
   secondaryKeywords?: { term: string; minCount: number; maxCount?: number }[]
   lsiKeywords?: string[]
-  internalLinks?: { url: string; anchor: string; priority?: 'must' | 'nice' }[]
+  internalLinks?: { url: string; anchor: string; anchorAlts?: string[]; priority?: 'must' | 'nice' }[]
   topic?: string
 }
 
@@ -60,23 +60,88 @@ function keywordMax(min: number): number {
 // When the brief specifies NO links, we leave the text untouched (there is no
 // whitelist to enforce, so we don't strip anything).
 // ---------------------------------------------------------------------------
-function linkifyFirstOccurrence(text: string, anchor: string, url: string): { text: string; done: boolean } {
-  const re = new RegExp(escapeRegex(anchor), 'i')
+// Builds a series of progressively-looser regex matchers for the same
+// anchor, so that small wording / formatting drift in the LLM output
+// (singular ↔ plural, hyphen ↔ space, smart-quote vs straight, "the FCA"
+// vs "FCA", etc.) doesn't leave the link missing from the page. Variants
+// are tried in order — the first one that hits wins.
+function buildMatchers(anchor: string, anchorAlts: string[]): Array<{ label: string; re: RegExp }> {
+  const candidates = [anchor, ...anchorAlts].map((s) => s.trim()).filter(Boolean)
+  const seen = new Set<string>()
+  const out: Array<{ label: string; re: RegExp }> = []
+
+  for (const cand of candidates) {
+    // (1) verbatim — fastest, safest. Case-insensitive only.
+    if (!seen.has(`v:${cand}`)) {
+      out.push({ label: `verbatim "${cand}"`, re: new RegExp(escapeRegex(cand), 'i') })
+      seen.add(`v:${cand}`)
+    }
+
+    // (2) flexible whitespace + punctuation between words. Catches
+    // "asset-referenced tokens" vs "asset referenced tokens" vs
+    // "asset referenced tokens" (non-breaking space), curly
+    // apostrophes, etc.
+    const flexible = cand
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((w) => escapeRegex(w))
+      .join('[\\s\\-\\u00a0‐-―]+') // any whitespace/dash/NBSP between words
+    if (!seen.has(`f:${flexible}`) && flexible !== escapeRegex(cand)) {
+      out.push({ label: `flex-ws "${cand}"`, re: new RegExp(flexible, 'i') })
+      seen.add(`f:${flexible}`)
+    }
+
+    // (3) plural-tolerant variant on the LAST word. "MiCA licence" → also
+    // matches "MiCA licences". Conservative: only allows a single trailing
+    // "s" or "es", so we don't over-match.
+    const words = cand.split(/\s+/).filter(Boolean)
+    if (words.length > 0) {
+      const last = words[words.length - 1]
+      if (!/[s]$/i.test(last)) {
+        const pluralPattern = words
+          .slice(0, -1)
+          .map(escapeRegex)
+          .concat(`${escapeRegex(last)}(?:e?s)?`)
+          .join('[\\s\\-\\u00a0‐-―]+')
+        if (!seen.has(`p:${pluralPattern}`)) {
+          out.push({ label: `plural "${cand}"`, re: new RegExp(pluralPattern, 'i') })
+          seen.add(`p:${pluralPattern}`)
+        }
+      }
+    }
+  }
+
+  return out
+}
+
+function linkifyFirstOccurrence(
+  text: string,
+  anchor: string,
+  url: string,
+  anchorAlts: string[] = [],
+): { text: string; done: boolean; matchedBy?: string } {
+  const matchers = buildMatchers(anchor, anchorAlts)
   const lines = text.split('\n')
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-    if (line.startsWith('#')) continue                          // skip headings
-    if (/^\*\*Word Count|^\*Reading Time|^\*Tags/i.test(line)) continue // skip metadata header
-    if (/^\*This page is for informational/i.test(line)) continue       // skip disclaimer
-    const m = line.match(re)
-    if (!m || m.index === undefined) continue
-    const idx = m.index
-    // Don't linkify text that's already inside a markdown link: [anchor](...)
-    const before = line.slice(Math.max(0, idx - 1), idx)
-    const after = line.slice(idx + m[0].length)
-    if (before === '[' && after.startsWith('](')) continue
-    lines[i] = line.slice(0, idx) + `[${anchor}](${url})` + line.slice(idx + m[0].length)
-    return { text: lines.join('\n'), done: true }
+  for (const matcher of matchers) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+      if (line.startsWith('#')) continue                          // skip headings
+      if (/^\*\*Word Count|^\*Reading Time|^\*Tags/i.test(line)) continue // skip metadata header
+      if (/^\*This page is for informational/i.test(line)) continue       // skip disclaimer
+      const m = line.match(matcher.re)
+      if (!m || m.index === undefined) continue
+      const idx = m.index
+      // Don't linkify text that's already inside a markdown link: [anchor](...)
+      const before = line.slice(Math.max(0, idx - 1), idx)
+      const after = line.slice(idx + m[0].length)
+      if (before === '[' && after.startsWith('](')) continue
+      // Wrap the EXACT matched substring (m[0]) — preserves capitalisation /
+      // hyphen / plural form from the body so the page reads naturally.
+      // The brief anchor is kept only when the matcher was the verbatim one.
+      const linkText = matcher.label.startsWith('verbatim') ? anchor : m[0]
+      lines[i] = line.slice(0, idx) + `[${linkText}](${url})` + line.slice(idx + m[0].length)
+      return { text: lines.join('\n'), done: true, matchedBy: matcher.label }
+    }
   }
   return { text, done: false }
 }
@@ -99,7 +164,7 @@ function appendRelatedLinks(text: string, links: { url: string; anchor: string }
 
 function enforceExactLinks(
   text: string,
-  required: { url: string; anchor: string }[],
+  required: { url: string; anchor: string; anchorAlts?: string[] }[],
 ): { text: string; fixes: string[] } {
   const fixes: string[] = []
   // No TZ links → nothing to enforce against; leave links as the model wrote them.
@@ -129,17 +194,22 @@ function enforceExactLinks(
     return full
   })
 
-  // Pass 2: inject any TZ link still missing.
+  // Pass 2: inject any TZ link still missing. We pass anchorAlts to the
+  // linkifier so close-but-not-verbatim wording in the LLM output (plural,
+  // hyphen swap, etc.) still gets caught instead of falling through to
+  // the See-also appendix.
   const toAppend: { url: string; anchor: string }[] = []
   for (const l of required) {
     const url = l.url.trim()
     if (seenUrls.has(url)) continue
     const anchor = l.anchor.trim()
-    const res = linkifyFirstOccurrence(out, anchor, url)
+    const alts = (l.anchorAlts ?? []).map((a) => a.trim()).filter(Boolean)
+    const res = linkifyFirstOccurrence(out, anchor, url, alts)
     if (res.done) {
       out = res.text
       seenUrls.add(url)
-      fixes.push(`injected missing TZ link by linkifying existing text "${anchor}"`)
+      const how = res.matchedBy ? ` via ${res.matchedBy}` : ''
+      fixes.push(`injected missing TZ link${how} for "${anchor}"`)
     } else {
       toAppend.push({ url, anchor })
     }
