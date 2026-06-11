@@ -6,7 +6,7 @@ import { format, formatDistanceToNow, isSameDay, isSameMonth, startOfMonth, endO
 import { toast } from 'sonner'
 import {
   CalendarDays, List as ListIcon, Layers, Plus, ChevronLeft, ChevronRight, Link2, ExternalLink, Upload,
-  Activity as ActivityIcon, CheckCircle2, PlusCircle, Trash2, RotateCcw, ClipboardList,
+  Activity as ActivityIcon, CheckCircle2, PlusCircle, Trash2, RotateCcw, ClipboardList, Wand2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -16,6 +16,7 @@ import {
 import { cn } from '@/lib/utils'
 import { LbFormModal } from './lb-form-modal'
 import { LbImportModal } from './lb-import-modal'
+import { LbReclassifyModal } from './lb-reclassify-modal'
 
 export interface LbItem {
   id: string
@@ -85,6 +86,7 @@ export function LinkBuildingBoard({
   // with the LbMode `mode` prop above ('links' | 'tasks').
   const [formMode, setFormMode] = useState<Mode>(null)
   const [importOpen, setImportOpen] = useState(false)
+  const [reclassifyOpen, setReclassifyOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string>('all')
 
   const anchor = new Date(anchorMonthISO)
@@ -206,9 +208,19 @@ export function LinkBuildingBoard({
               link-building page. Tasks Andrew is a focused task tracker —
               one primary "Add task" button, no link-only affordances. */}
           {!isTasks ? (
-            <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-1.5">
-              <Upload className="h-3.5 w-3.5" /> Import plan
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setReclassifyOpen(true)}
+                className="gap-1.5"
+                title="AI scans the backlog and proposes which items should move to Tasks Andrew"
+              >
+                <Wand2 className="h-3.5 w-3.5" /> Reclassify
+              </Button>
+              <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-1.5">
+                <Upload className="h-3.5 w-3.5" /> Import plan
+              </Button>
+            </>
           ) : null}
           <Button onClick={() => setFormMode({ kind: 'create', defaultType })}>
             {isTasks ? <ClipboardList className="h-4 w-4 mr-1.5" /> : <Plus className="h-4 w-4 mr-1.5" />}
@@ -243,6 +255,7 @@ export function LinkBuildingBoard({
 
       <LbFormModal mode={formMode} onClose={() => setFormMode(null)} />
       <LbImportModal open={importOpen} onOpenChange={setImportOpen} />
+      <LbReclassifyModal open={reclassifyOpen} onOpenChange={setReclassifyOpen} />
     </div>
   )
 }
