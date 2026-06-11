@@ -22,13 +22,20 @@ export default async function MarketingTasksPage({
   const userId = session?.user?.id as string
   const project = await getOrCreateCurrentProject(userId)
 
-  const items = await prisma.linkBuildingItem.findMany({
-    where: {
-      projectId: project.id,
-      type: { in: [...LB_TASK_LIKE_TYPES] },
-    },
-    orderBy: { scheduledFor: 'asc' },
-  })
+  const [items, members] = await Promise.all([
+    prisma.linkBuildingItem.findMany({
+      where: {
+        projectId: project.id,
+        type: { in: [...LB_TASK_LIKE_TYPES] },
+      },
+      orderBy: { scheduledFor: 'asc' },
+    }),
+    prisma.projectMember.findMany({
+      where: { projectId: project.id },
+      include: { user: { select: { id: true, name: true, email: true } } },
+      orderBy: { createdAt: 'asc' },
+    }),
+  ])
 
   const data: LbItem[] = items.map((i) => ({
     id: i.id,
@@ -46,12 +53,20 @@ export default async function MarketingTasksPage({
     dr: i.dr,
     cost: i.cost,
     notes: i.notes ?? '',
+    assigneeIds: i.assigneeIds ?? [],
+  }))
+
+  const memberOptions = members.map((m) => ({
+    id: m.userId,
+    name: m.user.name ?? m.user.email ?? '?',
+    email: m.user.email ?? '',
   }))
 
   return (
     <LinkBuildingBoard
       mode="tasks"
       items={data}
+      members={memberOptions}
       initialView={(searchParams.view as 'list' | 'calendar' | 'board') ?? 'list'}
       anchorMonthISO={searchParams.month ?? new Date().toISOString()}
     />

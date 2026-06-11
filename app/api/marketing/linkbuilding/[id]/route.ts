@@ -31,6 +31,7 @@ const PatchSchema = z.object({
   dr: z.number().int().min(0).max(100).nullable().optional(),
   cost: z.number().nonnegative().nullable().optional(),
   notes: z.string().max(10_000).nullable().optional(),
+  assigneeIds: z.array(z.string().min(1)).max(50).optional(),
 })
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {

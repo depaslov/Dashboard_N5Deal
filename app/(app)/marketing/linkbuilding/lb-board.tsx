@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils'
 import { LbFormModal } from './lb-form-modal'
 import { LbImportModal } from './lb-import-modal'
 import { LbReclassifyModal } from './lb-reclassify-modal'
+import { AssigneeAvatars } from './lb-assignees'
 
 export interface LbItem {
   id: string
@@ -34,6 +35,13 @@ export interface LbItem {
   dr: number | null
   cost: number | null
   notes: string
+  assigneeIds: string[]
+}
+
+export interface LbMember {
+  id: string
+  name: string
+  email: string
 }
 
 type View = 'list' | 'calendar' | 'board' | 'activity'
@@ -67,11 +75,13 @@ export type LbMode = 'links' | 'tasks'
 
 export function LinkBuildingBoard({
   items,
+  members,
   initialView,
   anchorMonthISO,
   mode = 'links',
 }: {
   items: LbItem[]
+  members: LbMember[]
   initialView: View
   anchorMonthISO: string
   mode?: LbMode
@@ -246,20 +256,21 @@ export function LinkBuildingBoard({
         <EmptyState mode={mode} onAdd={() => setFormMode({ kind: 'create', defaultType })} />
       ) : (
         <>
-          {view === 'list' && <ListView items={filtered} onClick={(it) => setFormMode({ kind: 'edit', item: it })} />}
+          {view === 'list' && <ListView items={filtered} members={members} onClick={(it) => setFormMode({ kind: 'edit', item: it })} />}
           {view === 'calendar' && (
             <CalendarView
               items={filtered}
+              members={members}
               anchor={anchor}
               onClickItem={(it) => setFormMode({ kind: 'edit', item: it })}
               onClickCell={(d) => setFormMode({ kind: 'create', defaultDate: d.toISOString() })}
             />
           )}
-          {view === 'board' && <BoardView items={filtered} onClick={(it) => setFormMode({ kind: 'edit', item: it })} />}
+          {view === 'board' && <BoardView items={filtered} members={members} onClick={(it) => setFormMode({ kind: 'edit', item: it })} />}
         </>
       )}
 
-      <LbFormModal mode={formMode} onClose={() => setFormMode(null)} />
+      <LbFormModal mode={formMode} members={members} onClose={() => setFormMode(null)} />
       <LbImportModal open={importOpen} onOpenChange={setImportOpen} />
       <LbReclassifyModal open={reclassifyOpen} onOpenChange={setReclassifyOpen} />
     </div>
@@ -300,7 +311,7 @@ function EmptyState({ onAdd, mode = 'links' }: { onAdd: () => void; mode?: LbMod
 // ============================================================================
 // List view
 // ============================================================================
-function ListView({ items, onClick }: { items: LbItem[]; onClick: (i: LbItem) => void }) {
+function ListView({ items, members, onClick }: { items: LbItem[]; members: LbMember[]; onClick: (i: LbItem) => void }) {
   if (items.length === 0) return <FilteredEmpty />
   return (
     <div className="rounded-lg border border-border bg-card shadow-sm overflow-hidden">
@@ -329,8 +340,13 @@ function ListView({ items, onClick }: { items: LbItem[]; onClick: (i: LbItem) =>
                   {format(new Date(i.scheduledFor), 'd LLL yyyy')}
                 </td>
                 <td className="px-4 py-2.5">
-                  <div className="font-medium truncate max-w-md">{i.title}</div>
-                  {i.targetSite ? <div className="text-[11px] text-muted-foreground mt-0.5 truncate max-w-md">{i.targetSite}</div> : null}
+                  <div className="flex items-center gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium truncate max-w-md">{i.title}</div>
+                      {i.targetSite ? <div className="text-[11px] text-muted-foreground mt-0.5 truncate max-w-md">{i.targetSite}</div> : null}
+                    </div>
+                    <AssigneeAvatars assigneeIds={i.assigneeIds} members={members} size="sm" />
+                  </div>
                 </td>
                 <td className="px-4 py-2.5">
                   <Badge variant="secondary" className="text-[10px]">{typeMeta?.label ?? i.type}</Badge>
@@ -377,11 +393,13 @@ const MAX_CHIPS = 4
 
 function CalendarView({
   items,
+  members,
   anchor,
   onClickItem,
   onClickCell,
 }: {
   items: LbItem[]
+  members: LbMember[]
   anchor: Date
   onClickItem: (i: LbItem) => void
   onClickCell: (d: Date) => void
@@ -449,11 +467,12 @@ function CalendarView({
                     onClick={(e) => { e.stopPropagation(); onClickItem(it) }}
                     title={`${it.title} · ${it.targetSite || ''}`}
                     className={cn(
-                      'block w-full text-left text-[10px] font-medium px-1.5 py-0.5 rounded truncate',
+                      'w-full text-left text-[10px] font-medium px-1.5 py-0.5 rounded flex items-center gap-1',
                       LB_STATUS_BADGE[it.status as LBStatus] ?? 'bg-muted text-muted-foreground',
                     )}
                   >
-                    {it.title}
+                    <span className="truncate flex-1 min-w-0">{it.title}</span>
+                    <AssigneeAvatars assigneeIds={it.assigneeIds} members={members} size="xs" max={2} />
                   </button>
                 ))}
                 {dayItems.length > MAX_CHIPS ? (
@@ -473,7 +492,7 @@ function CalendarView({
 // ============================================================================
 // Board (kanban by status)
 // ============================================================================
-function BoardView({ items, onClick }: { items: LbItem[]; onClick: (i: LbItem) => void }) {
+function BoardView({ items, members, onClick }: { items: LbItem[]; members: LbMember[]; onClick: (i: LbItem) => void }) {
   const router = useRouter()
   // Cards being dragged + the column hovered as a drop target. Stored as
   // refs in state so React re-renders draw the highlighted column outline
@@ -572,6 +591,7 @@ function BoardView({ items, onClick }: { items: LbItem[]; onClick: (i: LbItem) =
                     <span>{format(new Date(i.scheduledFor), 'd LLL')}</span>
                     {i.dr ? <span>· DR {i.dr}</span> : null}
                     {typeof i.cost === 'number' && i.cost > 0 ? <span>· ${i.cost}</span> : null}
+                    <AssigneeAvatars assigneeIds={i.assigneeIds} members={members} size="sm" className="ml-auto" />
                   </div>
                 </div>
               ))}

@@ -11,14 +11,23 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { LB_TYPES, LB_STATUSES, isLinkType } from '@/lib/marketing/constants'
-import type { LbItem } from './lb-board'
+import type { LbItem, LbMember } from './lb-board'
+import { AssigneePicker } from './lb-assignees'
 
 type Mode =
   | { kind: 'create'; defaultDate?: string; defaultType?: string }
   | { kind: 'edit'; item: LbItem }
   | null
 
-export function LbFormModal({ mode, onClose }: { mode: Mode; onClose: () => void }) {
+export function LbFormModal({
+  mode,
+  members,
+  onClose,
+}: {
+  mode: Mode
+  members: LbMember[]
+  onClose: () => void
+}) {
   const router = useRouter()
   const open = mode !== null
   const isEdit = mode?.kind === 'edit'
@@ -37,6 +46,7 @@ export function LbFormModal({ mode, onClose }: { mode: Mode; onClose: () => void
   const [dr, setDr] = useState('')
   const [cost, setCost] = useState('')
   const [notes, setNotes] = useState('')
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -49,6 +59,7 @@ export function LbFormModal({ mode, onClose }: { mode: Mode; onClose: () => void
       setScheduledFor(i.scheduledFor.slice(0, 10))
       setPublishedDate(i.publishedDate ? i.publishedDate.slice(0, 10) : '')
       setLiveUrl(i.liveUrl); setDr(i.dr !== null ? String(i.dr) : ''); setCost(i.cost !== null ? String(i.cost) : ''); setNotes(i.notes)
+      setAssigneeIds(i.assigneeIds ?? [])
     } else {
       setTitle(''); setTargetSite(''); setContactName(''); setContactEmail('')
       setAnchorText(''); setDestinationUrl('')
@@ -56,6 +67,7 @@ export function LbFormModal({ mode, onClose }: { mode: Mode; onClose: () => void
       setStatus('planned')
       setScheduledFor((mode.defaultDate ?? new Date().toISOString()).slice(0, 10))
       setPublishedDate(''); setLiveUrl(''); setDr(''); setCost(''); setNotes('')
+      setAssigneeIds([])
     }
   }, [mode])
 
@@ -84,6 +96,7 @@ export function LbFormModal({ mode, onClose }: { mode: Mode; onClose: () => void
         dr: dr ? parseInt(dr, 10) : null,
         cost: cost ? parseFloat(cost) : null,
         notes: notes.trim() || undefined,
+        assigneeIds,
       }
       const url = isEdit ? `/api/marketing/linkbuilding/${mode!.item.id}` : '/api/marketing/linkbuilding'
       const method = isEdit ? 'PATCH' : 'POST'
@@ -244,6 +257,14 @@ export function LbFormModal({ mode, onClose }: { mode: Mode; onClose: () => void
               </div>
             </>
           ) : null}
+
+          <div>
+            <Label>Assigned to</Label>
+            <p className="text-[11px] text-muted-foreground mt-0.5 mb-1.5">
+              Pick one or more teammates — their avatars show up on the card.
+            </p>
+            <AssigneePicker members={members} value={assigneeIds} onChange={setAssigneeIds} />
+          </div>
 
           <div>
             <Label htmlFor="lb-notes">Notes</Label>
