@@ -543,12 +543,6 @@ model LinkBuildingItem {
   dr             Int?      // Domain Rating (Ahrefs / similar)
   cost           Float?    // Money spent on this placement
   notes          String?   @db.Text
-  // User ids of project members this task is assigned to. Postgres text
-  // array — many-to-many would be cleaner schema-wise but for a team of
-  // a dozen people the array works fine, and Prisma's `has` / `hasSome`
-  // operators handle the "tasks assigned to me" filter natively. Empty
-  // array means unassigned.
-  assigneeIds    String[]  @default([])
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   createdById    String?

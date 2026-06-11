@@ -18,22 +18,15 @@ export default async function MarketingLinkBuildingPage({
 
   // Only true link-placement items here — anything in the task-like
   // family (task / article / market_news / medium / seo) lives on the
-  // Tasks page. Single source of truth for which types route to which
-  // page is LB_TASK_LIKE_TYPES in lib/marketing/constants.ts.
-  const [items, members] = await Promise.all([
-    prisma.linkBuildingItem.findMany({
-      where: {
-        projectId: project.id,
-        type: { notIn: [...LB_TASK_LIKE_TYPES] },
-      },
-      orderBy: { scheduledFor: 'asc' },
-    }),
-    prisma.projectMember.findMany({
-      where: { projectId: project.id },
-      include: { user: { select: { id: true, name: true, email: true } } },
-      orderBy: { createdAt: 'asc' },
-    }),
-  ])
+  // Tasks Andrew page. Single source of truth for which types route to
+  // which page is LB_TASK_LIKE_TYPES in lib/marketing/constants.ts.
+  const items = await prisma.linkBuildingItem.findMany({
+    where: {
+      projectId: project.id,
+      type: { notIn: [...LB_TASK_LIKE_TYPES] },
+    },
+    orderBy: { scheduledFor: 'asc' },
+  })
 
   const data: LbItem[] = items.map((i) => ({
     id: i.id,
@@ -51,20 +44,12 @@ export default async function MarketingLinkBuildingPage({
     dr: i.dr,
     cost: i.cost,
     notes: i.notes ?? '',
-    assigneeIds: i.assigneeIds ?? [],
-  }))
-
-  const memberOptions = members.map((m) => ({
-    id: m.userId,
-    name: m.user.name ?? m.user.email ?? '?',
-    email: m.user.email ?? '',
   }))
 
   return (
     <LinkBuildingBoard
       mode="links"
       items={data}
-      members={memberOptions}
       initialView={(searchParams.view as 'list' | 'calendar' | 'board') ?? 'list'}
       anchorMonthISO={searchParams.month ?? new Date().toISOString()}
     />

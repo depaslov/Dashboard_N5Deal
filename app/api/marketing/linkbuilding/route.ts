@@ -40,7 +40,6 @@ const CreateSchema = z.object({
   dr: z.number().int().min(0).max(100).optional().nullable(),
   cost: z.number().nonnegative().optional().nullable(),
   notes: z.string().max(10_000).optional().nullable(),
-  assigneeIds: z.array(z.string().min(1)).max(50).optional(),
 })
 
 export async function GET(req: Request) {
@@ -104,7 +103,6 @@ export async function POST(req: Request) {
       dr: parsed.data.dr ?? null,
       cost: parsed.data.cost ?? null,
       notes: parsed.data.notes || null,
-      assigneeIds: parsed.data.assigneeIds ?? [],
     },
   })
 
