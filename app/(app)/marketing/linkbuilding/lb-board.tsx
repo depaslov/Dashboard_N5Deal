@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { format, formatDistanceToNow, isSameDay, isSameMonth, startOfMonth, endOfMonth } from 'date-fns'
 import { toast } from 'sonner'
 import {
@@ -81,6 +81,11 @@ export function LinkBuildingBoard({
   const defaultType = isTasks ? 'task' : 'outreach'
   const router = useRouter()
   const params = useSearchParams()
+  // Read the live pathname so view-toggle / month-shift updates stay on
+  // the current page (Link Building vs Tasks Andrew) instead of always
+  // pushing to /marketing/linkbuilding. Falls back to the link-building
+  // path if pathname isn't available yet during hydration.
+  const pathname = usePathname() ?? '/marketing/linkbuilding'
   const [view, setView] = useState<View>(initialView)
   // Form-modal state. Renamed from `mode` to `formMode` to avoid colliding
   // with the LbMode `mode` prop above ('links' | 'tasks').
@@ -96,7 +101,8 @@ export function LinkBuildingBoard({
     for (const [k, v] of Object.entries(updates)) {
       if (v === undefined) q.delete(k); else q.set(k, v)
     }
-    router.push('/marketing/linkbuilding?' + q.toString())
+    const qs = q.toString()
+    router.push(qs ? `${pathname}?${qs}` : pathname)
   }
 
   function changeView(v: View) {
