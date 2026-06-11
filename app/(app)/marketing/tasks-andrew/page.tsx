@@ -2,14 +2,17 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { getOrCreateCurrentProject } from '@/lib/project'
+import { LB_TASK_LIKE_TYPES } from '@/lib/marketing/constants'
 import { LinkBuildingBoard, type LbItem } from '../linkbuilding/lb-board'
 
 export const dynamic = 'force-dynamic'
 
-// Tasks Andrew is the non-link side of the LinkBuildingItem table. Same
-// model, same form, same activity log, same views — just type === 'task'
-// so the team can use the board as a general work tracker without
-// muddying the Link Building section that's specifically about placements.
+// Tasks Andrew is the non-link-building side of the LinkBuildingItem
+// table. Same model, same form, same activity log, same views — just
+// filtered to the task-like type family (task, article, market_news,
+// medium, seo) so the team can use the board as a general work tracker
+// without muddying the Link Building section that's specifically about
+// outreach / placements / earning backlinks.
 export default async function MarketingTasksAndrewPage({
   searchParams,
 }: {
@@ -20,7 +23,10 @@ export default async function MarketingTasksAndrewPage({
   const project = await getOrCreateCurrentProject(userId)
 
   const items = await prisma.linkBuildingItem.findMany({
-    where: { projectId: project.id, type: 'task' },
+    where: {
+      projectId: project.id,
+      type: { in: [...LB_TASK_LIKE_TYPES] },
+    },
     orderBy: { scheduledFor: 'asc' },
   })
 

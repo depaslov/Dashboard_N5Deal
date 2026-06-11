@@ -11,8 +11,8 @@ export const runtime = 'nodejs'
 // Keep aligned with LB_TYPES — we don't want to accept arbitrary strings
 // and end up with type='whatever' rows the constants don't know about.
 const TYPES = [
-  'task',
-  'profile', 'web20', 'crowd', 'medium', 'article', 'market_news',
+  'task', 'article', 'market_news', 'medium', 'seo',
+  'profile', 'web20', 'crowd',
   'outreach', 'guest_post', 'resource', 'partner', 'directory', 'hari', 'other',
 ] as const
 

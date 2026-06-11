@@ -91,19 +91,24 @@ export const MARKETING_NAV = [
 // =============================================================================
 
 export const LB_TYPES = [
-  // General task — anything that isn't a link placement. Hides the link-
-  // specific fields in the form (targetSite / anchor / DR / cost / live
-  // URL etc.) so operators can use the same board as a general tracker,
-  // not just a link-building one.
+  // ─── General-task family ────────────────────────────────────────────
+  // Anything that isn't a real backlink-earning activity. These hide the
+  // link-specific fields in the form (targetSite / anchor / DR / cost /
+  // live URL) and route to /marketing/tasks-andrew instead of the Link
+  // Building page. Operators treat the board as a general work tracker
+  // for this side of the table.
   { k: 'task', label: 'Task' },
-  // Daily content-cadence tactics (added to support monthly plans)
+  { k: 'article', label: 'Site article' },
+  { k: 'market_news', label: 'Market news' },
+  { k: 'medium', label: 'Medium article' },
+  { k: 'seo', label: 'SEO' },
+
+  // ─── Real link-building activities ─────────────────────────────────
+  // Live on /marketing/linkbuilding. All of these target an external
+  // site to earn a backlink to n5deal / bankstore / etc.
   { k: 'profile', label: 'Profile link' },
   { k: 'web20', label: 'Web 2.0' },
   { k: 'crowd', label: 'Crowd marketing' },
-  { k: 'medium', label: 'Medium article' },
-  { k: 'article', label: 'Site article' },
-  { k: 'market_news', label: 'Market news' },
-  // Original placement / outreach categories
   { k: 'outreach', label: 'Cold outreach' },
   { k: 'guest_post', label: 'Guest post' },
   { k: 'resource', label: 'Resource page' },
@@ -114,13 +119,23 @@ export const LB_TYPES = [
 ] as const
 export type LBType = (typeof LB_TYPES)[number]['k']
 
+// Task-like types route to Tasks Andrew; everything else stays on Link
+// Building. Centralised so the page filters, the form modal's link-only
+// field gate, and the classify-endpoint scan all agree on the cut.
+// IMPORTANT: kept as a plain string list (not a Set) because Prisma's
+// `in:` clause takes an array directly.
+export const LB_TASK_LIKE_TYPES = ['task', 'article', 'market_news', 'medium', 'seo'] as const
+export const LB_TASK_LIKE_SET: ReadonlySet<string> = new Set(LB_TASK_LIKE_TYPES)
+export function isTaskLikeType(type: string): boolean {
+  return LB_TASK_LIKE_SET.has(type)
+}
+
 // Types where the "link placement" fields (target site, anchor text, DR,
-// cost, live URL, contact info) are meaningful. Tasks aren't linkable, so
-// the form trims those fields when type === 'task' and views can fall back
-// to a simpler card. Centralised here so route handlers, the form modal,
-// and the views all agree without duplicating the list.
+// cost, live URL, contact info) are meaningful. The full task-like family
+// (task / article / market_news / medium / seo) all hide those fields in
+// the form because the operator isn't earning a backlink for any of them.
 export const LB_LINK_TYPES: ReadonlySet<LBType> = new Set(
-  LB_TYPES.filter((t) => t.k !== 'task').map((t) => t.k),
+  LB_TYPES.filter((t) => !LB_TASK_LIKE_SET.has(t.k)).map((t) => t.k),
 )
 export function isLinkType(type: string): boolean {
   return LB_LINK_TYPES.has(type as LBType)

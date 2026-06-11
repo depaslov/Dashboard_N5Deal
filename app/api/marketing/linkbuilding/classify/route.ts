@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { getOrCreateCurrentProject } from '@/lib/project'
 import { callLLM, MissingLLMKey } from '@/lib/marketing/llm'
+import { LB_TASK_LIKE_TYPES } from '@/lib/marketing/constants'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -20,7 +21,7 @@ export const maxDuration = 120
 // cost down and lets the model see the rest of the list when deciding
 // whether something is an outlier.
 
-const SYSTEM_PROMPT = `You classify backlog items as either real link-building activities (outreach, guest post, resource page, partner placement, directory listing, profile link, Web 2.0, crowd marketing, Medium article, site article, market news, HARO/press) OR general tasks (anything that isn't trying to earn a backlink — research, design, admin, planning, follow-up reminders, internal coordination, etc.). Output strict JSON.`
+const SYSTEM_PROMPT = `You classify backlog items as either real link-building activities (outreach, guest post, resource page, partner placement, directory listing, profile link, Web 2.0, crowd marketing, HARO/press) OR task-like items (general tasks, site articles, market-news posts, Medium articles, SEO work, planning, internal coordination — anything not aimed at earning a backlink on an external site). Output strict JSON.`
 
 interface ItemForClassify {
   id: string
@@ -69,8 +70,13 @@ export async function POST() {
 
   const project = await getOrCreateCurrentProject(userId)
 
+  // Skip task-like types — they're already on Tasks Andrew. We only need
+  // to scan the real link-building rows here.
   const rows = await prisma.linkBuildingItem.findMany({
-    where: { projectId: project.id, NOT: { type: 'task' } },
+    where: {
+      projectId: project.id,
+      type: { notIn: [...LB_TASK_LIKE_TYPES] },
+    },
     select: {
       id: true,
       title: true,

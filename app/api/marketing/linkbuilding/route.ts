@@ -8,11 +8,12 @@ import { logLbActivity } from '@/lib/marketing/lb-activity'
 
 export const dynamic = 'force-dynamic'
 
-// Keep in sync with LB_TYPES in lib/marketing/constants.ts. 'task' is the
-// non-link general-purpose type; the rest are placement / outreach kinds.
+// Keep in sync with LB_TYPES in lib/marketing/constants.ts. First five are
+// the "task-like" family (route to /tasks-andrew); the rest are real
+// link-building activities (route to /linkbuilding).
 const TYPES = [
-  'task',
-  'profile', 'web20', 'crowd', 'medium', 'article', 'market_news',
+  'task', 'article', 'market_news', 'medium', 'seo',
+  'profile', 'web20', 'crowd',
   'outreach', 'guest_post', 'resource', 'partner', 'directory', 'hari', 'other',
 ] as const
 // `approved` is the explicit gate between in_progress and published — see

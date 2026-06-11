@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { getOrCreateCurrentProject } from '@/lib/project'
+import { LB_TASK_LIKE_TYPES } from '@/lib/marketing/constants'
 import { LinkBuildingBoard, type LbItem } from './lb-board'
 
 export const dynamic = 'force-dynamic'
@@ -15,11 +16,15 @@ export default async function MarketingLinkBuildingPage({
   const userId = session?.user?.id as string
   const project = await getOrCreateCurrentProject(userId)
 
-  // Only true link-placement items here — anything typed as a general
-  // 'task' lives on the Tasks Andrew page so this view stays focused on
-  // outreach / guest posts / placements.
+  // Only true link-placement items here — anything in the task-like
+  // family (task / article / market_news / medium / seo) lives on the
+  // Tasks Andrew page. Single source of truth for which types route to
+  // which page is LB_TASK_LIKE_TYPES in lib/marketing/constants.ts.
   const items = await prisma.linkBuildingItem.findMany({
-    where: { projectId: project.id, NOT: { type: 'task' } },
+    where: {
+      projectId: project.id,
+      type: { notIn: [...LB_TASK_LIKE_TYPES] },
+    },
     orderBy: { scheduledFor: 'asc' },
   })
 
