@@ -99,6 +99,12 @@ RULES (apply mechanically, not stylistically):
 - Primary keyword in headings: H1 (mandatory) + AT MOST 1 other H2/H3 (optional). All remaining H2/H3 MUST use "the license", "the authorisation", "this licence", or rephrase to drop the keyword entirely. This is the most common failure — verify before output.
 - All secondary/LSI keywords listed below must each appear AT LEAST once in the body.
 
+NON-NEGOTIABLE: KEYWORDS MUST HAVE CONTEXT — they cannot be stuffed.
+- A keyword counts ONLY when it is part of a sentence whose meaning depends on it. "EMI licence holders must report quarterly" counts. "EMI licence EMI licence is a financial licence (EMI licence)" does NOT — it is keyword-stuffing and the output is rejected.
+- NO parenthetical keyword dumps. "the licence (also called EMI authorisation / EMI permit / electronic money permission)" is stuffing in a trench coat — refuse. Use those terms in DIFFERENT sentences across DIFFERENT paragraphs instead.
+- NO bullet lists whose sole purpose is repeating keywords. Every bullet must convey a distinct piece of information.
+- LSI keywords belong inside sentences that explain a related concept, a comparison, or a practical example — not lumped together. Spread them across at least three paragraphs in different H2 sections.
+
 After writing, you MUST output a KEYWORD VERIFICATION table at the end of the page with the ACTUAL final counts. If your declared count differs from the real count by ≥1, the output is rejected.`)
   }
 

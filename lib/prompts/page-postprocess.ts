@@ -33,6 +33,18 @@ export interface PagePostProcessResult {
   fixes: string[]
 }
 
+// Coverage report — used by the generate route to decide whether a second
+// LLM pass is needed to weave missing keywords in. Counts are case-
+// insensitive substring counts so plural / declined forms still register.
+export interface KeywordCoverage {
+  /** Primary + secondary keywords that fell SHORT of their minCount target. */
+  underMain: { term: string; have: number; want: number }[]
+  /** LSI keywords with zero occurrences. */
+  missingLsi: string[]
+  /** Convenience: true when nothing is missing. */
+  allCovered: boolean
+}
+
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -398,6 +410,97 @@ function ensureMetadataHeader(text: string, brief: PagePostProcessBrief): { text
   const rebuilt = [...header, ...lines.slice(cursor)].join('\n')
   fixes.push(`injected metadata header (${wordCount} words, ${readingTime} min, ${tags.length} tags) — model had skipped it`)
   return { text: rebuilt, fixes }
+}
+
+// ---------------------------------------------------------------------------
+// Keyword coverage analyzer — counts each main / LSI keyword in the body,
+// returns the ones that fell short of their target so the generate route
+// can run a second LLM pass to weave them in naturally. Pure / no side
+// effects — safe to run independently of postProcessPage.
+//
+// IMPORTANT: counts use a substring match (case-insensitive) rather than
+// strict word boundaries because keywords routinely show up in inflected
+// forms (e.g. "EMI licence" / "EMI licences") that a `\b` match would
+// miss. Substring matching can over-count when the keyword is a fragment
+// of a longer word — we accept that as the lesser evil; the generate
+// pipeline cares about "is this keyword visibly present" more than "is
+// it grammatically isolated".
+// ---------------------------------------------------------------------------
+export function analyzeKeywordCoverage(
+  text: string,
+  brief: PagePostProcessBrief,
+): KeywordCoverage {
+  function countOf(term: string): number {
+    if (!term) return 0
+    const m = text.match(new RegExp(escapeRegex(term), 'gi'))
+    return m?.length ?? 0
+  }
+
+  const underMain: { term: string; have: number; want: number }[] = []
+
+  if (brief.primaryKeyword?.term && brief.primaryKeyword.minCount > 0) {
+    const have = countOf(brief.primaryKeyword.term)
+    if (have < brief.primaryKeyword.minCount) {
+      underMain.push({ term: brief.primaryKeyword.term, have, want: brief.primaryKeyword.minCount })
+    }
+  }
+  for (const k of brief.secondaryKeywords ?? []) {
+    if (!k?.term || (k.minCount ?? 0) <= 0) continue
+    const have = countOf(k.term)
+    if (have < k.minCount) underMain.push({ term: k.term, have, want: k.minCount })
+  }
+
+  const missingLsi: string[] = []
+  for (const term of brief.lsiKeywords ?? []) {
+    if (!term) continue
+    if (countOf(term) === 0) missingLsi.push(term)
+  }
+
+  return {
+    underMain,
+    missingLsi,
+    allCovered: underMain.length === 0 && missingLsi.length === 0,
+  }
+}
+
+// Builds the prompt the generate route sends to the LLM on the second
+// pass to fill keyword gaps. Centralised here so the wording stays in
+// lock-step with what the analyzer is checking — instructions explicitly
+// reference the counts and require the keyword in CONTEXT (no header-
+// stuffing, no parenthetical lists).
+export function buildKeywordTopUpPrompt(
+  draft: string,
+  coverage: KeywordCoverage,
+): string {
+  const underLines = coverage.underMain
+    .map((u) => `  • "${u.term}" — currently ${u.have} occurrence${u.have === 1 ? '' : 's'}, needs ${u.want}`)
+    .join('\n')
+  const missingLines = coverage.missingLsi
+    .map((t) => `  • "${t}" — currently absent, needs to appear at least once`)
+    .join('\n')
+
+  return `The page below is structurally fine but is MISSING these keyword targets from the brief. Rewrite the page so each missing or under-used keyword appears as required, woven into a sentence that makes semantic sense. Do NOT keyword-stuff. Each insertion must be a natural part of the sentence around it.
+
+UNDER-COUNT MAIN KEYWORDS (substring match, case-insensitive):
+${underLines || '  (none)'}
+
+MISSING LSI / SECONDARY KEYWORDS:
+${missingLines || '  (none)'}
+
+NON-NEGOTIABLE RULES:
+1. Preserve EVERY existing internal link \`[anchor](url)\` exactly as written.
+2. Preserve EVERY existing H1 / H2 / H3 / H4 heading text. You may add a sentence inside an existing section, but DO NOT add, remove, or rename headings.
+3. Preserve the SEO METADATA block at the end verbatim.
+4. Preserve the disclaimer (any line starting with "*This page is for informational").
+5. Preserve the metadata header (Word Count / Reading Time / Tags) at the top.
+6. NO keyword stuffing — sentences like "EMI licence EMI licence is important for EMI licence" are WORSE than the original output. Refuse those.
+7. NO parenthetical keyword dumps — "the licence (also known as: X, Y, Z)" is keyword-stuffing in a trench coat. Refuse those too.
+8. Each missing keyword goes into a sentence where it would NATURALLY belong — a comparison, a clarification, a real-world example, or a follow-on question.
+9. Output the FULL rewritten page in markdown — no preamble, no closing notes, no \`\`\` fences. Same length range as the input.
+
+────── DRAFT ──────
+
+${draft}`
 }
 
 // ---------------------------------------------------------------------------

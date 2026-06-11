@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db'
 import { getOrCreateCurrentProject } from '@/lib/project'
 import { buildBriefPrompt, type BriefData, type BriefInternalLink, type BriefRedFlag, type ContentType } from '@/lib/content-brief'
 import { PAGE_SYSTEM_PROMPT_V3, buildPageUserPrompt } from '@/lib/prompts/page-system-v3'
-import { postProcessPage } from '@/lib/prompts/page-postprocess'
+import { postProcessPage, analyzeKeywordCoverage, buildKeywordTopUpPrompt } from '@/lib/prompts/page-postprocess'
 import { findSimilarGeneratedContent } from '@/lib/rag'
 import { embeddingsAvailable } from '@/lib/embeddings'
 import { loadVectorStoreForScopes } from '@/lib/embedding-store'
@@ -442,7 +442,7 @@ export async function POST(req: Request) {
         let postFixes: string[] = []
         if (usePageSystem) {
           const primary = (brief.mainKeywords ?? [])[0]
-          const post = postProcessPage(fullText, {
+          const briefForPost = {
             primaryKeyword: primary ? { term: primary.term, minCount: primary.minCount } : undefined,
             secondaryKeywords: (brief.mainKeywords ?? []).slice(1),
             lsiKeywords: brief.lsiKeywords ?? [],
@@ -453,10 +453,75 @@ export async function POST(req: Request) {
               priority: l.priority,
             })),
             topic,
-          })
+          }
+          const post = postProcessPage(fullText, briefForPost)
           if (post.fixes.length) console.log('[generate] postprocess fixes:', post.fixes)
           finalText = post.text
           postFixes = post.fixes
+
+          // ── Keyword coverage rescue ───────────────────────────────────
+          // Analyze what's missing AFTER the first postprocess pass. If
+          // any main keyword is under-count or any LSI is absent, fire a
+          // SECOND LLM call (non-streaming, single shot) to weave the
+          // gaps in naturally. The rewrite prompt forbids stuffing and
+          // requires preserving links + structure, so the second pass
+          // is safe to re-postprocess and keep.
+          //
+          // Skipped silently if everything is already covered — cheapest
+          // path stays cheap.
+          const coverage = analyzeKeywordCoverage(finalText, briefForPost)
+          if (!coverage.allCovered) {
+            postFixes.push(
+              ...coverage.underMain.map((u) => `keyword under-count "${u.term}": ${u.have}/${u.want}`),
+              ...coverage.missingLsi.map((t) => `LSI missing: "${t}"`),
+            )
+            try {
+              send({ status: 'processing', delta: '\n\n[keyword top-up in progress…]\n' })
+              const topUpRes = await fetch('https://apps.abacus.ai/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${process.env.ABACUSAI_API_KEY}`,
+                },
+                body: JSON.stringify({
+                  model: 'gpt-5.4-mini',
+                  messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: buildKeywordTopUpPrompt(finalText, coverage) },
+                  ],
+                  stream: false,
+                  max_tokens: 6000,
+                }),
+              })
+              if (topUpRes.ok) {
+                const data = await topUpRes.json()
+                const rewritten: string = data?.choices?.[0]?.message?.content ?? ''
+                if (rewritten.trim().length > 200) {
+                  // Re-run postprocess on the rewrite to keep links + caps clean.
+                  const secondPost = postProcessPage(rewritten, briefForPost)
+                  finalText = secondPost.text
+                  postFixes.push(`keyword top-up applied (${coverage.underMain.length + coverage.missingLsi.length} gap${coverage.underMain.length + coverage.missingLsi.length === 1 ? '' : 's'})`)
+                  postFixes.push(...secondPost.fixes.map((f) => `[top-up] ${f}`))
+                  // Final coverage check — record any remaining gaps so the
+                  // operator can spot-fix in the editor.
+                  const finalCov = analyzeKeywordCoverage(finalText, briefForPost)
+                  if (!finalCov.allCovered) {
+                    postFixes.push(
+                      ...finalCov.underMain.map((u) => `WARNING: still under-count after top-up: "${u.term}" ${u.have}/${u.want}`),
+                      ...finalCov.missingLsi.map((t) => `WARNING: LSI still missing after top-up: "${t}"`),
+                    )
+                  }
+                } else {
+                  postFixes.push('keyword top-up returned too-short result; skipped')
+                }
+              } else {
+                postFixes.push(`keyword top-up upstream error ${topUpRes.status}; original draft kept`)
+              }
+            } catch (e) {
+              console.error('[generate] keyword top-up failed', e)
+              postFixes.push('keyword top-up errored; original draft kept')
+            }
+          }
         }
 
         // Surface the postprocess fixes alongside the final text so the UI can
