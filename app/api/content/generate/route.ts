@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db'
 import { getOrCreateCurrentProject } from '@/lib/project'
 import { buildBriefPrompt, type BriefData, type BriefInternalLink, type BriefRedFlag, type ContentType } from '@/lib/content-brief'
 import { PAGE_SYSTEM_PROMPT_V3, buildPageUserPrompt } from '@/lib/prompts/page-system-v3'
-import { postProcessPage, analyzeKeywordCoverage, buildKeywordTopUpPrompt } from '@/lib/prompts/page-postprocess'
+import { postProcessPage, analyzeKeywordCoverage } from '@/lib/prompts/page-postprocess'
 import { findSimilarGeneratedContent } from '@/lib/rag'
 import { embeddingsAvailable } from '@/lib/embeddings'
 import { loadVectorStoreForScopes } from '@/lib/embedding-store'
@@ -501,126 +501,33 @@ export async function POST(req: Request) {
           }
           postFixes.push(`[audit] brief links present after pass 1: ${countLinks(finalText)}/${briefForPost.internalLinks?.length ?? 0}`)
 
-          // ── Pass 2: keyword coverage rescue (optional second LLM call)
-          // Skipped silently if everything is already covered — cheapest
-          // path stays cheap. Fires a SECOND LLM call (non-streaming,
-          // single shot) to weave gaps in naturally when needed. The
-          // rewrite prompt forbids stuffing and requires preserving
-          // links + structure, so the second pass is safe to
-          // re-postprocess and keep.
+          // ── Pass 2: keyword coverage AUDIT ONLY (no LLM rewrite)
+          // Earlier versions of this code ran a second LLM pass to weave
+          // missing keywords into the draft automatically. That solved
+          // the keyword-gap problem but introduced a worse one — the
+          // rewrite would silently change wording, drop paragraphs, or
+          // reorder sections, so the operator saw "good text during
+          // generation, different text in the saved page". A link-count
+          // rollback guard caught the worst cases but couldn't detect
+          // prose-level losses. We've rolled that pass back entirely:
+          // coverage is now reported as warnings in postFixes and the
+          // operator decides whether to patch by hand in the editor or
+          // re-generate. The single-shot generation IS the final text.
           try {
             const coverage = analyzeKeywordCoverage(finalText, briefForPost)
             if (!coverage.allCovered) {
               postFixes.push(
-                ...coverage.underMain.map((u) => `keyword under-count "${u.term}": ${u.have}/${u.want}`),
-                ...coverage.missingLsi.map((t) => `LSI missing: "${t}"`),
+                ...coverage.underMain.map((u) => `WARNING: keyword under-count "${u.term}": ${u.have}/${u.want} — add a sentence in the editor or regenerate`),
+                ...coverage.missingLsi.map((t) => `WARNING: LSI missing: "${t}" — add a sentence in the editor or regenerate`),
               )
-
-              // 90s ceiling on the top-up call so it can't hang the whole
-              // function. If the LLM upstream takes longer than that we
-              // abandon the top-up and keep the original draft —
-              // postFixes records the timeout so the operator sees why.
-              const topUpController = new AbortController()
-              const topUpTimer = setTimeout(() => topUpController.abort(), 90_000)
-
-              let topUpRes: Response | null = null
-              try {
-                topUpRes = await fetch('https://apps.abacus.ai/v1/chat/completions', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${process.env.ABACUSAI_API_KEY}`,
-                  },
-                  body: JSON.stringify({
-                    model: 'gpt-5.4-mini',
-                    messages: [
-                      { role: 'system', content: systemPrompt },
-                      { role: 'user', content: buildKeywordTopUpPrompt(finalText, coverage) },
-                    ],
-                    stream: false,
-                    max_tokens: 6000,
-                  }),
-                  signal: topUpController.signal,
-                })
-              } finally {
-                clearTimeout(topUpTimer)
-              }
-
-              if (topUpRes && topUpRes.ok) {
-                const data = await topUpRes.json()
-                const rewritten: string = data?.choices?.[0]?.message?.content ?? ''
-                if (rewritten.trim().length > 200) {
-                  // ── Critical guard: rollback if top-up dropped links ──
-                  // The keyword-coverage rewrite is meant to weave terms
-                  // into existing sentences, but LLMs routinely strip
-                  // formatting they don't understand. If the rewrite has
-                  // fewer brief-URL markdown tokens than the original,
-                  // it has demonstrably lost links the operator put
-                  // there on purpose — accepting it would trade keyword
-                  // wins for link losses, which is a worse outcome than
-                  // keeping the draft as-is. Postprocess re-injection
-                  // helps but it can't re-add a link whose anchor text
-                  // the rewrite also rephrased. Safer to reject.
-                  const beforeLinks = countLinks(finalText)
-                  const linksInRewrite = countLinks(rewritten)
-                  if (linksInRewrite < beforeLinks) {
-                    postFixes.push(
-                      `top-up REJECTED: rewrite kept only ${linksInRewrite}/${beforeLinks} brief links — original draft preserved instead`,
-                    )
-                  } else {
-                    // Re-run postprocess on the rewrite to keep links + caps clean.
-                    try {
-                      const secondPost = postProcessPage(rewritten, briefForPost)
-                      // Belt-and-braces: re-check link count AFTER pass-2
-                      // postprocess too. If the See-also fallback was
-                      // the only thing keeping a link present we still
-                      // detect that and roll back to the cleaner draft.
-                      const finalLinks = countLinks(secondPost.text)
-                      if (finalLinks < beforeLinks) {
-                        postFixes.push(
-                          `top-up ROLLED BACK after re-postprocess: ${finalLinks}/${beforeLinks} brief links survived (was ${beforeLinks}/${beforeLinks}) — original draft kept`,
-                        )
-                      } else {
-                        finalText = secondPost.text
-                        postFixes.push(`keyword top-up applied (${coverage.underMain.length + coverage.missingLsi.length} gap${coverage.underMain.length + coverage.missingLsi.length === 1 ? '' : 's'})`)
-                        postFixes.push(`[audit] brief links present after top-up: ${finalLinks}/${briefForPost.internalLinks?.length ?? 0}`)
-                        postFixes.push(...secondPost.fixes.map((f) => `[top-up] ${f}`))
-                        const finalCov = analyzeKeywordCoverage(finalText, briefForPost)
-                        if (!finalCov.allCovered) {
-                          postFixes.push(
-                            ...finalCov.underMain.map((u) => `WARNING: still under-count after top-up: "${u.term}" ${u.have}/${u.want}`),
-                            ...finalCov.missingLsi.map((t) => `WARNING: LSI still missing after top-up: "${t}"`),
-                          )
-                        }
-                      }
-                    } catch (e) {
-                      console.error('[generate] post-top-up postprocess threw', e)
-                      postFixes.push(`top-up rewrite arrived but re-postprocess errored; original draft kept`)
-                    }
-                  }
-                } else {
-                  postFixes.push('keyword top-up returned too-short result; original draft kept')
-                }
-              } else if (topUpRes) {
-                postFixes.push(`keyword top-up upstream error ${topUpRes.status}; original draft kept`)
-              }
+            } else {
+              postFixes.push(`[audit] keyword coverage clean — all main & LSI targets satisfied`)
             }
           } catch (e) {
-            const msg = (e as Error)?.message ?? 'unknown'
-            console.error('[generate] keyword top-up failed', e)
-            postFixes.push(
-              msg.toLowerCase().includes('abort')
-                ? 'keyword top-up timed out after 90s; original draft kept'
-                : `keyword top-up errored (${msg}); original draft kept`,
-            )
+            console.error('[generate] coverage audit threw', e)
+            postFixes.push(`coverage audit errored (${(e as Error)?.message ?? 'unknown'}); article unchanged`)
           }
         }
-
-        // Defensive: if some legacy / aborted run left the in-progress
-        // marker in the body, strip it before sending. New runs never
-        // emit it; this is belt-and-braces for output that may have
-        // accumulated it during the buggy window.
-        finalText = finalText.replace(/\n*\[keyword top-up in progress…\]\n*/g, '\n\n')
 
         // Surface the postprocess fixes alongside the final text so the UI can
         // show the operator "AI missed link X, we injected it as See-also" or
