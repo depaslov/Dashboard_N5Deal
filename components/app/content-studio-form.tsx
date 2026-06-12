@@ -533,12 +533,21 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
     else toast.success(`Generated ${okCount} pages`)
   }
 
+  // Strip the legacy "[keyword top-up in progress…]" SSE marker if it
+  // leaked into the body from an aborted run. The server stopped emitting
+  // it, but pages generated during the buggy window can still have it
+  // baked in — clean before saving so the DB doesn't preserve the artifact.
+  function cleanForSave(text: string): string {
+    return text.replace(/\n*\[keyword top-up in progress…\]\n*/g, '\n\n').trimEnd()
+  }
+
   const handleSave = async () => {
+    const body = cleanForSave(output)
     const res = await fetch('/api/content', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contentType, topic, targetAudience: audience, keyMessages, tone: '',
-        generatedBrief: output, icpIds,
+        generatedBrief: body, icpIds,
       }),
     })
     const data = await res.json().catch(() => ({}))
@@ -558,7 +567,7 @@ export function ContentStudioForm({ contentType, title, description, icps, platf
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contentType, topic: row.topic, targetAudience: audience, keyMessages, tone: '',
-          generatedBrief: row.output, icpIds,
+          generatedBrief: cleanForSave(row.output), icpIds,
         }),
       })
       if (res.ok) ok++; else failed++

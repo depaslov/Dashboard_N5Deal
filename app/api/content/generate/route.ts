@@ -67,7 +67,12 @@ function makeBriefDigest(input: {
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-export const maxDuration = 60
+// 300s is Vercel Pro's hard ceiling. We need ≥ first-LLM-call (≤90s) +
+// post-process + optional keyword top-up second LLM call (≤90s) +
+// re-postprocess + buffer. The previous 60s ceiling was tripping the
+// function whenever the top-up pass fired, killing the `completed` SSE
+// event and leaving the UI stuck on the streamed-only text.
+export const maxDuration = 300
 
 const CONTENT_TYPES: ContentType[] = ['article', 'catalog', 'linkedin', 'telegram']
 
@@ -433,13 +438,14 @@ export async function POST(req: Request) {
           }
         }
 
-        // Deterministic post-processing for page-style content:
-        // strip invented/duplicate links, cap primary keyword count by
-        // rewriting H2/H3 headings, inject metadata header if missing.
-        // Only run on pages (article/catalog) — linkedin/telegram don't
-        // share the same structural rules.
+        // Deterministic post-processing for page-style content. Each step
+        // is wrapped in its own try/catch so a single failure (regex
+        // throw, top-up timeout, etc.) can't silently kill the
+        // `completed` SSE event downstream. Whatever text we have at any
+        // point is what gets sent — never an empty completion.
         let finalText = fullText
         let postFixes: string[] = []
+
         if (usePageSystem) {
           const primary = (brief.mainKeywords ?? [])[0]
           const briefForPost = {
@@ -454,75 +460,108 @@ export async function POST(req: Request) {
             })),
             topic,
           }
-          const post = postProcessPage(fullText, briefForPost)
-          if (post.fixes.length) console.log('[generate] postprocess fixes:', post.fixes)
-          finalText = post.text
-          postFixes = post.fixes
 
-          // ── Keyword coverage rescue ───────────────────────────────────
-          // Analyze what's missing AFTER the first postprocess pass. If
-          // any main keyword is under-count or any LSI is absent, fire a
-          // SECOND LLM call (non-streaming, single shot) to weave the
-          // gaps in naturally. The rewrite prompt forbids stuffing and
-          // requires preserving links + structure, so the second pass
-          // is safe to re-postprocess and keep.
-          //
+          // ── Pass 1: deterministic postprocess (links + caps + metadata)
+          try {
+            const post = postProcessPage(fullText, briefForPost)
+            if (post.fixes.length) console.log('[generate] postprocess fixes:', post.fixes)
+            finalText = post.text
+            postFixes = post.fixes
+          } catch (e) {
+            console.error('[generate] postprocess threw', e)
+            postFixes.push(`postprocess errored (${(e as Error)?.message ?? 'unknown'}); using raw LLM output`)
+            finalText = fullText
+          }
+
+          // ── Pass 2: keyword coverage rescue (optional second LLM call)
           // Skipped silently if everything is already covered — cheapest
-          // path stays cheap.
-          const coverage = analyzeKeywordCoverage(finalText, briefForPost)
-          if (!coverage.allCovered) {
-            postFixes.push(
-              ...coverage.underMain.map((u) => `keyword under-count "${u.term}": ${u.have}/${u.want}`),
-              ...coverage.missingLsi.map((t) => `LSI missing: "${t}"`),
-            )
-            try {
-              send({ status: 'processing', delta: '\n\n[keyword top-up in progress…]\n' })
-              const topUpRes = await fetch('https://apps.abacus.ai/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${process.env.ABACUSAI_API_KEY}`,
-                },
-                body: JSON.stringify({
-                  model: 'gpt-5.4-mini',
-                  messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: buildKeywordTopUpPrompt(finalText, coverage) },
-                  ],
-                  stream: false,
-                  max_tokens: 6000,
-                }),
-              })
-              if (topUpRes.ok) {
+          // path stays cheap. Fires a SECOND LLM call (non-streaming,
+          // single shot) to weave gaps in naturally when needed. The
+          // rewrite prompt forbids stuffing and requires preserving
+          // links + structure, so the second pass is safe to
+          // re-postprocess and keep.
+          try {
+            const coverage = analyzeKeywordCoverage(finalText, briefForPost)
+            if (!coverage.allCovered) {
+              postFixes.push(
+                ...coverage.underMain.map((u) => `keyword under-count "${u.term}": ${u.have}/${u.want}`),
+                ...coverage.missingLsi.map((t) => `LSI missing: "${t}"`),
+              )
+
+              // 90s ceiling on the top-up call so it can't hang the whole
+              // function. If the LLM upstream takes longer than that we
+              // abandon the top-up and keep the original draft —
+              // postFixes records the timeout so the operator sees why.
+              const topUpController = new AbortController()
+              const topUpTimer = setTimeout(() => topUpController.abort(), 90_000)
+
+              let topUpRes: Response | null = null
+              try {
+                topUpRes = await fetch('https://apps.abacus.ai/v1/chat/completions', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${process.env.ABACUSAI_API_KEY}`,
+                  },
+                  body: JSON.stringify({
+                    model: 'gpt-5.4-mini',
+                    messages: [
+                      { role: 'system', content: systemPrompt },
+                      { role: 'user', content: buildKeywordTopUpPrompt(finalText, coverage) },
+                    ],
+                    stream: false,
+                    max_tokens: 6000,
+                  }),
+                  signal: topUpController.signal,
+                })
+              } finally {
+                clearTimeout(topUpTimer)
+              }
+
+              if (topUpRes && topUpRes.ok) {
                 const data = await topUpRes.json()
                 const rewritten: string = data?.choices?.[0]?.message?.content ?? ''
                 if (rewritten.trim().length > 200) {
                   // Re-run postprocess on the rewrite to keep links + caps clean.
-                  const secondPost = postProcessPage(rewritten, briefForPost)
-                  finalText = secondPost.text
-                  postFixes.push(`keyword top-up applied (${coverage.underMain.length + coverage.missingLsi.length} gap${coverage.underMain.length + coverage.missingLsi.length === 1 ? '' : 's'})`)
-                  postFixes.push(...secondPost.fixes.map((f) => `[top-up] ${f}`))
-                  // Final coverage check — record any remaining gaps so the
-                  // operator can spot-fix in the editor.
-                  const finalCov = analyzeKeywordCoverage(finalText, briefForPost)
-                  if (!finalCov.allCovered) {
-                    postFixes.push(
-                      ...finalCov.underMain.map((u) => `WARNING: still under-count after top-up: "${u.term}" ${u.have}/${u.want}`),
-                      ...finalCov.missingLsi.map((t) => `WARNING: LSI still missing after top-up: "${t}"`),
-                    )
+                  try {
+                    const secondPost = postProcessPage(rewritten, briefForPost)
+                    finalText = secondPost.text
+                    postFixes.push(`keyword top-up applied (${coverage.underMain.length + coverage.missingLsi.length} gap${coverage.underMain.length + coverage.missingLsi.length === 1 ? '' : 's'})`)
+                    postFixes.push(...secondPost.fixes.map((f) => `[top-up] ${f}`))
+                    const finalCov = analyzeKeywordCoverage(finalText, briefForPost)
+                    if (!finalCov.allCovered) {
+                      postFixes.push(
+                        ...finalCov.underMain.map((u) => `WARNING: still under-count after top-up: "${u.term}" ${u.have}/${u.want}`),
+                        ...finalCov.missingLsi.map((t) => `WARNING: LSI still missing after top-up: "${t}"`),
+                      )
+                    }
+                  } catch (e) {
+                    console.error('[generate] post-top-up postprocess threw', e)
+                    postFixes.push(`top-up rewrite arrived but re-postprocess errored; original draft kept`)
                   }
                 } else {
-                  postFixes.push('keyword top-up returned too-short result; skipped')
+                  postFixes.push('keyword top-up returned too-short result; original draft kept')
                 }
-              } else {
+              } else if (topUpRes) {
                 postFixes.push(`keyword top-up upstream error ${topUpRes.status}; original draft kept`)
               }
-            } catch (e) {
-              console.error('[generate] keyword top-up failed', e)
-              postFixes.push('keyword top-up errored; original draft kept')
             }
+          } catch (e) {
+            const msg = (e as Error)?.message ?? 'unknown'
+            console.error('[generate] keyword top-up failed', e)
+            postFixes.push(
+              msg.toLowerCase().includes('abort')
+                ? 'keyword top-up timed out after 90s; original draft kept'
+                : `keyword top-up errored (${msg}); original draft kept`,
+            )
           }
         }
+
+        // Defensive: if some legacy / aborted run left the in-progress
+        // marker in the body, strip it before sending. New runs never
+        // emit it; this is belt-and-braces for output that may have
+        // accumulated it during the buggy window.
+        finalText = finalText.replace(/\n*\[keyword top-up in progress…\]\n*/g, '\n\n')
 
         // Surface the postprocess fixes alongside the final text so the UI can
         // show the operator "AI missed link X, we injected it as See-also" or
