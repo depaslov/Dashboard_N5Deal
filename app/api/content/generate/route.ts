@@ -461,17 +461,31 @@ export async function POST(req: Request) {
             topic,
           }
 
-          // Helper: count how many of the brief's internal links are
-          // present in `text` as full `[anchor](url)` markdown tokens.
-          // Used as a "did the rewrite drop my links?" tripwire on the
-          // top-up pass — see the guard below.
+          // Helper: count how many brief-link INSTANCES are present in
+          // `text` as full `[anchor](url)` markdown tokens. Used as a
+          // "did the rewrite drop my links?" tripwire on the top-up
+          // pass — see the guard below.
+          //
+          // Cardinality matters: brief can list multiple entries that
+          // share the same URL (e.g. three different anchors all
+          // pointing to "/"). For each URL we expect AS MANY markdown
+          // occurrences as brief entries pointing there, capped at the
+          // brief's count. A url-keyed presence test would falsely
+          // claim "3/3 present" when only one markdown link exists, so
+          // we count actual matches per URL.
           const countLinks = (text: string): number => {
-            let n = 0
+            const urlCounts = new Map<string, number>()
             for (const l of briefForPost.internalLinks ?? []) {
-              const u = l.url.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-              if (new RegExp(`\\]\\(${u}\\)`).test(text)) n++
+              const u = l.url.trim()
+              urlCounts.set(u, (urlCounts.get(u) ?? 0) + 1)
             }
-            return n
+            let total = 0
+            for (const [url, briefCount] of urlCounts) {
+              const escaped = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+              const matches = text.match(new RegExp(`\\]\\(${escaped}\\)`, 'g')) ?? []
+              total += Math.min(matches.length, briefCount)
+            }
+            return total
           }
 
           // ── Pass 1: deterministic postprocess (links + caps + metadata)

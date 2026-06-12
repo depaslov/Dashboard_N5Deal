@@ -182,55 +182,80 @@ function enforceExactLinks(
   // No TZ links → nothing to enforce against; leave links as the model wrote them.
   if (required.length === 0) return { text, fixes }
 
-  const byUrl = new Map(required.map((l) => [l.url.trim(), l.anchor.trim()]))
-  const allowedUrls = new Set(byUrl.keys())
-  const seenUrls = new Set<string>()
+  // Track each required entry independently so multiple (anchor, url)
+  // pairs that share the SAME url (e.g. brief lists fintech-licence,
+  // crypto-exchange-licence, crypto-licence all pointing to "/")
+  // are each enforced as their own distinct link rather than collapsed
+  // by a url-keyed map.
+  type Entry = { url: string; anchor: string; anchorAlts: string[]; seen: boolean }
+  const entries: Entry[] = required.map((l) => ({
+    url: l.url.trim(),
+    anchor: l.anchor.trim(),
+    anchorAlts: (l.anchorAlts ?? []).map((a) => a.trim()).filter(Boolean),
+    seen: false,
+  }))
+  const allowedUrls = new Set(entries.map((e) => e.url))
 
-  // Pass 1: walk existing links — strip non-brief + duplicates, force anchor verbatim.
+  // Pick the best unseen entry for an existing [anchor](url) link found
+  // in the body. Preference: (1) exact url + exact anchor; (2) exact url
+  // + matching anchorAlt; (3) exact url alone (first unseen). Returns
+  // null if no unseen entry matches the url.
+  function pickEntry(linkAnchor: string, linkUrl: string): Entry | null {
+    const exactMatch = entries.find((e) => !e.seen && e.url === linkUrl && e.anchor === linkAnchor)
+    if (exactMatch) return exactMatch
+    const altMatch = entries.find((e) => !e.seen && e.url === linkUrl && e.anchorAlts.includes(linkAnchor))
+    if (altMatch) return altMatch
+    return entries.find((e) => !e.seen && e.url === linkUrl) ?? null
+  }
+
+  // Pass 1: walk existing links — strip non-brief, claim each one for
+  // an unseen brief entry that matches by url (preferring exact-anchor
+  // matches), force anchor verbatim when needed.
   let out = text.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (full, anchor, url) => {
     const cleanUrl = String(url).trim()
     if (!allowedUrls.has(cleanUrl)) {
       fixes.push(`stripped link not in TZ: [${anchor}](${cleanUrl})`)
       return String(anchor)
     }
-    if (seenUrls.has(cleanUrl)) {
-      fixes.push(`stripped duplicate TZ link: [${anchor}](${cleanUrl})`)
+    const entry = pickEntry(String(anchor), cleanUrl)
+    if (!entry) {
+      // Url is allowed but every brief entry pointing to it is already
+      // claimed — this is a stray extra. Strip the markdown but keep
+      // the anchor text so the sentence stays readable.
+      fixes.push(`stripped extra TZ link (all matching brief entries already used): [${anchor}](${cleanUrl})`)
       return String(anchor)
     }
-    seenUrls.add(cleanUrl)
-    const wantAnchor = byUrl.get(cleanUrl)!
-    if (anchor !== wantAnchor) {
-      fixes.push(`anchor corrected to TZ: "${anchor}" → "${wantAnchor}"`)
-      return `[${wantAnchor}](${cleanUrl})`
+    entry.seen = true
+    if (anchor !== entry.anchor) {
+      fixes.push(`anchor corrected to TZ: "${anchor}" → "${entry.anchor}" (${cleanUrl})`)
+      return `[${entry.anchor}](${cleanUrl})`
     }
     return full
   })
 
-  // Pass 2: inject any TZ link still missing. We pass anchorAlts to the
-  // linkifier so close-but-not-verbatim wording in the LLM output (plural,
-  // hyphen swap, etc.) still gets caught instead of falling through to
-  // the See-also appendix.
-  const toAppend: { url: string; anchor: string }[] = []
-  for (const l of required) {
-    const url = l.url.trim()
-    if (seenUrls.has(url)) continue
-    const anchor = l.anchor.trim()
-    const alts = (l.anchorAlts ?? []).map((a) => a.trim()).filter(Boolean)
-    const res = linkifyFirstOccurrence(out, anchor, url, alts)
+  // Pass 2: inject any brief entry still unseen. We pass anchorAlts to
+  // the linkifier so close-but-not-verbatim wording in the LLM output
+  // (plural, hyphen swap, etc.) still gets caught instead of falling
+  // through to the See-also appendix. Once linkified, the entry is
+  // marked seen.
+  const toAppend: Entry[] = []
+  for (const entry of entries) {
+    if (entry.seen) continue
+    const res = linkifyFirstOccurrence(out, entry.anchor, entry.url, entry.anchorAlts)
     if (res.done) {
       out = res.text
-      seenUrls.add(url)
+      entry.seen = true
       const how = res.matchedBy ? ` via ${res.matchedBy}` : ''
-      fixes.push(`injected missing TZ link${how} for "${anchor}"`)
+      fixes.push(`injected missing TZ link${how} for "${entry.anchor}" (${entry.url})`)
     } else {
-      toAppend.push({ url, anchor })
+      toAppend.push(entry)
     }
   }
   if (toAppend.length > 0) {
-    out = appendRelatedLinks(out, toAppend)
-    for (const l of toAppend) {
-      seenUrls.add(l.url)
-      fixes.push(`injected missing TZ link "${l.anchor}" as a See-also reference (phrase not found in body)`)
+    out = appendRelatedLinks(out, toAppend.map((e) => ({ url: e.url, anchor: e.anchor })))
+    for (const entry of toAppend) {
+      entry.seen = true
+      fixes.push(`injected missing TZ link "${entry.anchor}" (${entry.url}) as a See-also reference (phrase not found in body)`)
     }
   }
 
