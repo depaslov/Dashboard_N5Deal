@@ -488,15 +488,24 @@ MISSING LSI / SECONDARY KEYWORDS:
 ${missingLines || '  (none)'}
 
 NON-NEGOTIABLE RULES:
-1. Preserve EVERY existing internal link \`[anchor](url)\` exactly as written.
+
+1. INTERNAL LINKS ARE OPAQUE TOKENS. Every \`[anchor text](url)\` markdown link that appears in the DRAFT below MUST appear in your output, character-for-character identical, including the square brackets, the parentheses, the URL, and the anchor text inside them. Do NOT rephrase the anchor text. Do NOT change the URL. Do NOT split the link across multiple sentences. Do NOT remove the link even if the sentence around it changes.
+   ✗ WRONG: rewriting "operators must hold a [valid EMI licence](/emi) before launch" → "operators need a valid EMI licence first" (link destroyed)
+   ✗ WRONG: rewriting "operators must hold a [valid EMI licence](/emi) before launch" → "operators must hold a [valid EMI authorisation](/emi) before launch" (anchor text changed)
+   ✓ RIGHT: rewriting "operators must hold a [valid EMI licence](/emi) before launch" → "in practice, operators must hold a [valid EMI licence](/emi) before they can launch products in the EEA" (link preserved verbatim, sentence around it expanded)
+
 2. Preserve EVERY existing H1 / H2 / H3 / H4 heading text. You may add a sentence inside an existing section, but DO NOT add, remove, or rename headings.
 3. Preserve the SEO METADATA block at the end verbatim.
 4. Preserve the disclaimer (any line starting with "*This page is for informational").
 5. Preserve the metadata header (Word Count / Reading Time / Tags) at the top.
-6. NO keyword stuffing — sentences like "EMI licence EMI licence is important for EMI licence" are WORSE than the original output. Refuse those.
-7. NO parenthetical keyword dumps — "the licence (also known as: X, Y, Z)" is keyword-stuffing in a trench coat. Refuse those too.
-8. Each missing keyword goes into a sentence where it would NATURALLY belong — a comparison, a clarification, a real-world example, or a follow-on question.
-9. Output the FULL rewritten page in markdown — no preamble, no closing notes, no \`\`\` fences. Same length range as the input.
+6. Preserve the **See also:** appendix block if one exists in the draft — those are TZ links that already had to be rescued; do NOT delete them.
+
+7. NO keyword stuffing — sentences like "EMI licence EMI licence is important for EMI licence" are WORSE than the original output. Refuse those.
+8. NO parenthetical keyword dumps — "the licence (also known as: X, Y, Z)" is keyword-stuffing in a trench coat. Refuse those too.
+9. Each missing keyword goes into a sentence where it would NATURALLY belong — a comparison, a clarification, a real-world example, or a follow-on question.
+10. Output the FULL rewritten page in markdown — no preamble, no closing notes, no \`\`\` fences. Same length range as the input.
+
+BEFORE YOU OUTPUT: do a final scan and confirm every \`](\` token from the DRAFT is still in your output. If you cannot keep a link in a paragraph you rewrote, REVERT that paragraph to the draft wording — losing a link is a worse mistake than missing a keyword.
 
 ────── DRAFT ──────
 

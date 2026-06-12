@@ -461,6 +461,19 @@ export async function POST(req: Request) {
             topic,
           }
 
+          // Helper: count how many of the brief's internal links are
+          // present in `text` as full `[anchor](url)` markdown tokens.
+          // Used as a "did the rewrite drop my links?" tripwire on the
+          // top-up pass — see the guard below.
+          const countLinks = (text: string): number => {
+            let n = 0
+            for (const l of briefForPost.internalLinks ?? []) {
+              const u = l.url.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+              if (new RegExp(`\\]\\(${u}\\)`).test(text)) n++
+            }
+            return n
+          }
+
           // ── Pass 1: deterministic postprocess (links + caps + metadata)
           try {
             const post = postProcessPage(fullText, briefForPost)
@@ -472,6 +485,7 @@ export async function POST(req: Request) {
             postFixes.push(`postprocess errored (${(e as Error)?.message ?? 'unknown'}); using raw LLM output`)
             finalText = fullText
           }
+          postFixes.push(`[audit] brief links present after pass 1: ${countLinks(finalText)}/${briefForPost.internalLinks?.length ?? 0}`)
 
           // ── Pass 2: keyword coverage rescue (optional second LLM call)
           // Skipped silently if everything is already covered — cheapest
@@ -522,22 +536,53 @@ export async function POST(req: Request) {
                 const data = await topUpRes.json()
                 const rewritten: string = data?.choices?.[0]?.message?.content ?? ''
                 if (rewritten.trim().length > 200) {
-                  // Re-run postprocess on the rewrite to keep links + caps clean.
-                  try {
-                    const secondPost = postProcessPage(rewritten, briefForPost)
-                    finalText = secondPost.text
-                    postFixes.push(`keyword top-up applied (${coverage.underMain.length + coverage.missingLsi.length} gap${coverage.underMain.length + coverage.missingLsi.length === 1 ? '' : 's'})`)
-                    postFixes.push(...secondPost.fixes.map((f) => `[top-up] ${f}`))
-                    const finalCov = analyzeKeywordCoverage(finalText, briefForPost)
-                    if (!finalCov.allCovered) {
-                      postFixes.push(
-                        ...finalCov.underMain.map((u) => `WARNING: still under-count after top-up: "${u.term}" ${u.have}/${u.want}`),
-                        ...finalCov.missingLsi.map((t) => `WARNING: LSI still missing after top-up: "${t}"`),
-                      )
+                  // ── Critical guard: rollback if top-up dropped links ──
+                  // The keyword-coverage rewrite is meant to weave terms
+                  // into existing sentences, but LLMs routinely strip
+                  // formatting they don't understand. If the rewrite has
+                  // fewer brief-URL markdown tokens than the original,
+                  // it has demonstrably lost links the operator put
+                  // there on purpose — accepting it would trade keyword
+                  // wins for link losses, which is a worse outcome than
+                  // keeping the draft as-is. Postprocess re-injection
+                  // helps but it can't re-add a link whose anchor text
+                  // the rewrite also rephrased. Safer to reject.
+                  const beforeLinks = countLinks(finalText)
+                  const linksInRewrite = countLinks(rewritten)
+                  if (linksInRewrite < beforeLinks) {
+                    postFixes.push(
+                      `top-up REJECTED: rewrite kept only ${linksInRewrite}/${beforeLinks} brief links — original draft preserved instead`,
+                    )
+                  } else {
+                    // Re-run postprocess on the rewrite to keep links + caps clean.
+                    try {
+                      const secondPost = postProcessPage(rewritten, briefForPost)
+                      // Belt-and-braces: re-check link count AFTER pass-2
+                      // postprocess too. If the See-also fallback was
+                      // the only thing keeping a link present we still
+                      // detect that and roll back to the cleaner draft.
+                      const finalLinks = countLinks(secondPost.text)
+                      if (finalLinks < beforeLinks) {
+                        postFixes.push(
+                          `top-up ROLLED BACK after re-postprocess: ${finalLinks}/${beforeLinks} brief links survived (was ${beforeLinks}/${beforeLinks}) — original draft kept`,
+                        )
+                      } else {
+                        finalText = secondPost.text
+                        postFixes.push(`keyword top-up applied (${coverage.underMain.length + coverage.missingLsi.length} gap${coverage.underMain.length + coverage.missingLsi.length === 1 ? '' : 's'})`)
+                        postFixes.push(`[audit] brief links present after top-up: ${finalLinks}/${briefForPost.internalLinks?.length ?? 0}`)
+                        postFixes.push(...secondPost.fixes.map((f) => `[top-up] ${f}`))
+                        const finalCov = analyzeKeywordCoverage(finalText, briefForPost)
+                        if (!finalCov.allCovered) {
+                          postFixes.push(
+                            ...finalCov.underMain.map((u) => `WARNING: still under-count after top-up: "${u.term}" ${u.have}/${u.want}`),
+                            ...finalCov.missingLsi.map((t) => `WARNING: LSI still missing after top-up: "${t}"`),
+                          )
+                        }
+                      }
+                    } catch (e) {
+                      console.error('[generate] post-top-up postprocess threw', e)
+                      postFixes.push(`top-up rewrite arrived but re-postprocess errored; original draft kept`)
                     }
-                  } catch (e) {
-                    console.error('[generate] post-top-up postprocess threw', e)
-                    postFixes.push(`top-up rewrite arrived but re-postprocess errored; original draft kept`)
                   }
                 } else {
                   postFixes.push('keyword top-up returned too-short result; original draft kept')
