@@ -14,7 +14,7 @@ interface IcpItem { id: string; name: string }
 interface PlatformItem { id: string; name: string; slug: string; formatType: string }
 
 interface Props {
-  contentType: 'articles' | 'market-news' | 'newsletter' | 'social' | 'link-building' | 'pages'
+  contentType: 'articles' | 'market-news' | 'newsletter' | 'social' | 'link-building' | 'pages' | 'press-releases'
   title: string
   description: string
   icps: IcpItem[]

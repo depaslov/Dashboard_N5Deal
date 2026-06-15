@@ -10,6 +10,7 @@ import { obsidianScope } from './obsidian-sync'
 import { loadVectorStoreForScopes } from './embedding-store'
 import { embeddingsAvailable } from './embeddings'
 import { PAGE_SYSTEM_PROMPT_V3, buildPageUserPrompt } from './prompts/page-system-v3'
+import { PRESS_RELEASE_SYSTEM_PROMPT_V1, buildPressReleaseUserPrompt } from './prompts/press-release-system'
 
 const KB_TOP_K = 6
 const KB_MIN_SCORE = 0.55
@@ -301,11 +302,47 @@ export async function assembleStudioPrompt(input: AssembleInput): Promise<Assemb
   // (keyword overuse, missing metadata header, missing MUST links, invented
   // URLs). The strict pair has HARD GATES and is paired with a deterministic
   // server-side post-processor that enforces the brief's MAX limits.
+  //
+  // Press releases share the same brief shape (keywords, anchors, KB,
+  // structure, ICP) but need an AP-Style output skeleton instead of a
+  // page layout. Same hard-gates philosophy; different format. Routed to
+  // its dedicated prompt module so future changes to either stay isolated.
   const isPageStyle = input.contentType === 'pages' || input.contentType === 'articles'
+  const isPressRelease = input.contentType === 'press-releases'
 
   let systemPrompt: string
   let userPrompt: string
-  if (isPageStyle) {
+  if (isPressRelease) {
+    systemPrompt = PRESS_RELEASE_SYSTEM_PROMPT_V1
+    userPrompt = buildPressReleaseUserPrompt({
+      topic: input.topic,
+      targetAudience: input.targetAudience ?? '',
+      keyMessages: input.keyMessages ?? '',
+      language,
+      wordCountMin: input.wordCountMin,
+      wordCountMax: input.wordCountMax,
+      mainKeywords: input.mainKeywords ?? [],
+      lsiKeywords: input.lsiKeywords ?? [],
+      internalLinks: internalLinks.map((l) => ({
+        url: l.url,
+        anchor: l.anchor,
+        anchorAlts: l.anchorAlts ?? [],
+        priority: (l.priority === 'must' ? 'must' : 'nice') as 'must' | 'nice',
+        context: l.context ?? undefined,
+      })),
+      structure: (input.sectionStructure && input.sectionStructure.length > 0)
+        ? input.sectionStructure.map((b) => ({ heading: b.heading, subtopics: b.subtopics ?? [] }))
+        : (input.sectionOutline ?? []).map((h) => ({ heading: h, subtopics: [] })),
+      knowledgeBaseContext: kb.context,
+      documentContext: input.documentText,
+      icpContext: ctx.icps,
+      redFlags: redFlags.map((r) => ({
+        word: r.word,
+        severity: (r.severity === 'block' ? 'block' : 'warn') as 'block' | 'warn',
+        reason: r.reason ?? undefined,
+      })),
+    })
+  } else if (isPageStyle) {
     systemPrompt = PAGE_SYSTEM_PROMPT_V3
     userPrompt = buildPageUserPrompt({
       topic: input.topic,
@@ -345,7 +382,11 @@ export async function assembleStudioPrompt(input: AssembleInput): Promise<Assemb
     userPrompt,
     meta: {
       templateId: template?.id ?? null,
-      templateName: isPageStyle ? `${template?.name ?? '(no DB template)'} → overridden by PAGE_SYSTEM_PROMPT_V3` : (template?.name ?? null),
+      templateName: isPressRelease
+        ? `${template?.name ?? '(no DB template)'} → overridden by PRESS_RELEASE_SYSTEM_PROMPT_V1`
+        : isPageStyle
+        ? `${template?.name ?? '(no DB template)'} → overridden by PAGE_SYSTEM_PROMPT_V3`
+        : (template?.name ?? null),
       icpNames: orderedIcps.map((i) => i.name),
       platform: safePlatform ? { id: safePlatform.id, name: safePlatform.name, slug: safePlatform.slug } : null,
       kbSources: kb.sources,

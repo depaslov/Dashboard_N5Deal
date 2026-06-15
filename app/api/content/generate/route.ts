@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db'
 import { getOrCreateCurrentProject } from '@/lib/project'
 import { buildBriefPrompt, type BriefData, type BriefInternalLink, type BriefRedFlag, type ContentType } from '@/lib/content-brief'
 import { PAGE_SYSTEM_PROMPT_V3, buildPageUserPrompt } from '@/lib/prompts/page-system-v3'
+import { PRESS_RELEASE_SYSTEM_PROMPT_V1, buildPressReleaseUserPrompt } from '@/lib/prompts/press-release-system'
 import { postProcessPage, analyzeKeywordCoverage } from '@/lib/prompts/page-postprocess'
 import { findSimilarGeneratedContent } from '@/lib/rag'
 import { embeddingsAvailable } from '@/lib/embeddings'
@@ -74,7 +75,7 @@ export const runtime = 'nodejs'
 // event and leaving the UI stuck on the streamed-only text.
 export const maxDuration = 300
 
-const CONTENT_TYPES: ContentType[] = ['article', 'catalog', 'linkedin', 'telegram']
+const CONTENT_TYPES: ContentType[] = ['article', 'catalog', 'linkedin', 'telegram', 'press-release']
 
 function coerceBrief(raw: any): BriefData {
   // Fill missing fields with safe defaults
@@ -264,14 +265,45 @@ export async function POST(req: Request) {
 
   // For page-style content (article / catalog) use the comprehensive PAGE
   // SYSTEM PROMPT V3 + structured user prompt with hard-gate tables.
+  // Press releases use their own AP-Style system + builder but share the
+  // same brief shape (keywords with MIN/MAX, anchors, KB context, ICP) and
+  // the same downstream postprocess (postProcessPage) for keyword caps +
+  // link enforcement — only the output FORMAT differs.
   // Other content types (linkedin / telegram) keep the lightweight legacy
   // path since those formats have different requirements.
-  const usePageSystem = contentType === 'article' || contentType === 'catalog'
+  const usePageSystem =
+    contentType === 'article' || contentType === 'catalog' || contentType === 'press-release'
+  const isPressRelease = contentType === 'press-release'
 
   let systemPrompt: string
   let finalUserPrompt: string
 
-  if (usePageSystem) {
+  if (isPressRelease) {
+    systemPrompt = PRESS_RELEASE_SYSTEM_PROMPT_V1
+    finalUserPrompt = buildPressReleaseUserPrompt({
+      topic,
+      targetAudience,
+      keyMessages,
+      language: brief.language,
+      wordCountMin: brief.wordCountMin,
+      wordCountMax: brief.wordCountMax,
+      mainKeywords: brief.mainKeywords,
+      lsiKeywords: brief.lsiKeywords,
+      internalLinks: mergedInternalLinks.map((l) => ({
+        url: l.url,
+        anchor: l.anchor,
+        anchorAlts: l.anchorAlts,
+        priority: l.priority,
+        context: l.context,
+      })),
+      structure: brief.structure?.map((b) => ({ heading: b.heading, subtopics: b.subtopics })),
+      knowledgeBaseContext,
+      documentContext,
+      icpContext,
+      redFlags: mergedRedFlags,
+      notes: brief.notes,
+    })
+  } else if (usePageSystem) {
     systemPrompt = PAGE_SYSTEM_PROMPT_V3
     finalUserPrompt = buildPageUserPrompt({
       topic,

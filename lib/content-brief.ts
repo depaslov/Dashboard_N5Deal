@@ -1,7 +1,7 @@
 // Shared types for the TZ-style structured content brief.
 // Used on both server (API + AI prompt builder) and client (form + output).
 
-export type ContentType = 'article' | 'catalog' | 'linkedin' | 'telegram'
+export type ContentType = 'article' | 'catalog' | 'linkedin' | 'telegram' | 'press-release'
 export type BriefLanguage = 'uk' | 'en' | 'ru'
 
 export interface MainKeyword {
@@ -69,7 +69,11 @@ export interface BriefData {
 }
 
 export function emptyBrief(contentType: ContentType = 'article'): BriefData {
-  const isLong = contentType === 'article' || contentType === 'catalog'
+  // Press releases get their own length defaults (operator typically tightens
+  // these per release): typical newswire copy lands around 400–700 words,
+  // not the 700–1000 page sweet spot.
+  const isPressRelease = contentType === 'press-release'
+  const isLong = contentType === 'article' || contentType === 'catalog' || isPressRelease
   return {
     pageUrl: '',
     icpId: null,
@@ -78,8 +82,8 @@ export function emptyBrief(contentType: ContentType = 'article'): BriefData {
     format: isLong ? 'Informative, Q&A friendly' : 'Concise, scroll-stopping',
     goal: '',
     placement: '',
-    wordCountMin: isLong ? 700 : 120,
-    wordCountMax: isLong ? 1000 : 300,
+    wordCountMin: isPressRelease ? 400 : isLong ? 700 : 120,
+    wordCountMax: isPressRelease ? 700 : isLong ? 1000 : 300,
     uniqueness: 90,
     useH2: isLong,
     useH3: isLong,

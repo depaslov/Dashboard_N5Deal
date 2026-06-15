@@ -6,15 +6,16 @@ import { getOrCreateCurrentProject } from '@/lib/project'
 import { PageHeader } from '@/components/app/page-header'
 import { Button } from '@/components/ui/button'
 import { ContentListClient } from './content-list-client'
-import { Plus, Newspaper, BookText, Mail, Hash, Link2, FileText } from 'lucide-react'
+import { Plus, Newspaper, BookText, Mail, Hash, Link2, FileText, Megaphone } from 'lucide-react'
 
 const STUDIO_TYPES = [
-  { href: '/content/articles',     label: 'Articles',     desc: 'Long-form articles with semantic core + KB grounding.', Icon: BookText },
-  { href: '/content/pages',        label: 'Pages',        desc: 'Landing/listing pages — single or bulk (one per item).',Icon: FileText },
-  { href: '/content/market-news',  label: 'Market News',  desc: 'Rephrase a source article into N5Deal voice.',         Icon: Newspaper },
-  { href: '/content/newsletter',   label: 'Newsletter',   desc: 'LinkedIn Newsletter issues.',                          Icon: Mail },
-  { href: '/content/social',       label: 'Social Media', desc: 'Single posts or threads, per-platform rules.',         Icon: Hash },
-  { href: '/content/link-building',label: 'Link Building',desc: 'Standalone-value pieces with one earned mention.',     Icon: Link2 },
+  { href: '/content/articles',      label: 'Articles',       desc: 'Long-form articles with semantic core + KB grounding.', Icon: BookText },
+  { href: '/content/pages',         label: 'Pages',          desc: 'Landing/listing pages — single or bulk (one per item).',Icon: FileText },
+  { href: '/content/press-releases',label: 'Press Releases', desc: 'AP Style newswire copy for paid wires + free aggregators.', Icon: Megaphone },
+  { href: '/content/market-news',   label: 'Market News',    desc: 'Rephrase a source article into N5Deal voice.',         Icon: Newspaper },
+  { href: '/content/newsletter',    label: 'Newsletter',     desc: 'LinkedIn Newsletter issues.',                          Icon: Mail },
+  { href: '/content/social',        label: 'Social Media',   desc: 'Single posts or threads, per-platform rules.',         Icon: Hash },
+  { href: '/content/link-building', label: 'Link Building',  desc: 'Standalone-value pieces with one earned mention.',     Icon: Link2 },
 ]
 
 export const dynamic = 'force-dynamic'

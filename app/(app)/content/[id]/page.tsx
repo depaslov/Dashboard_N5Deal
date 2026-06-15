@@ -22,6 +22,8 @@ const TYPES: Record<string, { label: string; icon: any }> = {
   catalog: { label: 'Catalog', icon: BookOpen },
   linkedin: { label: 'LinkedIn Post', icon: Linkedin },
   telegram: { label: 'Telegram Post', icon: Send },
+  'press-release': { label: 'Press Release', icon: FileText },
+  'press-releases': { label: 'Press Release', icon: FileText },
 }
 
 export default async function ContentDetailPage({ params }: { params: { id: string } }) {

@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { assertProjectAccess } from '@/lib/project'
 import { PAGE_SYSTEM_PROMPT_V3, buildPageUserPrompt } from '@/lib/prompts/page-system-v3'
+import { PRESS_RELEASE_SYSTEM_PROMPT_V1, buildPressReleaseUserPrompt } from '@/lib/prompts/press-release-system'
 import { postProcessPage } from '@/lib/prompts/page-postprocess'
 
 export const dynamic = 'force-dynamic'
@@ -57,7 +58,20 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   // model drifts on each iteration — picks wrong anchors, invents URLs, etc.
   const brief = (content.briefData as any) ?? {}
 
-  const finalUserPrompt = buildPageUserPrompt({
+  // Pick the system + user-prompt builder based on the stored content type
+  // so a press release keeps generating as a press release on regenerate /
+  // edit (not silently morphed into a page). Falls back to the page system
+  // when contentType is missing, since that's the historical default.
+  // Accept both the API enum form ('press-release') and the UI-slug form
+  // ('press-releases') because the studio form saves whichever route slug it
+  // was rendered on. Same dual-naming applies to 'pages' vs 'article' for the
+  // page flow — the UI slug lands in the DB intact.
+  const isPressRelease =
+    content.contentType === 'press-release' || content.contentType === 'press-releases'
+  const systemPromptForRevise = isPressRelease ? PRESS_RELEASE_SYSTEM_PROMPT_V1 : PAGE_SYSTEM_PROMPT_V3
+  const buildPromptForRevise = isPressRelease ? buildPressReleaseUserPrompt : buildPageUserPrompt
+
+  const finalUserPrompt = buildPromptForRevise({
     topic: content.topic,
     targetAudience: content.targetAudience,
     keyMessages: content.keyMessages,
@@ -99,7 +113,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       body: JSON.stringify({
         model: MODEL,
         messages: [
-          { role: 'system', content: PAGE_SYSTEM_PROMPT_V3 },
+          { role: 'system', content: systemPromptForRevise },
           { role: 'user', content: finalUserPrompt },
         ],
         max_tokens: 6000,
