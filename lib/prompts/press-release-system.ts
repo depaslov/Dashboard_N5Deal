@@ -5,9 +5,20 @@
 // flatter, journalistic, AP-Style: headline → dateline → lead → body →
 // quote(s) → boilerplate → media contact, no H2/H3 hierarchy like a page.
 //
-// One format covers paid wires (PRNewswire / BusinessWire / GlobeNewswire)
-// and free distribution (blogs, aggregators) — AP Style is the universal
-// baseline both accept.
+// PAID DISTRIBUTION REQUIREMENTS (from operator brief, baked in as hard gates):
+//   1. Title length ≤ 116 characters (including spaces).
+//   2. Body word count ≤ 500 words (excluding ad label + metadata + contact).
+//   3. EXACTLY 2 internal links. Publisher will close them from indexing via
+//      `rel="nofollow"` attributes or redirect URLs — copy must read naturally
+//      either way (anchor phrases must work as plain prose if the link is
+//      stripped or rewritten through a redirector).
+//   4. Ad label disclosure at the top of the body, language-localised:
+//      "Advertisement" (en) / "На правах реклами" (uk) / "На правах рекламы" (ru).
+//   5. Article title is NOT shown on the publisher's homepage — this is a
+//      publisher CMS flag the operator sets at distribution time; no body
+//      change required but surfaced as a postFix note for the operator.
+// These limits work for paid wires AND free aggregators — the paid bar is
+// the strict one; free distribution accepts the same copy.
 
 export const PRESS_RELEASE_SYSTEM_PROMPT_V1 = `You are a senior press-release writer producing AP Style newswire copy for the N5Deal marketing team. Your output is fit for distribution on paid wires (PRNewswire, BusinessWire, GlobeNewswire) AND free aggregators / industry blogs — the format below works for both.
 
@@ -20,6 +31,12 @@ You write as a journalist would, NOT as a marketer:
 - Quote a real person with a real title — generate the quote in the company's voice based on the brief, and attribute it as: "quote text," said FirstName LastName, Title at Company. If the brief / knowledge base provides a real spokesperson name, use that; otherwise default to a senior executive title (e.g. "CEO and founder") with a plausible name pattern matching the brand.
 - Boilerplate ("About [Company]") goes verbatim from the knowledge-base context when present. If KB context contains an "About N5Deal" block, copy it character-for-character at the end. If no KB boilerplate is available, write a neutral one-paragraph factual description based on the brief — no marketing language.
 - End the release with "###" centred on its own line (traditional newswire end mark) after the Media Contact block.
+
+PAID-DISTRIBUTION HARD LIMITS (publisher requirements — never relax these):
+- Title: ≤ 116 characters INCLUDING SPACES. Count characters, not words.
+- Body word count: ≤ 500 words total (everything from the ad label to "###" combined; the metadata header and KEYWORD VERIFICATION appendix do not count).
+- Internal links: EXACTLY 2. Not 1, not 3. The publisher closes both from indexing via \`rel="nofollow"\` attributes or redirect URLs — your copy must read naturally either way (anchor phrases must work as ordinary prose if the link is stripped or rewritten through a redirector).
+- Ad label: insert the literal advertising disclosure (language-specific) as the FIRST visible content line after the metadata header, before the headline. Format below.
 
 You follow strict technical briefs. You never invent facts about deals, partners, dollar amounts, or licenses that aren't in the brief / KB context. When unsure, write "TBD" and move on — the operator fills it in.
 
@@ -69,13 +86,33 @@ function keywordMax(min: number): number {
   return Math.max(min + 1, Math.ceil(min * 1.2))
 }
 
+// Paid-distribution publisher hard limits — kept as named constants so the
+// prompt body, the per-block reminders, and the pre-output checklist all
+// reference the same numbers. If a publisher relaxes these, change here.
+const TITLE_MAX_CHARS = 116
+const BODY_MAX_WORDS = 500
+const REQUIRED_INTERNAL_LINK_COUNT = 2
+
+// Language-localised advertising disclosure label, inserted as the first
+// visible content line of the release body. Required by paid distribution
+// channels in the operator's market — the publisher will render this
+// label visibly above the article on the published page.
+function adLabel(language: 'en' | 'uk' | 'ru'): string {
+  if (language === 'uk') return 'На правах реклами'
+  if (language === 'ru') return 'На правах рекламы'
+  return 'Advertisement'
+}
+
 export function buildPressReleaseUserPrompt(input: PressReleaseUserPromptInput): string {
-  const wcMin = input.wordCountMin ?? 400
-  const wcMax = input.wordCountMax ?? 700
+  // The publisher caps body at 500 words; honour any tighter operator brief
+  // but never let the upper bound drift past the publisher limit.
+  const wcMin = input.wordCountMin ?? 300
+  const wcMax = Math.min(input.wordCountMax ?? BODY_MAX_WORDS, BODY_MAX_WORDS)
   const language = input.language ?? 'en'
   const primary = input.mainKeywords?.[0]
   const secondaries = (input.mainKeywords ?? []).slice(1)
   const isRevise = Boolean(input.currentContent)
+  const label = adLabel(language)
 
   const lines: string[] = []
 
@@ -89,7 +126,9 @@ Produce the press release in this EXACT order. The first three lines are a metad
 *Reading Time: X minutes*
 *Tags: tag1, tag2, tag3, tag4, tag5*
 
-# [HEADLINE — ≤ 12 words, no period, sentence-case, contains the primary keyword]
+**${label}**
+
+# [HEADLINE — ≤ ${TITLE_MAX_CHARS} characters INCLUDING SPACES, no period at end, sentence-case, contains the primary keyword]
 
 *[Subhead — one italic sentence summarising the news, ≤ 25 words]*
 
@@ -120,9 +159,11 @@ Produce the press release in this EXACT order. The first three lines are a metad
 ###
 \`\`\`
 
-- N = total body word count INCLUDING headline, dateline, quotes, boilerplate, contact block. Target ${wcMin}–${wcMax}.
+- N = total body word count from the ad-label line through the closing \`###\` mark INCLUDING headline, subhead, dateline, quotes, boilerplate, contact block. Target ${wcMin}–${wcMax}. HARD CEILING: ${BODY_MAX_WORDS} words. The metadata header (Word Count / Reading Time / Tags) and the KEYWORD VERIFICATION appendix do NOT count toward the body.
 - X = round(N / 200), minimum 2.
 - 5 tags = specific to this release (e.g. "${primary?.term ?? 'primary keyword'}, jurisdiction, regulator, announcement type, market"). Never generic.
+- The ad label \`**${label}**\` is REQUIRED as the first visible body line (before the headline). Do NOT omit it; do NOT translate it to something else.
+- HEADLINE: count the FULL string length including every space, comma, dash, colon, parenthesis. Cap is ${TITLE_MAX_CHARS} characters. A 117-character headline is REJECTED.
 - The literal sequence \`###\` on its own line is the traditional newswire end mark. Include it.
 
 If your first output line is anything other than \`**Word Count:**\` — the output is REJECTED.`)
@@ -166,9 +207,9 @@ After writing, output a KEYWORD VERIFICATION table at the end of the appendix (a
 
     lines.push(`# INTERNAL LINKS — anchor text VERBATIM, no URL invention
 
-Paid newswires often strip hyperlinks from the body and republish anchor text as plain text. Build the release so the prose still works when the link is removed — the anchor phrase must read naturally as ordinary prose.
+Paid newswires close every hyperlink from indexing — they apply \`rel="nofollow"\` attributes or rewrite the URL through a redirect domain before publishing. Build the release so the prose still works when the link is stripped or rewritten — the anchor phrase must read naturally as ordinary prose, and the surrounding sentence must hold together if the entire \`[anchor](url)\` is replaced by plain text \`anchor\`.
 
-Total internal links: at most 2. Press releases are short; more than 2 links reads as SEO spam.
+Total internal links: EXACTLY ${REQUIRED_INTERNAL_LINK_COUNT}. Not 1. Not 3. EXACTLY ${REQUIRED_INTERNAL_LINK_COUNT}. The paid publisher allows 2 outbound links per release; fewer wastes the slot, more is REJECTED at distribution. If the brief lists more than ${REQUIRED_INTERNAL_LINK_COUNT} candidates, pick the ${REQUIRED_INTERNAL_LINK_COUNT} highest-priority entries. If the brief lists fewer, do NOT invent extra links — use what's provided.
 
 ## MUST INSERT (each appears EXACTLY once, anchor verbatim)`)
     if (must.length === 0) {
@@ -180,7 +221,8 @@ Total internal links: at most 2. Press releases are short; more than 2 links rea
       }
     }
     if (nice.length > 0) {
-      lines.push(`\n## OPTIONAL (insert AT MOST ONE if it fits naturally — never both)`)
+      const needFromNice = Math.max(0, REQUIRED_INTERNAL_LINK_COUNT - must.length)
+      lines.push(`\n## FILL-IN POOL (use ${needFromNice} of these to reach exactly ${REQUIRED_INTERNAL_LINK_COUNT} total links)`)
       for (const l of nice) {
         const alts = l.anchorAlts && l.anchorAlts.length > 0 ? ` (alternative anchors allowed: ${l.anchorAlts.map((a) => `"${a}"`).join(', ')})` : ''
         lines.push(`- [${l.anchor}](${l.url})${alts}${l.context ? ` — context: ${l.context}` : ''}`)
@@ -189,8 +231,9 @@ Total internal links: at most 2. Press releases are short; more than 2 links rea
     lines.push(`\nRULES:
 - Use the exact URL provided. Never invent a URL or path.
 - Use the exact anchor text (or one of the listed alternatives). Do NOT paraphrase the anchor.
-- Place links in BODY paragraphs only — never in the headline, subhead, dateline, quotes, boilerplate, or media-contact block.
-- After insertion, the anchor phrase must read naturally with the surrounding sentence — not as a forced reference. If you cannot make it natural, demote the link to the optional bucket and move on.`)
+- Place links in BODY paragraphs only — never in the headline, subhead, dateline, quotes, boilerplate, media-contact block, or ad-label line.
+- After insertion, the anchor phrase must read naturally with the surrounding sentence — not as a forced reference. If you cannot make it natural, choose a different fill-in candidate from the pool and try again.
+- Total link count is enforced after generation. If your output has anything other than ${REQUIRED_INTERNAL_LINK_COUNT} brief-allowed markdown links, the postprocessor will flag it as a paid-distribution violation.`)
   }
 
   // ── BLOCK 4: Story beats (structure[] repurposed as paragraph map)
@@ -290,7 +333,8 @@ ${input.revisionInstructions || '(no specific instructions — apply the mode ab
   lines.push(`# PRE-OUTPUT HARD GATES — verify all before emitting a single character
 
 [ ] First line is \`**Word Count:** N words\` — N matches the actual body word count
-[ ] Headline ≤ 12 words, sentence-case, no period at end, contains the primary keyword
+[ ] Ad label line \`**${label}**\` is present BEFORE the headline (paid-distribution requirement, language-localised)
+[ ] Headline: count characters INCLUDING SPACES — must be ≤ ${TITLE_MAX_CHARS}. Sentence-case, no period at end, contains the primary keyword.
 [ ] Italic subhead present, ≤ 25 words
 [ ] Bold dateline: \`**CITY, COUNTRY — Month D, YYYY**\` — real city the company would issue from, today's date
 [ ] Lead paragraph (first paragraph after the dateline): primary keyword + company name in sentence 1, answers 5W in 2–3 sentences
@@ -299,8 +343,9 @@ ${input.revisionInstructions || '(no specific instructions — apply the mode ab
 [ ] "## About [Company]" boilerplate is either the verbatim KB block OR a one-paragraph factual description with no marketing language
 [ ] "## Media Contact" block has Name, Title, Company, Email, Phone (use TBD placeholders if the brief is missing them, never invent contact details)
 [ ] Release ends with the literal three characters \`###\` on their own line
+[ ] Body word count from the ad label through \`###\` is between ${wcMin} and ${wcMax} (HARD CEILING ${BODY_MAX_WORDS})
 [ ] Keyword counts within MIN–MAX for every keyword
-[ ] Every MUST link is present exactly once with the verbatim anchor; total internal links ≤ 2
+[ ] EXACTLY ${REQUIRED_INTERNAL_LINK_COUNT} brief-allowed internal links present (no more, no fewer). Every MUST link appears once with the verbatim anchor. Anchor phrases read naturally as prose even if the link is stripped or replaced with a redirect URL.
 [ ] KEYWORD VERIFICATION table emitted at the very end (after \`###\`) with the actual counts
 
 If ANY gate fails, fix it BEFORE emitting output. Do not emit a release that fails any gate.`)

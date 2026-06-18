@@ -561,6 +561,75 @@ export async function POST(req: Request) {
           }
         }
 
+        // Press-release-specific paid-distribution gates. These are publisher
+        // limits, not LLM rules, so we verify deterministically after the
+        // model has finished. Failures don't block the save — they surface as
+        // postFixes WARNING lines so the operator can fix in the editor or
+        // regenerate. Always recorded so the operator has an audit trail.
+        if (isPressRelease) {
+          // Headline: first markdown H1 line (`# ...`) in the body. Count
+          // chars including spaces, exclude the leading "# " marker.
+          const titleMatch = finalText.match(/^#\s+(.+)$/m)
+          if (titleMatch) {
+            const titleText = titleMatch[1].trim()
+            const titleLen = titleText.length
+            if (titleLen > 116) {
+              postFixes.push(`WARNING: headline is ${titleLen} characters (limit 116) — shorten before paid distribution`)
+            } else {
+              postFixes.push(`[audit] headline length: ${titleLen}/116 chars`)
+            }
+          } else {
+            postFixes.push(`WARNING: no H1 headline found in output — paid distribution requires a headline`)
+          }
+
+          // Body word count: from the ad-label line (first **bold** of
+          // either Advertisement / На правах реклами / На правах рекламы)
+          // through the closing `###` mark. Strip the metadata header and
+          // KEYWORD VERIFICATION appendix so the count matches what the
+          // publisher will measure.
+          const adLabelRegex = /\*\*(?:Advertisement|На правах реклами|На правах рекламы)\*\*/
+          const adStart = finalText.search(adLabelRegex)
+          const endMark = finalText.indexOf('\n###')
+          if (adStart >= 0 && endMark > adStart) {
+            const body = finalText.slice(adStart, endMark)
+            const wordCount = (body.match(/\S+/g) ?? []).length
+            if (wordCount > 500) {
+              postFixes.push(`WARNING: body is ${wordCount} words (limit 500) — trim before paid distribution`)
+            } else {
+              postFixes.push(`[audit] body word count: ${wordCount}/500`)
+            }
+          } else {
+            postFixes.push(`WARNING: could not measure body word count (ad label or \`###\` end mark missing) — verify both are present`)
+          }
+
+          // Internal links: paid distribution requires EXACTLY 2.
+          const briefLinkCount = (() => {
+            const urlCounts = new Map<string, number>()
+            for (const l of mergedInternalLinks) {
+              const u = l.url.trim()
+              urlCounts.set(u, (urlCounts.get(u) ?? 0) + 1)
+            }
+            let total = 0
+            for (const [url, briefCount] of urlCounts) {
+              const escaped = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+              const matches = finalText.match(new RegExp(`\\]\\(${escaped}\\)`, 'g')) ?? []
+              total += Math.min(matches.length, briefCount)
+            }
+            return total
+          })()
+          if (briefLinkCount !== 2) {
+            postFixes.push(`WARNING: ${briefLinkCount} brief-allowed internal link(s) present — paid distribution requires EXACTLY 2`)
+          } else {
+            postFixes.push(`[audit] internal link count: 2/2 (paid-distribution OK)`)
+          }
+
+          // Operator reminder: paid distribution publishers expect this
+          // article to NOT appear on the homepage feed. CMS flag, not
+          // copy change — surface here so the operator remembers when
+          // submitting the release.
+          postFixes.push(`[publisher-flag] At distribution: set "Do not show on homepage" / "Hide from main feed" in the publisher CMS — paid placement requirement`)
+        }
+
         // Surface the postprocess fixes alongside the final text so the UI can
         // show the operator "AI missed link X, we injected it as See-also" or
         // "link Y is still missing — please add it manually". The studio form
