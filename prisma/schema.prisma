@@ -84,6 +84,7 @@ model Project {
   tags            Tag[]
   platforms       Platform[]
   promptTemplates PromptTemplate[]
+  glossaryEntries GlossaryEntry[]
 
   // Marketing OS module
   socialAccounts    SocialAccount[]
@@ -478,6 +479,31 @@ model RedFlagWord {
   @@unique([projectId, word, language])
   @@index([projectId])
   @@index([category])
+}
+
+// Project glossary — phrase + definition pairs surfaced on the public
+// /glossary page on n5deal.com. Two-column UI in the dashboard. Per-project
+// scope so each brand keeps its own term list. Slug is auto-derived from
+// phrase for the public URL (e.g. "EMI License" → "emi-license").
+model GlossaryEntry {
+  id         String   @id @default(cuid())
+  projectId  String
+  phrase     String
+  definition String   @db.Text
+  slug       String
+  language   String   @default("en") // en | uk | ru
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Same phrase can only be defined once per language per project, but the
+  // same phrase across two languages is allowed (e.g. "EMI License" en +
+  // "EMI ліцензія" uk both fine).
+  @@unique([projectId, phrase, language])
+  @@unique([projectId, slug, language])
+  @@index([projectId])
+  @@index([language])
 }
 
 // Cached chunk embeddings for incremental sync (Obsidian vaults, user docs,
