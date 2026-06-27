@@ -1,7 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   distDir: process.env.NEXT_DIST_DIR || '.next',
-  output: process.env.NEXT_OUTPUT_MODE,
+  // 'standalone' bundles a minimal node_modules + server.js into
+  // .next/standalone for Docker deploy. Override with NEXT_OUTPUT_MODE=''
+  // for local `next start` flows that prefer the regular build output.
+  output: process.env.NEXT_OUTPUT_MODE ?? 'standalone',
   productionBrowserSourceMaps: false,
   eslint: {
     ignoreDuringBuilds: true,

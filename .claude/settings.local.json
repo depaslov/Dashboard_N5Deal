@@ -75,7 +75,8 @@
       "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_pdGQT80LIZSW@ep-summer-wildflower-aqmf7hp3-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx tsx scripts/seed-marketing-site-articles-june-2026.ts)",
       "Bash(awk 'NR>=815 && NR<=830' /Users/andriykrechkivsky/Downloads/n5deal_export_v3/lib/prompts/page-system-v3.ts)",
       "Bash(git mv *)",
-      "Bash(mkdir -p /Users/andriykrechkivsky/Downloads/n5deal_export_v3/app/api/glossary/\\\\[id\\\\])"
+      "Bash(mkdir -p /Users/andriykrechkivsky/Downloads/n5deal_export_v3/app/api/glossary/\\\\[id\\\\])",
+      "Bash(chmod +x /Users/andriykrechkivsky/Downloads/n5deal_export_v3/scripts/setup-vm.sh /Users/andriykrechkivsky/Downloads/n5deal_export_v3/scripts/deploy.sh /Users/andriykrechkivsky/Downloads/n5deal_export_v3/scripts/deploy-vault.sh)"
     ],
     "additionalDirectories": [
       "/Users/andriykrechkivsky/Downloads/n5deal_export_v3/app/(app)/content/[id]",

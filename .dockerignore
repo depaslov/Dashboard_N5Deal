@@ -1,0 +1,51 @@
+# Build artifacts — generated inside the container, never copy from host
+.next
+node_modules
+.next/cache
+out
+
+# Source control + IDE
+.git
+.gitignore
+.github
+.vscode
+.idea
+.claude
+
+# Local env files — production env comes from the VM's .env via compose
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Tests + dev tooling
+coverage
+jest.config.*
+*.test.*
+*.spec.*
+
+# Logs & temp
+*.log
+npm-debug.log*
+.npm
+tmp
+
+# Docs that don't need to ship
+README.md
+LOCAL_SETUP.md
+DEPLOYMENT.md
+*.md
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Docker artifacts (don't recurse into self)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Obsidian vaults — mounted at runtime as a volume, never baked into image
+obsidian-vaults
+**/*.obsidian

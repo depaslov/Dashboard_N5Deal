@@ -1,0 +1,98 @@
+# ────────────────────────────────────────────────────────────────────────────
+# N5Deal Dashboard — production docker-compose for Hostinger VPS.
+#
+# Two services on a private bridge network:
+#   - app:    Next.js standalone server (built from local Dockerfile)
+#   - nginx:  reverse proxy + TLS termination (Certbot for cert renewal)
+#
+# Volumes:
+#   - obsidian-vaults: mounted into the app container read-only. The host
+#     path is on the VM filesystem and gets populated by `deploy-vault.sh`
+#     (rsync from local dev machine). Read-only mount prevents any
+#     accidental writeback that could corrupt the source.
+#   - logs: app + nginx log directory. Mapped to a host dir so `journalctl`
+#     and `tail -f` from the VM see them without docker exec.
+#   - certbot: Let's Encrypt cert volume. Shared between Nginx and the
+#     Certbot sidecar (run manually via `docker compose run --rm certbot`).
+#
+# Postgres lives on Neon (cloud) — not in this compose file. DATABASE_URL
+# in .env handles the connection.
+# ────────────────────────────────────────────────────────────────────────────
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: n5deal-dashboard:latest
+    container_name: n5deal-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Inside the container the vault root is the mount target, NOT the
+      # host path — the app code resolves vault paths relative to this.
+      OBSIDIAN_VAULT_ROOT: /var/obsidian-vaults
+      NODE_ENV: production
+    volumes:
+      # Read-only Obsidian mount. Host path is created by setup-vm.sh and
+      # populated by the local rsync script. Source of truth lives off the VM.
+      - ${OBSIDIAN_VAULTS_HOST_PATH:-/opt/n5deal/obsidian-vaults}:/var/obsidian-vaults:ro
+      - ./logs/app:/var/log/app
+    expose:
+      # Only exposed inside the docker network; Nginx is the only public path.
+      - "3000"
+    networks:
+      - n5deal-net
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: n5deal-nginx
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/n5deal.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./logs/nginx:/var/log/nginx
+      # Let's Encrypt cert volume — shared with the certbot sidecar so the
+      # webroot challenge files land in a path Nginx serves at /.well-known/
+      # acme-challenge/ during cert issuance + renewal.
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+      - certbot-www:/var/www/certbot
+    networks:
+      - n5deal-net
+
+  # Sidecar — NOT started by `docker compose up`. Run on demand to get / renew
+  # the cert:
+  #   docker compose run --rm certbot certonly --webroot \
+  #     -w /var/www/certbot -d dash.your-domain.com \
+  #     --email you@example.com --agree-tos --no-eff-email
+  # Then `docker compose restart nginx` to pick up the new cert.
+  certbot:
+    image: certbot/certbot:latest
+    container_name: n5deal-certbot
+    profiles: ["manual"]
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+      - certbot-www:/var/www/certbot
+
+volumes:
+  certbot-etc:
+  certbot-var:
+  certbot-www:
+
+networks:
+  n5deal-net:
+    driver: bridge
