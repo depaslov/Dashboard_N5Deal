@@ -234,12 +234,6 @@ export default function JuneReportPage() {
                   Резервний акаунт / перехід на Reddit — задача на липень
                 </td>
               </tr>
-              <tr>
-                <td className={td}>Guest / Niche</td>
-                <td className={td}>—</td>
-                <td className={td}>2–4</td>
-                <td className={td}>Не встигли; замість цього — платна закупка через PRNews.io (див. нижче)</td>
-              </tr>
               <tr className="bg-primary/5">
                 <td className={td}>
                   <strong>Paid outreach</strong>
