@@ -23,6 +23,7 @@ import {
   Megaphone,
   Building,
   BookOpen,
+  FileText,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -58,6 +59,7 @@ const NAV_ITEMS = [
   { label: 'Tags', href: '/tags', icon: TagIcon },
   { label: 'Red Flags', href: '/red-flags', icon: ShieldAlert },
   { label: 'Glossary', href: '/glossary', icon: BookOpen },
+  { label: 'Reports', href: '/reports', icon: FileText },
   { label: 'Company', href: '/company', icon: Building },
   { label: 'Marketing OS', href: '/marketing', icon: Megaphone },
   { label: 'Settings', href: '/settings', icon: Settings },
