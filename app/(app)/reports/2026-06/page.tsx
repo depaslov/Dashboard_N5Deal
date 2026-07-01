@@ -42,12 +42,21 @@ export default function JuneReportPage() {
             <Star className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
             <div className="text-sm leading-relaxed">
               <strong>Головне за місяць:</strong> написано 15 нових сторінок під тематику M&amp;A / Deal
-              Rooms, розміщено 25+ беклінків з розширенням на Reddit, guest-пости і dev-платформи, і{' '}
-              <strong>нарешті закупились першими платними розміщеннями</strong> (guest-пости на
-              нішевих DR-донорах). На дешборді — 58 комітів: новий модуль Press Releases (AP Style
-              для платних wire-ів), окремий Glossary модуль (публічний /glossary фід), повна
-              Docker + Hostinger інфраструктура для self-host deployment, і Google Docs
-              інтеграція для експорту згенерованого контенту.
+              Rooms, розміщено 5 профілів і 7 crowd-відповідей (crowd-акаунт після цього перманентно
+              забанили — треба переходити на резервний), WEB 2.0 у процесі і закриваються 1 липня,
+              і <strong>нарешті закупились першими платними outreach-розміщеннями</strong> через{' '}
+              <a
+                href="https://prnews.io/sites/208157-luckysevenprnewsio.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-primary"
+              >
+                PRNews.io — Lucky Seven
+              </a>
+              . На дешборді — 58 комітів: новий модуль Press Releases (AP Style для платних wire-ів),
+              окремий Glossary модуль (публічний /glossary фід), повна Docker + Hostinger
+              інфраструктура для self-host deployment, і Google Docs інтеграція для експорту
+              згенерованого контенту.
             </div>
           </div>
         </div>
@@ -68,12 +77,28 @@ export default function JuneReportPage() {
             </thead>
             <tbody>
               <tr>
-                <td className={td}>Розміщені беклінки</td>
-                <td className={td}>20</td>
+                <td className={td}>Розміщені беклінки (Profiles)</td>
+                <td className={td}>10</td>
                 <td className={td}>
-                  <strong>25+</strong>
+                  <strong>5</strong>
                 </td>
-                <td className={td}>30+</td>
+                <td className={td}>10+ (в т.ч. відновлення crowd)</td>
+              </tr>
+              <tr>
+                <td className={td}>WEB 2.0</td>
+                <td className={td}>5</td>
+                <td className={td}>
+                  <strong>у процесі</strong> (закриття 1 липня)
+                </td>
+                <td className={td}>7+</td>
+              </tr>
+              <tr>
+                <td className={td}>Crowd-відповіді</td>
+                <td className={td}>3 (Quora)</td>
+                <td className={td}>
+                  <strong>7 → акаунт забанили</strong>
+                </td>
+                <td className={td}>10+ (з нового акаунта / Reddit)</td>
               </tr>
               <tr>
                 <td className={td}>Нові тексти для блогу</td>
@@ -84,28 +109,12 @@ export default function JuneReportPage() {
                 <td className={td}>20+</td>
               </tr>
               <tr>
-                <td className={td}>Crowd-відповіді</td>
-                <td className={td}>3 (Quora)</td>
-                <td className={td}>
-                  <strong>7</strong> (Quora + Reddit)
-                </td>
-                <td className={td}>10+</td>
-              </tr>
-              <tr>
-                <td className={td}>Нові типи донорів</td>
+                <td className={td}>Платні розміщення (outreach)</td>
                 <td className={td}>—</td>
                 <td className={td}>
-                  <strong>Reddit, guest-пости, dev-платформи</strong>
+                  <strong>PRNews.io / Lucky Seven</strong> — перша закупка
                 </td>
-                <td className={td}>Niche, industry blogs</td>
-              </tr>
-              <tr>
-                <td className={td}>Платні розміщення</td>
-                <td className={td}>—</td>
-                <td className={td}>
-                  <strong>Перший пакет закритий</strong>
-                </td>
-                <td className={td}>2–4 guest posts</td>
+                <td className={td}>2–4 guest posts / press releases</td>
               </tr>
               <tr>
                 <td className={td}>Dashboard / Vibecoding</td>
@@ -172,9 +181,19 @@ export default function JuneReportPage() {
       <section className="mb-10">
         <h2 className="text-xl font-bold mb-3">Link Building — червень 2026</h2>
         <p className="text-sm text-muted-foreground mb-4">
-          За червень розміщено 25+ відстежуваних посилань. Розширення на нові типи донорів
-          (Reddit, guest-пости, dev-платформи) та контекстні розміщення під свіжі блог-статті.
-          Outreach-донори — за вибіркою вебмайстра.
+          За червень фактично розміщено 5 Profile-беклінків і 7 Crowd-відповідей (після чого
+          crowd-акаунт перманентно забанили — треба заводити резервний або переходити на Reddit).
+          WEB 2.0 у процесі, закриття 1 липня. Перша закупка платних outreach-розміщень пройшла
+          через{' '}
+          <a
+            href="https://prnews.io/sites/208157-luckysevenprnewsio.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-primary"
+          >
+            PRNews.io / Lucky Seven
+          </a>
+          .
         </p>
 
         <div className="overflow-x-auto mb-4">
@@ -182,51 +201,86 @@ export default function JuneReportPage() {
             <thead>
               <tr>
                 <th className={th}>Напрямок</th>
-                <th className={th}>К-сть</th>
-                <th className={th}>Ціль</th>
+                <th className={th}>Факт червень</th>
+                <th className={th}>Ціль було</th>
+                <th className={th}>Статус / коментар</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td className={td}>Profiles</td>
+                <td className={td}>
+                  <strong>5</strong>
+                </td>
                 <td className={td}>7</td>
-                <td className={td}>Розширення брендового сліду + DR-донори</td>
+                <td className={td}>Розміщено. Не добрали 2 через час на переключення після бану crowd</td>
               </tr>
               <tr>
                 <td className={td}>WEB 2.0</td>
+                <td className={td}>
+                  <strong>у процесі</strong>
+                </td>
                 <td className={td}>7</td>
-                <td className={td}>Контентні беклінки на блог-статті</td>
+                <td className={td}>Закриваємо 1 липня (перетікає у липневий звіт)</td>
               </tr>
-              <tr>
+              <tr className="bg-destructive/5">
                 <td className={td}>Crowd</td>
+                <td className={td}>
+                  <strong>7 → бан</strong>
+                </td>
                 <td className={td}>7</td>
-                <td className={td}>Експертні відповіді + контекст-лінки (Quora + Reddit)</td>
+                <td className={td}>
+                  Посилання проставлені, але crowd-акаунт після цього <strong>перманентно забанили</strong>.
+                  Резервний акаунт / перехід на Reddit — задача на липень
+                </td>
               </tr>
               <tr>
                 <td className={td}>Guest / Niche</td>
+                <td className={td}>—</td>
                 <td className={td}>2–4</td>
-                <td className={td}>Тематичні DR-беклінки, вищий траст</td>
+                <td className={td}>Не встигли; замість цього — платна закупка через PRNews.io (див. нижче)</td>
               </tr>
               <tr className="bg-primary/5">
                 <td className={td}>
-                  <strong>Paid placements</strong>
+                  <strong>Paid outreach</strong>
                 </td>
                 <td className={td}>
-                  <strong>Перший пакет</strong>
+                  <strong>1 закупка</strong>
                 </td>
+                <td className={td}>—</td>
                 <td className={td}>
-                  Закупили перший пакет платних guest-пост-розміщень. Нішеві DR-донори; деталі —
-                  у LB-таблиці на дешборді
+                  Закупили платне розміщення на{' '}
+                  <a
+                    href="https://prnews.io/sites/208157-luckysevenprnewsio.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-primary"
+                  >
+                    Lucky Seven через PRNews.io
+                  </a>
+                  . Перший платний channel у нашому LB-міксі
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <div className="rounded-md bg-muted/50 p-3 text-sm">
-          <strong>Що змінилося з травня:</strong> у травні LB був чисто organic (Profiles + WEB 2.0
-          + Quora). У червні додався Reddit-crowd + перша платна закупка. Guest / Niche направок —
-          вперше з’явився у розкладці.
+        <div className="rounded-md bg-muted/50 p-3 text-sm space-y-2">
+          <div>
+            <strong>Що змінилося з травня:</strong>
+          </div>
+          <ul className="list-disc list-inside space-y-1">
+            <li>Кількісно менше беклінків (5 профілів vs 10 у травні) — час пішов на обробку бану crowd-акаунта</li>
+            <li>
+              <strong>Crowd-акаунт перманентно забанили</strong> після 7 постів — треба заводити
+              резервний або переходити на Reddit
+            </li>
+            <li>WEB 2.0 shifted timing — закриття перетікає на 1 липня</li>
+            <li>
+              <strong>Перша платна закупка</strong> (PRNews.io / Lucky Seven) — новий тип каналу
+              у нашому LB-міксі, дозволяє тестувати outreach на високих DR донорах без outreach-циклів
+            </li>
+          </ul>
         </div>
       </section>
 
@@ -379,8 +433,9 @@ export default function JuneReportPage() {
       <section className="mb-10">
         <h2 className="text-xl font-bold mb-3">План на липень 2026</h2>
         <p className="text-sm text-muted-foreground mb-4">
-          Фокус липня: production deploy на Hostinger, розширення платних розміщень, продовження
-          контентної генерації через Content Studio, робота над holding-tool модулем.
+          Фокус липня: закриття перенесених WEB 2.0, відновлення crowd (резервний акаунт / Reddit),
+          розширення платних outreach-розміщень через PRNews.io, production deploy на Hostinger,
+          робота над holding-tool модулем.
         </p>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
@@ -393,24 +448,35 @@ export default function JuneReportPage() {
             </thead>
             <tbody>
               <tr>
+                <td className={td}>WEB 2.0 (carry-over)</td>
+                <td className={td}>Закрити 7 (з червня)</td>
+                <td className={tdMuted}>Закривається 1 липня — це перше що йде у липневий звіт</td>
+              </tr>
+              <tr>
+                <td className={td}>Profiles</td>
+                <td className={td}>10+</td>
+                <td className={tdMuted}>Наздогнати недобрані 2 з червня + звичайна квота</td>
+              </tr>
+              <tr>
+                <td className={td}>Crowd (відновлення)</td>
+                <td className={td}>10+ відповідей</td>
+                <td className={tdMuted}>
+                  Резервний Quora-акаунт або перехід на Reddit. Без bulk-постингу з одного акаунта —
+                  щоб уникнути повторного бану
+                </td>
+              </tr>
+              <tr>
+                <td className={td}>Paid outreach</td>
+                <td className={td}>2–4 розміщення</td>
+                <td className={tdMuted}>
+                  Продовження PRNews.io (Lucky Seven чи інші донори з їхньої панелі) + тест іншої
+                  outreach-платформи для порівняння цін/якості
+                </td>
+              </tr>
+              <tr>
                 <td className={td}>Content Studio</td>
                 <td className={td}>20+ нових сторінок</td>
                 <td className={tdMuted}>M&A-тематика + перші press releases на реальні події</td>
-              </tr>
-              <tr>
-                <td className={td}>Link Building</td>
-                <td className={td}>30+ беклінків</td>
-                <td className={tdMuted}>Розширення на niche / industry блоги, 2–4 guest-пости</td>
-              </tr>
-              <tr>
-                <td className={td}>Crowd</td>
-                <td className={td}>10+ відповідей</td>
-                <td className={tdMuted}>Reddit регулярні відповіді + продовження Quora</td>
-              </tr>
-              <tr>
-                <td className={td}>Paid placements</td>
-                <td className={td}>2–4 guest-пости</td>
-                <td className={tdMuted}>Продовження закупки на нішевих DR-донорах</td>
               </tr>
               <tr>
                 <td className={td}>Dashboard</td>
