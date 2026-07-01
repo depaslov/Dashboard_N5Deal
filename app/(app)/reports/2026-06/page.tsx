@@ -41,9 +41,11 @@ export default function JuneReportPage() {
           <div className="flex items-start gap-3">
             <Star className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
             <div className="text-sm leading-relaxed">
-              <strong>Головне за місяць:</strong> написано 15 нових сторінок під тематику M&amp;A / Deal
-              Rooms, розміщено 5 профілів і 7 crowd-відповідей (crowd-акаунт після цього перманентно
-              забанили — треба переходити на резервний), WEB 2.0 у процесі і закриваються 1 липня,
+              <strong>Головне за місяць:</strong> написано 36 нових сторінок — базова M&amp;A / Deal
+              Rooms серія (15) + розширення на fintech licensing, cross-border deal mechanics і
+              regulatory topics (21). Розміщено 5 профілів і 7 crowd-відповідей (crowd-акаунт після
+              цього перманентно забанили — треба переходити на резервний), WEB 2.0 у процесі і
+              закриваються 1 липня,
               і <strong>нарешті закупились першими платними outreach-розміщеннями</strong> через{' '}
               <a
                 href="https://prnews.io/sites/208157-luckysevenprnewsio.html"
@@ -104,9 +106,9 @@ export default function JuneReportPage() {
                 <td className={td}>Нові тексти для блогу</td>
                 <td className={td}>20+</td>
                 <td className={td}>
-                  <strong>15</strong>
+                  <strong>36</strong> (15 M&amp;A / Deal Rooms + 21 licensing / fintech)
                 </td>
-                <td className={td}>20+</td>
+                <td className={td}>25+</td>
               </tr>
               <tr>
                 <td className={td}>Платні розміщення (outreach)</td>
@@ -133,11 +135,17 @@ export default function JuneReportPage() {
       <section className="mb-10">
         <h2 className="text-xl font-bold mb-3">Написані сторінки (Content Studio)</h2>
         <p className="text-sm text-muted-foreground mb-4">
-          15 статей за місяць. Формати: Guides, Checklists, How-to, Listicles, Comparisons, FAQ,
-          Explainers. Усі за ТЗ і compliance (Red Flags / 256 термінів), довжина 700–1&nbsp;200 слів,
-          KD-фокус 10–30, 3–5 внутрішніх посилань на статтю.
+          36 статей за місяць. Дві серії: (1) базова M&amp;A / Deal Rooms — 15 текстів під запуск
+          основного pillar-контенту, (2) розширення на fintech licensing, cross-border deal
+          mechanics і regulatory topics — 21 текст. Формати: Guides, Checklists, How-to, Listicles,
+          Comparisons, FAQ, Explainers, Industry. Усі за ТЗ і compliance (Red Flags / 256 термінів),
+          довжина 700–1&nbsp;200 слів, 3–5 внутрішніх посилань на статтю.
         </p>
-        <div className="overflow-x-auto">
+
+        <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mb-2">
+          Серія 1: M&amp;A / Deal Rooms (KD 10–30)
+        </h3>
+        <div className="overflow-x-auto mb-6">
           <table className="w-full border-collapse">
             <thead>
               <tr>
@@ -170,6 +178,52 @@ export default function JuneReportPage() {
                   <td className={td}>{title}</td>
                   <td className={td}>{type}</td>
                   <td className={td}>{kd}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mb-2">
+          Серія 2: Fintech licensing, deal mechanics, regulatory
+        </h3>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr>
+                <th className={th}>#</th>
+                <th className={th}>Тема статті</th>
+                <th className={th}>Тип</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ['16', 'FCA vs CBI: Which UK or Irish License Is Worth More in M&A', 'Comparison'],
+                ['17', 'MSB License in Canada: The Underrated Gateway to North American Payments', 'Guide'],
+                ['18', 'PI License in the UK Post-Brexit: What\'s Changed and What It Costs Now', 'Explainer'],
+                ['19', 'VASP Registration vs Full Crypto License: What\'s the Difference', 'Comparison'],
+                ['20', 'Passporting in the EU After MiCA: What Still Works and What Doesn\'t', 'Explainer'],
+                ['21', 'The Hidden Costs of Maintaining a Fintech License', 'Guide'],
+                ['22', 'Distressed Fintech Assets: How to Buy Low Without Buying Trouble', 'How-to'],
+                ['23', 'How to Value a Fintech License in M&A: The Metrics That Matter', 'How-to'],
+                ['24', 'Earn-outs in Fintech M&A: When They Work and When They Destroy Deals', 'Explainer'],
+                ['25', 'The 90-Day Pre-Sale Checklist for Fintech Founders', 'Checklist'],
+                ['26', 'How Regulatory Fines Affect Fintech Valuations (And How to Recover)', 'Guide'],
+                ['27', 'Cross-Border M&A: How to Structure a Deal Between EU and Gulf Entities', 'How-to'],
+                ['28', 'RWA Tokenisation in the UAE: A Practical Guide for Asset Issuers', 'Guide'],
+                ['29', 'Crypto Adoption in the Gulf: ADGM, DIFC, and VARA Compared', 'Comparison'],
+                ['30', 'Hong Kong vs Singapore: Which Asian Hub Wins for Fintech M&A', 'Comparison'],
+                ['31', 'The Netherlands as EU Fintech Hub: DNB Licensing', 'Guide'],
+                ['32', 'AI-Powered KYC: How Automation Is Changing the Value of Compliance-Heavy Fintechs', 'Industry'],
+                ['33', 'The Real Cost of a Data Breach for a Licensed Fintech', 'Explainer'],
+                ['34', 'The Anatomy of a Failed Fintech Deal: 5 Real Reasons Transactions Collapse', 'Listicle'],
+                ['35', 'What Buyers Actually Read in a Fintech Information Memorandum', 'Explainer'],
+                ['36', 'How Long Does a Fintech M&A Deal Actually Take? A Realistic Timeline', 'Guide'],
+              ].map(([n, title, type]) => (
+                <tr key={n}>
+                  <td className={td}>{n}</td>
+                  <td className={td}>{title}</td>
+                  <td className={td}>{type}</td>
                 </tr>
               ))}
             </tbody>

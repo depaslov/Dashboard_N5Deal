@@ -16,7 +16,7 @@ const MONTHLY_REPORTS = [
     slug: '2026-06',
     title: 'N5Deal — Звіт за червень 2026',
     subtitle:
-      'Content Studio + Press Releases + Glossary + Deployment infra. LB: 5 профілів, 7 crowd (акаунт забанили), WEB 2.0 у процесі, перша закупка PRNews.io.',
+      '36 статей (15 M&A / Deal Rooms + 21 licensing / fintech). Press Releases + Glossary + Deployment infra на дешборді. LB: 5 профілів, 7 crowd (акаунт забанили), WEB 2.0 у процесі, перша закупка PRNews.io.',
     period: 'Червень 2026',
     href: '/reports/2026-06',
   },
