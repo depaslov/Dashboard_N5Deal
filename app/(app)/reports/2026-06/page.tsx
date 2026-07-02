@@ -541,6 +541,204 @@ export default function JuneReportPage() {
             </tbody>
           </table>
         </div>
+
+        {/* ── Детальні напрямки роботи ─────────────────────────────────── */}
+        <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mt-8 mb-3">
+          Детальні напрямки роботи
+        </h3>
+        <div className="space-y-5">
+          {[
+            {
+              title: 'Content Studio — 25+ статей за липень',
+              items: [
+                'Продовження серії 2 (licensing / regulatory): MiCA deep-dive, EMI-vs-PI детальніше, capital requirements по юрисдикціях',
+                'Нова серія 3: case studies / anatomy of successful deals — реальні кейси фінтех M&A з відкритих джерел',
+                'Топікал: Q2 2026 fintech M&A trends (recap за квартал з даними)',
+                'Перші press releases на реальні події через новий модуль — тест AP Style на паливному вайрі',
+                'Cross-linking всередині двох червневих серій — де ще не покрито анкорами',
+                'Оновлення старіших сторінок з нижчим KD (додати internal links, розширити секції що ranking-relevant)',
+              ],
+            },
+            {
+              title: 'Link Building — тактика',
+              items: [
+                'W1: закрити 7 WEB 2.0 що перенеслись з червня',
+                'W1-2: crowd recovery — резервний Quora акаунт або перехід на Reddit (без bulk-постингу з одного акаунта)',
+                'W2-3: profile push — 10+ на нових donors (наздогнати недобрані 2 з червня + нові)',
+                'W3-4: paid outreach — 2-4 розміщення через PRNews.io (Lucky Seven продовжити + тест 1-2 інших сайтів з їхньої панелі)',
+                'Тест 1 альтернативної outreach-платформи для порівняння цін/якості з PRNews.io',
+                'Guest posts / niche: reopen напрямок що не закрився в червні — цільові outreach на 2-3 нішевих fintech блоги',
+              ],
+            },
+            {
+              title: 'Dashboard / Vibecoding',
+              items: [
+                'Production deploy на Hostinger VPS: provision → setup-vm.sh → TLS cert → перший live deploy',
+                'Holding-tool модуль (Step 5 з Vibecoding плану)',
+                'Vault sync з локальної машини через deploy-vault.sh — перший live тест RAG на VM',
+                'Post-deploy: моніторинг логів, healthcheck, performance baseline',
+                'Fixes що виринуть при першому live тесті (edge cases що не спіймали локально)',
+                'Automation: розглянути перехід з manual deploy на GitHub Actions коли перший manual деплой стабілізується',
+              ],
+            },
+            {
+              title: 'Marketing OS + Reports',
+              items: [
+                'Розширення Marketing Calendar (додати більше content types, drag-and-drop rescheduling)',
+                'Marketing Reports UI: charts / graphs для metric trends',
+                'Task deadlines + reminders у LinkBuilding board',
+                'Автоматичне заповнення операційного звіту (наприклад, липневого): pull з git log + LB table + content DB',
+                'Публічний /glossary фід — синхронізація з n5deal.com/glossary',
+              ],
+            },
+            {
+              title: 'Press Releases — перший реальний тест',
+              items: [
+                'Написати 2-3 press releases на реальні події (нові listings, партнерства, milestones)',
+                'Тест публікації через PRNews.io / Lucky Seven — end-to-end від генерації до live publication',
+                'Знайти + додати боілерплейт "About N5Deal" у Knowledge Base щоб автопідтягувався',
+                'Порівняти live-версію з wire-у vs originally generated draft — коригувати prompt по фактичним публішер edits',
+              ],
+            },
+            {
+              title: 'Risks / dependencies',
+              items: [
+                'Deploy на Hostinger — перший раз, ризик edge cases (env vars, permissions, Prisma runtime)',
+                'Crowd recovery — якщо резервний акаунт теж забанять, треба Reddit-first strategy',
+                '25 статей у липні — pace той самий що в червні (36); тримати темп треба чітко',
+                'PRNews.io — треба перевірити наявність outreach бюджету на 4 розміщення',
+                'Обсідіан vault sync — залежить від rsync через SSH; треба SSH-ключі готові для deploy user',
+              ],
+            },
+          ].map((section) => (
+            <div key={section.title} className="border rounded-md p-4">
+              <div className="font-semibold text-sm mb-2">{section.title}</div>
+              <ul className="text-sm space-y-1 list-disc list-inside marker:text-muted-foreground">
+                {section.items.map((item, i) => (
+                  <li key={i} className="pl-1">
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Тижнева розбивка ─────────────────────────────────────────── */}
+        <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mt-8 mb-3">
+          Тижнева розбивка
+        </h3>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr>
+                <th className={th}>Тиждень</th>
+                <th className={th}>LB</th>
+                <th className={th}>Content</th>
+                <th className={th}>Dashboard</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className={td}>
+                  <strong>W1</strong>
+                  <br />
+                  1–7 лип
+                </td>
+                <td className={td}>Закрити 7 WEB 2.0 з червня. Почати crowd recovery (setup нового акаунта)</td>
+                <td className={td}>6–7 статей: продовження серії 2 (MiCA / EMI / PSP)</td>
+                <td className={td}>Provision Hostinger VPS + setup-vm.sh</td>
+              </tr>
+              <tr>
+                <td className={td}>
+                  <strong>W2</strong>
+                  <br />
+                  8–14 лип
+                </td>
+                <td className={td}>Нарощувати crowd (5+ відповідей на новому акаунті). Розпочати profile push (5+)</td>
+                <td className={td}>6–7 статей: почати серію 3 (case studies)</td>
+                <td className={td}>Первинний deploy + TLS cert + live тест RAG</td>
+              </tr>
+              <tr>
+                <td className={td}>
+                  <strong>W3</strong>
+                  <br />
+                  15–21 лип
+                </td>
+                <td className={td}>Догнати profiles (10+ total). Paid outreach W1 (PRNews.io — 1-2)</td>
+                <td className={td}>6–7 статей: перші press releases на реальні події</td>
+                <td className={td}>Holding-tool модуль (частина 1)</td>
+              </tr>
+              <tr>
+                <td className={td}>
+                  <strong>W4</strong>
+                  <br />
+                  22–31 лип
+                </td>
+                <td className={td}>Paid outreach W2 (2-3 більше). Guest posts / niche відкриття (1-2)</td>
+                <td className={td}>6–7 статей: Q2 2026 fintech M&A recap + оновлення старих</td>
+                <td className={td}>Holding-tool (частина 2) + Marketing OS фічі</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* ── Success criteria ─────────────────────────────────────────── */}
+        <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mt-8 mb-3">
+          Що вважатиметься «успішним липнем»
+        </h3>
+        <div className="rounded-md border-l-4 border-primary bg-muted/30 p-4">
+          <ul className="text-sm space-y-2">
+            <li className="flex items-start gap-2">
+              <span className="text-primary font-bold">✓</span>
+              <span>
+                <strong>25+ статей опубліковано</strong> (тримаємо темп червня, +5 замість
+                стрибка)
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary font-bold">✓</span>
+              <span>
+                <strong>30+ беклінків розміщено</strong> (7 WEB 2.0 carry-over + 10+ profiles + 10+
+                crowd + 2-4 paid + 1-2 guest)
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary font-bold">✓</span>
+              <span>
+                <strong>Crowd відновлений</strong> — резервний акаунт активний або Reddit-first
+                стратегія працює
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary font-bold">✓</span>
+              <span>
+                <strong>Live на Hostinger</strong> — production URL відповідає, RAG підтягує vault,
+                TLS активний
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary font-bold">✓</span>
+              <span>
+                <strong>2-4 paid outreach розміщення</strong> закриті через PRNews.io (+ тест 1 іншої
+                платформи)
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary font-bold">✓</span>
+              <span>
+                <strong>Перші реальні press releases</strong> вийшли через новий модуль на паливний
+                вайр — end-to-end flow працює
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary font-bold">✓</span>
+              <span>
+                <strong>Holding-tool модуль</strong> — MVP частина 1 функціональна на дешборді
+              </span>
+            </li>
+          </ul>
+        </div>
       </section>
 
       {/* ── Джерела ───────────────────────────────────────────────────────── */}
