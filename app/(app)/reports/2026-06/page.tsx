@@ -43,9 +43,9 @@ export default function JuneReportPage() {
             <div className="text-sm leading-relaxed">
               <strong>Головне за місяць:</strong> написано 36 нових сторінок — базова M&amp;A / Deal
               Rooms серія (15) + розширення на fintech licensing, cross-border deal mechanics і
-              regulatory topics (21). Розміщено 5 профілів і 7 crowd-відповідей (crowd-акаунт після
-              цього перманентно забанили — треба переходити на резервний), WEB 2.0 у процесі і
-              закриваються 1 липня,
+              regulatory topics (21). Розміщено 5 профілів, 7 crowd-відповідей (crowd-акаунт після
+              цього перманентно забанили) і 4 Medium публікації як WEB 2.0 (закрилось 1 липня, не
+              добрали 3 з планових 7),
               і <strong>нарешті закупились першими платними outreach-розміщеннями</strong> через{' '}
               <a
                 href="https://prnews.io/sites/208157-luckysevenprnewsio.html"
@@ -90,9 +90,9 @@ export default function JuneReportPage() {
                 <td className={td}>WEB 2.0</td>
                 <td className={td}>5</td>
                 <td className={td}>
-                  <strong>у процесі</strong> (закриття 1 липня)
+                  <strong>4</strong> (Medium публікації, закрито 1 липня)
                 </td>
-                <td className={td}>7+</td>
+                <td className={td}>7+ (в т.ч. carry-over 3)</td>
               </tr>
               <tr>
                 <td className={td}>Crowd-відповіді</td>
@@ -237,8 +237,8 @@ export default function JuneReportPage() {
         <p className="text-sm text-muted-foreground mb-4">
           За червень фактично розміщено 5 Profile-беклінків і 7 Crowd-відповідей (після чого
           crowd-акаунт перманентно забанили — треба заводити резервний або переходити на Reddit).
-          WEB 2.0 у процесі, закриття 1 липня. Перша закупка платних outreach-розміщень пройшла
-          через{' '}
+          WEB 2.0 закрито 1 липня — 4 публікаціями на Medium (не добрали 3 з планових 7).
+          Перша закупка платних outreach-розміщень пройшла через{' '}
           <a
             href="https://prnews.io/sites/208157-luckysevenprnewsio.html"
             target="_blank"
@@ -272,10 +272,12 @@ export default function JuneReportPage() {
               <tr>
                 <td className={td}>WEB 2.0</td>
                 <td className={td}>
-                  <strong>у процесі</strong>
+                  <strong>4 (Medium)</strong>
                 </td>
                 <td className={td}>7</td>
-                <td className={td}>Закриваємо 1 липня (перетікає у липневий звіт)</td>
+                <td className={td}>
+                  Закрито 1 липня 4 публікаціями на Medium (DR 94). Не добрали 3 — carry-over у липень
+                </td>
               </tr>
               <tr className="bg-destructive/5">
                 <td className={td}>Crowd</td>
@@ -313,6 +315,151 @@ export default function JuneReportPage() {
           </table>
         </div>
 
+        {/* ── Розміщені лінки ─────────────────────────────────────────── */}
+        <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mt-6 mb-3">
+          Розміщені лінки — червень 2026
+        </h3>
+        <div className="overflow-x-auto mb-3">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr>
+                <th className={th}>#</th>
+                <th className={th}>Donor</th>
+                <th className={th}>Type</th>
+                <th className={th}>DR</th>
+                <th className={th}>Anchor</th>
+                <th className={th}>Link</th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* ── Profiles (5 placed) — конкретні URLs у LB task board ─ */}
+              {[1, 2, 3, 4, 5].map((n) => (
+                <tr key={`profile-${n}`}>
+                  <td className={td}>{n}</td>
+                  <td className={tdMuted}>—</td>
+                  <td className={td}>Profile</td>
+                  <td className={tdMuted}>—</td>
+                  <td className={tdMuted}>https://n5deal.com</td>
+                  <td className={tdMuted}>
+                    <em>див. LB task board</em>
+                  </td>
+                </tr>
+              ))}
+
+              {/* ── Crowd (7 placed — акаунт забанений) ─────────────── */}
+              {[6, 7, 8, 9, 10, 11, 12].map((n) => (
+                <tr key={`crowd-${n}`} className="bg-destructive/5">
+                  <td className={td}>{n}</td>
+                  <td className={td}>quora.com</td>
+                  <td className={td}>Crowd</td>
+                  <td className={td}>91</td>
+                  <td className={tdMuted}>—</td>
+                  <td className={tdMuted}>
+                    <em>акаунт перманентно забанили — див. LB task board</em>
+                  </td>
+                </tr>
+              ))}
+
+              {/* ── WEB 2.0 — 4 Medium publications, закрито 1 липня ─ */}
+              <tr>
+                <td className={td}>13</td>
+                <td className={td}>medium.com</td>
+                <td className={td}>WEB 2.0</td>
+                <td className={td}>94</td>
+                <td className={td}>N5 Deal, fintech platform</td>
+                <td className={td}>
+                  <a
+                    href="https://medium.com/@smm_32132/the-anatomy-of-a-failed-fintech-deal-5-real-reasons-transactions-collapse-63b27e071b90"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-primary text-xs break-all"
+                  >
+                    the-anatomy-of-a-failed-fintech-deal…
+                  </a>
+                </td>
+              </tr>
+              <tr>
+                <td className={td}>14</td>
+                <td className={td}>medium.com</td>
+                <td className={td}>WEB 2.0</td>
+                <td className={td}>94</td>
+                <td className={td}>N5 Deal, fintech platform</td>
+                <td className={td}>
+                  <a
+                    href="https://medium.com/@smm_32132/ai-powered-kyc-how-automation-is-changing-the-value-of-compliance-heavy-fintechs-cb3c0d0315e0"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-primary text-xs break-all"
+                  >
+                    ai-powered-kyc…
+                  </a>
+                </td>
+              </tr>
+              <tr>
+                <td className={td}>15</td>
+                <td className={td}>medium.com</td>
+                <td className={td}>WEB 2.0</td>
+                <td className={td}>94</td>
+                <td className={td}>N5 Deal, fintech platform</td>
+                <td className={td}>
+                  <a
+                    href="https://medium.com/@smm_32132/the-netherlands-as-eu-fintech-hub-why-a-dnb-license-is-worth-more-in-m-a-8b5d4178150d"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-primary text-xs break-all"
+                  >
+                    the-netherlands-as-eu-fintech-hub…
+                  </a>
+                </td>
+              </tr>
+              <tr>
+                <td className={td}>16</td>
+                <td className={td}>medium.com</td>
+                <td className={td}>WEB 2.0</td>
+                <td className={td}>94</td>
+                <td className={td}>N5 Deal, fintech platform</td>
+                <td className={td}>
+                  <a
+                    href="https://medium.com/@smm_32132/cee-fintech-m-a-the-smart-money-trade-of-2026-27d11f9bd659"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-primary text-xs break-all"
+                  >
+                    cee-fintech-m-a-the-smart-money-trade…
+                  </a>
+                </td>
+              </tr>
+
+              {/* ── Paid outreach — PRNews.io / Lucky Seven ─────────── */}
+              <tr className="bg-primary/5">
+                <td className={td}>17</td>
+                <td className={td}>luckysevenprnewsio (PRNews.io)</td>
+                <td className={td}>
+                  <strong>Paid</strong>
+                </td>
+                <td className={tdMuted}>—</td>
+                <td className={tdMuted}>—</td>
+                <td className={td}>
+                  <a
+                    href="https://prnews.io/sites/208157-luckysevenprnewsio.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-primary text-xs break-all"
+                  >
+                    prnews.io/sites/208157-luckysevenprnewsio.html
+                  </a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">
+          Конкретні URL для Profile-донорів (#1-5) та Crowd-постів (#6-12) — у LB task board на
+          дашборді. Crowd-акаунт після 7 відповідей перманентно забанили. Medium-публікації (#13-16)
+          закрили WEB 2.0 напрямок 1 липня (не добрали 3 з планових 7). Платне розміщення (#17) — перша
+          закупка через PRNews.io / Lucky Seven.
+        </p>
+
         <div className="rounded-md bg-muted/50 p-3 text-sm space-y-2">
           <div>
             <strong>Що змінилося з травня:</strong>
@@ -323,7 +470,10 @@ export default function JuneReportPage() {
               <strong>Crowd-акаунт перманентно забанили</strong> після 7 постів — треба заводити
               резервний або переходити на Reddit
             </li>
-            <li>WEB 2.0 shifted timing — закриття перетікає на 1 липня</li>
+            <li>
+              WEB 2.0 закрито 4 Medium-публікаціями (не 7 як планувалось) — недобрані 3 переносяться
+              на липень
+            </li>
             <li>
               <strong>Перша платна закупка</strong> (PRNews.io / Lucky Seven) — новий тип каналу
               у нашому LB-міксі, дозволяє тестувати outreach на високих DR донорах без outreach-циклів
@@ -497,8 +647,10 @@ export default function JuneReportPage() {
             <tbody>
               <tr>
                 <td className={td}>WEB 2.0 (carry-over)</td>
-                <td className={td}>Закрити 7 (з червня)</td>
-                <td className={tdMuted}>Закривається 1 липня — це перше що йде у липневий звіт</td>
+                <td className={td}>Закрити недобрані 3 (з планових 7)</td>
+                <td className={tdMuted}>
+                  4 закрилось Medium-ом 1 липня; 3 переносяться на липневу квоту
+                </td>
               </tr>
               <tr>
                 <td className={td}>Profiles</td>
@@ -562,7 +714,7 @@ export default function JuneReportPage() {
             {
               title: 'Link Building — тактика',
               items: [
-                'W1: закрити 7 WEB 2.0 що перенеслись з червня',
+                'W1: закрити 3 WEB 2.0 що перенеслись з червня (недобір з планових 7 після 4 Medium публікацій 1 липня)',
                 'W1-2: crowd recovery — резервний Quora акаунт або перехід на Reddit (без bulk-постингу з одного акаунта)',
                 'W2-3: profile push — 10+ на нових donors (наздогнати недобрані 2 з червня + нові)',
                 'W3-4: paid outreach — 2-4 розміщення через PRNews.io (Lucky Seven продовжити + тест 1-2 інших сайтів з їхньої панелі)',
@@ -645,7 +797,7 @@ export default function JuneReportPage() {
                   <br />
                   1–7 лип
                 </td>
-                <td className={td}>Закрити 7 WEB 2.0 з червня. Почати crowd recovery (setup нового акаунта)</td>
+                <td className={td}>Закрити 3 WEB 2.0 з червня (недобір). Почати crowd recovery (setup нового акаунта)</td>
                 <td className={td}>6–7 статей: продовження серії 2 (MiCA / EMI / PSP)</td>
                 <td className={td}>Provision Hostinger VPS + setup-vm.sh</td>
               </tr>
@@ -699,7 +851,7 @@ export default function JuneReportPage() {
             <li className="flex items-start gap-2">
               <span className="text-primary font-bold">✓</span>
               <span>
-                <strong>30+ беклінків розміщено</strong> (7 WEB 2.0 carry-over + 10+ profiles + 10+
+                <strong>30+ беклінків розміщено</strong> (3 WEB 2.0 carry-over + 10+ profiles + 10+
                 crowd + 2-4 paid + 1-2 guest)
               </span>
             </li>
