@@ -43,9 +43,9 @@ export default function JuneReportPage() {
             <div className="text-sm leading-relaxed">
               <strong>Головне за місяць:</strong> написано 36 нових сторінок — базова M&amp;A / Deal
               Rooms серія (15) + розширення на fintech licensing, cross-border deal mechanics і
-              regulatory topics (21). Розміщено 5 профілів, 7 crowd-відповідей (crowd-акаунт після
+              regulatory topics (21). Розміщено 7 профілів, 7 Reddit-відповідей (Reddit-акаунт після
               цього перманентно забанили) і 4 Medium публікації як WEB 2.0 (закрилось 1 липня, не
-              добрали 3 з планових 7),
+              добрали 3 з планових 7 — <strong>усі статті вже готові, залишилось лише опублікувати</strong>),
               і <strong>нарешті закупились першими платними outreach-розміщеннями</strong> через{' '}
               <a
                 href="https://prnews.io/sites/208157-luckysevenprnewsio.html"
@@ -82,25 +82,25 @@ export default function JuneReportPage() {
                 <td className={td}>Розміщені беклінки (Profiles)</td>
                 <td className={td}>10</td>
                 <td className={td}>
-                  <strong>5</strong>
+                  <strong>7</strong> (досягнено планових 7)
                 </td>
-                <td className={td}>10+ (в т.ч. відновлення crowd)</td>
+                <td className={td}>10+</td>
               </tr>
               <tr>
                 <td className={td}>WEB 2.0</td>
                 <td className={td}>5</td>
                 <td className={td}>
-                  <strong>4</strong> (Medium публікації, закрито 1 липня)
+                  <strong>4</strong> (Medium публікації, закрито 1 липня; статті готові, чекають на публікацію)
                 </td>
-                <td className={td}>7+ (в т.ч. carry-over 3)</td>
+                <td className={td}>7+ (в т.ч. carry-over 3, тексти на руках)</td>
               </tr>
               <tr>
                 <td className={td}>Crowd-відповіді</td>
                 <td className={td}>3 (Quora)</td>
                 <td className={td}>
-                  <strong>7 → акаунт забанили</strong>
+                  <strong>7 (Reddit) → акаунт забанили</strong>
                 </td>
-                <td className={td}>10+ (з нового акаунта / Reddit)</td>
+                <td className={td}>10+ (новий Reddit акаунт з warmup або перехід на Quora / niche forums)</td>
               </tr>
               <tr>
                 <td className={td}>Нові тексти для блогу</td>
@@ -235,10 +235,11 @@ export default function JuneReportPage() {
       <section className="mb-10">
         <h2 className="text-xl font-bold mb-3">Link Building — червень 2026</h2>
         <p className="text-sm text-muted-foreground mb-4">
-          За червень фактично розміщено 5 Profile-беклінків і 7 Crowd-відповідей (після чого
-          crowd-акаунт перманентно забанили — треба заводити резервний або переходити на Reddit).
-          WEB 2.0 закрито 1 липня — 4 публікаціями на Medium (не добрали 3 з планових 7).
-          Перша закупка платних outreach-розміщень пройшла через{' '}
+          За червень розміщено 7 Profile-беклінків (досягнено планових 7) і 7 Reddit-відповідей —
+          після чого Reddit-акаунт перманентно забанили. WEB 2.0 закрито 1 липня — 4 публікаціями
+          на Medium (не добрали 3 з планових 7). Важливо: <strong>усі статті для WEB 2.0 і майбутніх
+          articles-розміщень вже готові — залишилось тільки опублікувати</strong>. Перша закупка
+          платних outreach-розміщень пройшла через{' '}
           <a
             href="https://prnews.io/sites/208157-luckysevenprnewsio.html"
             target="_blank"
@@ -264,10 +265,10 @@ export default function JuneReportPage() {
               <tr>
                 <td className={td}>Profiles</td>
                 <td className={td}>
-                  <strong>5</strong>
+                  <strong>7</strong>
                 </td>
                 <td className={td}>7</td>
-                <td className={td}>Розміщено. Не добрали 2 через час на переключення після бану crowd</td>
+                <td className={td}>Досягнено планових 7 (gravatar, behance, disqus, dribbble, flipboard, sourceforge, pinterest)</td>
               </tr>
               <tr>
                 <td className={td}>WEB 2.0</td>
@@ -276,18 +277,19 @@ export default function JuneReportPage() {
                 </td>
                 <td className={td}>7</td>
                 <td className={td}>
-                  Закрито 1 липня 4 публікаціями на Medium (DR 94). Не добрали 3 — carry-over у липень
+                  Закрито 1 липня 4 публікаціями на Medium (DR 94). Не добрали 3 — <strong>тексти
+                  вже готові</strong>, залишилось опублікувати; carry-over у липень
                 </td>
               </tr>
               <tr className="bg-destructive/5">
                 <td className={td}>Crowd</td>
                 <td className={td}>
-                  <strong>7 → бан</strong>
+                  <strong>7 (Reddit) → бан</strong>
                 </td>
                 <td className={td}>7</td>
                 <td className={td}>
-                  Посилання проставлені, але crowd-акаунт після цього <strong>перманентно забанили</strong>.
-                  Резервний акаунт / перехід на Reddit — задача на липень
+                  Посилання проставлені на Reddit, після чого <strong>Reddit-акаунт перманентно забанили</strong>.
+                  Новий акаунт з warmup або перехід на Quora / niche forums — задача на липень
                 </td>
               </tr>
               <tr className="bg-primary/5">
@@ -332,37 +334,52 @@ export default function JuneReportPage() {
               </tr>
             </thead>
             <tbody>
-              {/* ── Profiles (5 placed) — конкретні URLs у LB task board ─ */}
-              {[1, 2, 3, 4, 5].map((n) => (
-                <tr key={`profile-${n}`}>
-                  <td className={td}>{n}</td>
-                  <td className={tdMuted}>—</td>
+              {/* ── Profiles (7 placed) — конкретні URL нижче ────────── */}
+              {[
+                { n: 1, donor: 'gravatar.com', href: 'https://gravatar.com/almostfefb609b27', label: 'gravatar.com/almostfefb609b27' },
+                { n: 2, donor: 'behance.net', href: 'https://www.behance.net/socialmanager25', label: 'behance.net/socialmanager25' },
+                { n: 3, donor: 'disqus.com', href: 'https://disqus.com/by/alinahiba/about/', label: 'disqus.com/by/alinahiba/about' },
+                { n: 4, donor: 'dribbble.com', href: 'https://dribbble.com/alina-marketing/about', label: 'dribbble.com/alina-marketing/about' },
+                { n: 5, donor: 'flipboard.com', href: 'https://flipboard.com/@alinamarketing/https-n5deal.com-vg68o2idz', label: 'flipboard.com/@alinamarketing/…' },
+                { n: 6, donor: 'sourceforge.net', href: 'https://sourceforge.net/u/alinamarketing/profile', label: 'sourceforge.net/u/alinamarketing/profile' },
+                { n: 7, donor: 'pinterest.com', href: 'https://uk.pinterest.com/08z1s0ol9p125mli33rnd5j9klp219/', label: 'uk.pinterest.com/08z1s0ol9p125mli33rnd5j9klp219' },
+              ].map((p) => (
+                <tr key={`profile-${p.n}`}>
+                  <td className={td}>{p.n}</td>
+                  <td className={td}>{p.donor}</td>
                   <td className={td}>Profile</td>
                   <td className={tdMuted}>—</td>
-                  <td className={tdMuted}>https://n5deal.com</td>
-                  <td className={tdMuted}>
-                    <em>див. LB task board</em>
+                  <td className={td}>https://n5deal.com</td>
+                  <td className={td}>
+                    <a
+                      href={p.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline hover:text-primary text-xs break-all"
+                    >
+                      {p.label}
+                    </a>
                   </td>
                 </tr>
               ))}
 
-              {/* ── Crowd (7 placed — акаунт забанений) ─────────────── */}
-              {[6, 7, 8, 9, 10, 11, 12].map((n) => (
+              {/* ── Crowd (7 placed on Reddit — акаунт забанений) ──── */}
+              {[8, 9, 10, 11, 12, 13, 14].map((n) => (
                 <tr key={`crowd-${n}`} className="bg-destructive/5">
                   <td className={td}>{n}</td>
-                  <td className={td}>quora.com</td>
+                  <td className={td}>reddit.com</td>
                   <td className={td}>Crowd</td>
                   <td className={td}>91</td>
                   <td className={tdMuted}>—</td>
                   <td className={tdMuted}>
-                    <em>акаунт перманентно забанили — див. LB task board</em>
+                    <em>Reddit-акаунт перманентно забанили — див. LB task board</em>
                   </td>
                 </tr>
               ))}
 
               {/* ── WEB 2.0 — 4 Medium publications, закрито 1 липня ─ */}
               <tr>
-                <td className={td}>13</td>
+                <td className={td}>15</td>
                 <td className={td}>medium.com</td>
                 <td className={td}>WEB 2.0</td>
                 <td className={td}>94</td>
@@ -379,7 +396,7 @@ export default function JuneReportPage() {
                 </td>
               </tr>
               <tr>
-                <td className={td}>14</td>
+                <td className={td}>16</td>
                 <td className={td}>medium.com</td>
                 <td className={td}>WEB 2.0</td>
                 <td className={td}>94</td>
@@ -396,7 +413,7 @@ export default function JuneReportPage() {
                 </td>
               </tr>
               <tr>
-                <td className={td}>15</td>
+                <td className={td}>17</td>
                 <td className={td}>medium.com</td>
                 <td className={td}>WEB 2.0</td>
                 <td className={td}>94</td>
@@ -413,7 +430,7 @@ export default function JuneReportPage() {
                 </td>
               </tr>
               <tr>
-                <td className={td}>16</td>
+                <td className={td}>18</td>
                 <td className={td}>medium.com</td>
                 <td className={td}>WEB 2.0</td>
                 <td className={td}>94</td>
@@ -432,7 +449,7 @@ export default function JuneReportPage() {
 
               {/* ── Paid outreach — PRNews.io / Lucky Seven ─────────── */}
               <tr className="bg-primary/5">
-                <td className={td}>17</td>
+                <td className={td}>19</td>
                 <td className={td}>luckysevenprnewsio (PRNews.io)</td>
                 <td className={td}>
                   <strong>Paid</strong>
@@ -454,10 +471,11 @@ export default function JuneReportPage() {
           </table>
         </div>
         <p className="text-xs text-muted-foreground mb-4">
-          Конкретні URL для Profile-донорів (#1-5) та Crowd-постів (#6-12) — у LB task board на
-          дашборді. Crowd-акаунт після 7 відповідей перманентно забанили. Medium-публікації (#13-16)
-          закрили WEB 2.0 напрямок 1 липня (не добрали 3 з планових 7). Платне розміщення (#17) — перша
-          закупка через PRNews.io / Lucky Seven.
+          Profile-беклінки (#1-7) — 7 профілів, планова квота закрита. Crowd-пости (#8-14) —
+          Reddit-акаунт після 7 відповідей перманентно забанили; конкретні URL постів у LB task
+          board. Medium-публікації (#15-18) закрили WEB 2.0 напрямок 1 липня (не добрали 3 з планових
+          7 — <strong>тексти вже готові, залишилось опублікувати</strong>). Платне розміщення (#19) —
+          перша закупка через PRNews.io / Lucky Seven.
         </p>
 
         <div className="rounded-md bg-muted/50 p-3 text-sm space-y-2">
@@ -465,14 +483,17 @@ export default function JuneReportPage() {
             <strong>Що змінилося з травня:</strong>
           </div>
           <ul className="list-disc list-inside space-y-1">
-            <li>Кількісно менше беклінків (5 профілів vs 10 у травні) — час пішов на обробку бану crowd-акаунта</li>
             <li>
-              <strong>Crowd-акаунт перманентно забанили</strong> після 7 постів — треба заводити
-              резервний або переходити на Reddit
+              Profiles — планова квота 7 закрита (у травні було 10, але й ціль була вища). Донори:
+              gravatar, behance, disqus, dribbble, flipboard, sourceforge, pinterest
+            </li>
+            <li>
+              <strong>Reddit-акаунт перманентно забанили</strong> після 7 постів — треба заводити
+              новий з warmup або переходити на Quora / niche forums
             </li>
             <li>
               WEB 2.0 закрито 4 Medium-публікаціями (не 7 як планувалось) — недобрані 3 переносяться
-              на липень
+              на липень. <strong>Усі тексти вже готові — залишилось тільки опублікувати</strong>
             </li>
             <li>
               <strong>Перша платна закупка</strong> (PRNews.io / Lucky Seven) — новий тип каналу
@@ -655,14 +676,14 @@ export default function JuneReportPage() {
               <tr>
                 <td className={td}>Profiles</td>
                 <td className={td}>10+</td>
-                <td className={tdMuted}>Наздогнати недобрані 2 з червня + звичайна квота</td>
+                <td className={tdMuted}>Червень закрив планові 7; у липні розширюємо на нові DR-донори</td>
               </tr>
               <tr>
                 <td className={td}>Crowd (відновлення)</td>
                 <td className={td}>10+ відповідей</td>
                 <td className={tdMuted}>
-                  Резервний Quora-акаунт або перехід на Reddit. Без bulk-постингу з одного акаунта —
-                  щоб уникнути повторного бану
+                  Новий Reddit-акаунт з warmup або перехід на Quora / niche forums. Без bulk-постингу
+                  з одного акаунта — щоб уникнути повторного бану
                 </td>
               </tr>
               <tr>
@@ -703,6 +724,7 @@ export default function JuneReportPage() {
             {
               title: 'Content Studio — 25+ статей за липень',
               items: [
+                'Опублікувати вже готові статті що ще не залиті: 3 недобрані WEB 2.0 + черга articles на майбутні розміщення (тексти на руках)',
                 'Продовження серії 2 (licensing / regulatory): MiCA deep-dive, EMI-vs-PI детальніше, capital requirements по юрисдикціях',
                 'Нова серія 3: case studies / anatomy of successful deals — реальні кейси фінтех M&A з відкритих джерел',
                 'Топікал: Q2 2026 fintech M&A trends (recap за квартал з даними)',
@@ -714,9 +736,9 @@ export default function JuneReportPage() {
             {
               title: 'Link Building — тактика',
               items: [
-                'W1: закрити 3 WEB 2.0 що перенеслись з червня (недобір з планових 7 після 4 Medium публікацій 1 липня)',
-                'W1-2: crowd recovery — резервний Quora акаунт або перехід на Reddit (без bulk-постингу з одного акаунта)',
-                'W2-3: profile push — 10+ на нових donors (наздогнати недобрані 2 з червня + нові)',
+                'W1: закрити 3 WEB 2.0 що перенеслись з червня — тексти вже готові, тільки публікація',
+                'W1-2: crowd recovery — новий Reddit акаунт з warmup або перехід на Quora / niche forums (без bulk-постингу з одного акаунта)',
+                'W2-3: profile push — 10+ на нових DR-донорах (червень закрив планові 7, у липні розширюємо)',
                 'W3-4: paid outreach — 2-4 розміщення через PRNews.io (Lucky Seven продовжити + тест 1-2 інших сайтів з їхньої панелі)',
                 'Тест 1 альтернативної outreach-платформи для порівняння цін/якості з PRNews.io',
                 'Guest posts / niche: reopen напрямок що не закрився в червні — цільові outreach на 2-3 нішевих fintech блоги',
@@ -756,7 +778,7 @@ export default function JuneReportPage() {
               title: 'Risks / dependencies',
               items: [
                 'Deploy на Hostinger — перший раз, ризик edge cases (env vars, permissions, Prisma runtime)',
-                'Crowd recovery — якщо резервний акаунт теж забанять, треба Reddit-first strategy',
+                'Crowd recovery — якщо новий Reddit акаунт теж забанять, треба Quora / niche forums як backup',
                 '25 статей у липні — pace той самий що в червні (36); тримати темп треба чітко',
                 'PRNews.io — треба перевірити наявність outreach бюджету на 4 розміщення',
                 'Обсідіан vault sync — залежить від rsync через SSH; треба SSH-ключі готові для deploy user',
@@ -807,7 +829,7 @@ export default function JuneReportPage() {
                   <br />
                   8–14 лип
                 </td>
-                <td className={td}>Нарощувати crowd (5+ відповідей на новому акаунті). Розпочати profile push (5+)</td>
+                <td className={td}>Нарощувати crowd (5+ відповідей на новому Reddit-акаунті з warmup). Розпочати profile push (5+)</td>
                 <td className={td}>6–7 статей: почати серію 3 (case studies)</td>
                 <td className={td}>Первинний deploy + TLS cert + live тест RAG</td>
               </tr>
