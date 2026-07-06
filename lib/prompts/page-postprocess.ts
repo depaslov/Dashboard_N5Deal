@@ -126,6 +126,57 @@ function buildMatchers(anchor: string, anchorAlts: string[]): Array<{ label: str
   return out
 }
 
+// FAQ-detection: on the production site the FAQ / Q&A block renders as a
+// separate popup component — it is NOT part of the main page HTML flow.
+// Any internal link placed inside that block is invisible to the reader
+// and useless for SEO on the source page. So the postprocessor treats
+// FAQ ranges as OFF-LIMITS for link enforcement:
+//   • Pass 1 (walkExistingLinks) → strip TZ links found inside FAQ
+//   • Pass 2 (linkifyFirstOccurrence) → skip lines inside FAQ ranges
+//   • Fallback (appendRelatedLinks) → place See-also BEFORE the FAQ
+//
+// Detects H2 / H3 with any of: FAQ, F.A.Q., FAQs, Frequently Asked
+// Questions, Q&A, Q & A, Questions & Answers, Common Questions. A range
+// runs from the FAQ heading line to the NEXT H2/H3 (or end-of-text).
+type Range = { start: number; end: number }
+
+const FAQ_HEADING_RE = /^(#{2,3})\s+.*(?:FAQ|F\.A\.Q\.|FAQs|Frequently\s+Asked\s+Questions|Q\s*&\s*A|Questions\s*&\s*Answers|Common\s+Questions)\b/i
+
+function findFaqRanges(text: string): Range[] {
+  const lines = text.split('\n')
+  const ranges: Range[] = []
+  let offset = 0
+  const lineOffsets: number[] = []
+  for (const l of lines) {
+    lineOffsets.push(offset)
+    offset += l.length + 1 // +1 for the '\n' rejoined by split/join semantics
+  }
+  const totalLen = text.length
+
+  for (let i = 0; i < lines.length; i++) {
+    if (!FAQ_HEADING_RE.test(lines[i])) continue
+    const start = lineOffsets[i]
+    // Range extends to the next H2/H3 heading (any topic — inclusive of a
+    // second FAQ block, though that's unusual) or the end of the text.
+    let endLine = lines.length
+    for (let j = i + 1; j < lines.length; j++) {
+      if (/^#{2,3}\s+/.test(lines[j])) {
+        endLine = j
+        break
+      }
+    }
+    const end = endLine < lines.length ? lineOffsets[endLine] : totalLen
+    ranges.push({ start, end })
+    i = endLine - 1 // resume scan past this FAQ
+  }
+  return ranges
+}
+
+function isInRanges(charIdx: number, ranges: Range[]): boolean {
+  for (const r of ranges) if (charIdx >= r.start && charIdx < r.end) return true
+  return false
+}
+
 function linkifyFirstOccurrence(
   text: string,
   anchor: string,
@@ -133,13 +184,24 @@ function linkifyFirstOccurrence(
   anchorAlts: string[] = [],
 ): { text: string; done: boolean; matchedBy?: string } {
   const matchers = buildMatchers(anchor, anchorAlts)
+  const faqRanges = findFaqRanges(text)
   const lines = text.split('\n')
+  // Precompute char-offset for each line so we can cheaply test whether a
+  // given line index sits inside any FAQ range.
+  const lineOffsets: number[] = []
+  let off = 0
+  for (const l of lines) {
+    lineOffsets.push(off)
+    off += l.length + 1
+  }
   for (const matcher of matchers) {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
       if (line.startsWith('#')) continue                          // skip headings
       if (/^\*\*Word Count|^\*Reading Time|^\*Tags/i.test(line)) continue // skip metadata header
       if (/^\*This page is for informational/i.test(line)) continue       // skip disclaimer
+      // FAQ block is rendered as a popup on the site — never place links here.
+      if (isInRanges(lineOffsets[i], faqRanges)) continue
       const m = line.match(matcher.re)
       if (!m || m.index === undefined) continue
       const idx = m.index
@@ -161,8 +223,19 @@ function linkifyFirstOccurrence(
 function appendRelatedLinks(text: string, links: { url: string; anchor: string }[]): string {
   const refs = links.map((l) => `[${l.anchor}](${l.url})`).join(', ')
   const block = `**See also:** ${refs}`
-  // Insert before the disclaimer if present, else before the SEO METADATA
-  // appendix, else at the very end.
+  // Insertion priority:
+  //   1. Before the FAQ block — FAQ renders as a popup on the site, so
+  //      anything AFTER the FAQ heading is invisible on the actual page.
+  //      See-also must land in the visible body flow, above FAQ.
+  //   2. Before the disclaimer.
+  //   3. Before the SEO METADATA appendix.
+  //   4. At the very end.
+  const faqRanges = findFaqRanges(text)
+  if (faqRanges.length > 0) {
+    // First FAQ range wins — See-also goes right before its opening heading.
+    const insertAt = faqRanges[0].start
+    return text.slice(0, insertAt).replace(/\s+$/, '') + `\n\n${block}\n\n` + text.slice(insertAt)
+  }
   const discIdx = text.search(/\*This page is for informational/i)
   if (discIdx > 0) {
     return text.slice(0, discIdx).replace(/\s+$/, '') + `\n\n${block}\n\n` + text.slice(discIdx)
@@ -208,13 +281,31 @@ function enforceExactLinks(
     return entries.find((e) => !e.seen && e.url === linkUrl) ?? null
   }
 
+  // FAQ ranges — computed against the ORIGINAL text; the `.replace` callback
+  // receives per-match offsets that still index into the same string until
+  // any replacement runs (`String.prototype.replace` calls the callback for
+  // each match sequentially against the original, not the updated buffer).
+  // So `offset` from the callback is safe to test against these ranges.
+  const faqRanges = findFaqRanges(text)
+
   // Pass 1: walk existing links — strip non-brief, claim each one for
   // an unseen brief entry that matches by url (preferring exact-anchor
-  // matches), force anchor verbatim when needed.
-  let out = text.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (full, anchor, url) => {
+  // matches), force anchor verbatim when needed. Links found INSIDE the
+  // FAQ block are always stripped (never claim them) — FAQ renders as a
+  // popup on the live site, so a link there doesn't help SEO or reader.
+  // The unclaimed brief entry then falls through to Pass 2 and gets
+  // placed in the visible body.
+  let out = text.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (full, anchor, url, offset: number) => {
     const cleanUrl = String(url).trim()
     if (!allowedUrls.has(cleanUrl)) {
       fixes.push(`stripped link not in TZ: [${anchor}](${cleanUrl})`)
+      return String(anchor)
+    }
+    if (isInRanges(offset, faqRanges)) {
+      // TZ-allowed URL, but it's inside the FAQ popup block. Strip the
+      // markdown so the anchor text survives as prose, and leave the
+      // brief entry unclaimed so Pass 2 places it in the visible body.
+      fixes.push(`stripped TZ link inside FAQ (renders in popup, not on page): [${anchor}](${cleanUrl})`)
       return String(anchor)
     }
     const entry = pickEntry(String(anchor), cleanUrl)

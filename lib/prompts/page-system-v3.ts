@@ -140,6 +140,7 @@ Total internal links on the page: exactly 2 or 3. Never more, never fewer.
 - Each MUST link appears AT LEAST ONCE as a fully-formed Markdown link \`[anchor](url)\`. Plain-text mentions of the anchor without the \`[...](url)\` wrapper DO NOT COUNT. Missing a MUST link = output rejected.
 - BEFORE outputting the page, mentally re-scan and check: every URL in the MUST list above appears at least once in your draft as \`](URL)\`. If even one is missing, GO BACK and weave it in naturally inside an H2 section. Do not finish until every MUST URL is present.
 - Spread links across different H2 sections — never stack two in one paragraph.
+- **NEVER place internal links inside the FAQ / Q&A / Frequently Asked Questions section.** That block renders as a SEPARATE POPUP COMPONENT on the live site — it is NOT part of the visible page body. Links inside FAQ are invisible to the reader, don't count for SEO on this page, and get stripped by the post-processor anyway. Every \`[anchor](url)\` MUST live inside a normal body H2 section (e.g. an overview, comparison, cost, or explanation section) — NEVER inside an FAQ answer, question, or Q&A pair. If your only natural place for a link is inside a FAQ answer, MOVE that idea into the main body first and link it there.
 
 CHECKLIST you must satisfy before ending the page:
 ${must.map((l) => `  [ ] ${l.url} — anchored as "${l.anchor}"`).join('\n')}
@@ -938,6 +939,7 @@ HARD GATES (any miss = output fails — re-write before returning):
 - [ ] GATE E — At least one H3 "What [License] doesn't cover" with a concrete excluded-activity example?
 - [ ] GATE F — At least one paragraph naming a global analogue (country + local name + local regulator + scope difference)?
 - [ ] GATE G — Every anchor string from the brief is present as visible link text in the output?
+- [ ] GATE H — Zero \`[anchor](url)\` markdown links anywhere between an FAQ / Q&A / Frequently Asked Questions H2/H3 heading and the next heading. If you find one — MOVE it into a body H2 above the FAQ.
 
 SECONDARY CHECKS:
 - [ ] Primary keyword in H1?
