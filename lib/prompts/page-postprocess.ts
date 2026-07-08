@@ -354,6 +354,109 @@ function enforceExactLinks(
 }
 
 // ---------------------------------------------------------------------------
+// PASS 2.5 — convert prose lists to markdown bullets
+//
+// LLM output frequently drops list intent into inline prose despite the
+// prompt asking for bullets. Reading a comma-separated list of 5 items in
+// a single sentence tanks scannability, especially on landing pages that
+// readers skim. This pass is a deterministic safety net that converts
+// unambiguous colon-list prose into markdown bullets.
+//
+// Design constraints — false positives cost more than false negatives here.
+// A wrongly converted sentence garbles the page; a missed conversion just
+// leaves prose that the operator can fix in the editor. So we're strict:
+//
+//   1. Only "prefix: item1, item2, ..., and itemN." shape is touched
+//      (explicit colon before the list). Verb-only lists ("The factors
+//      are X, Y, and Z") are left to the prompt — too many false positives
+//      matching regular subordinate clauses.
+//   2. Prefix must end with a whitelisted signal word (include / such as /
+//      following / traits / factors / drivers / criteria / requirements /
+//      etc.). "Something that is X: something else, ..." isn't a list.
+//   3. Between 3 and 8 items — fewer = keep prose; more = too weird.
+//   4. Every item is 15–200 characters. A short item like "a valid" is
+//      almost always a false split (e.g. "a valid, transferable licence"
+//      splits wrong). Aborting is safer than merging heuristically.
+//   5. No markdown link inside any item. Bulleting a list containing
+//      `[anchor](url)` is fine in principle but adds edge cases; skip.
+//   6. Skip lines inside an FAQ range (rendered as popup).
+//   7. Skip headings, tables, code blocks, existing bullets.
+// ---------------------------------------------------------------------------
+
+// Two regex passes with EXPLICIT boundary tokens so lazy prefix matching
+// terminates at the right place. A single "prefix" regex with a lazy `.+?`
+// would match "T" as prefix and everything else as items — validating
+// individual signal words afterward wouldn't recover the correct split.
+//
+// PATTERN A — colon-list. Prefix explicitly ends with `:`.
+//   e.g. "share a few consistent traits: X, Y, Z, and W."
+const COLON_LIST_RE = /^([^\n]+?):[ \t]+((?:[^,.\n]+?,[ \t]+){2,}(?:and[ \t]+)?[^.\n]+)\.[ \t]*$/gm
+//
+// PATTERN B — verb-list. Prefix explicitly ends with a limited set of
+// enumeration verbs (word-boundary anchored). `\b(?:include|includes|are|
+// such as|…)` at end of prefix forces the lazy `[^\n]+?` to grow until it
+// finds one of these verbs — the shortest such match becomes the prefix.
+//   e.g. "The key drivers are X, Y, Z, W, and V."
+const VERB_LIST_RE = /^([^\n]+?\b(?:includes?|are|such as|examines?|reviews?|covers?|encompass(?:es)?|comprise[s]?|consists? of|require[s]?|confirm[s]?|check[s]?))[ \t]+((?:[^,.\n]+?,[ \t]+){2,}(?:and[ \t]+)?[^.\n]+)\.[ \t]*$/gm
+
+// Common items validator + bullet composer — shared between the two passes
+// so a change in split logic can't drift between colon-list and verb-list.
+function tryBulletiseItems(prefix: string, items: string): string | null {
+  // Any markdown link inside the items → too fragile to reformat, leave prose.
+  if (/\[[^\]]+\]\([^)]+\)/.test(items)) return null
+
+  let parts = items.split(/,[ \t]+/).map((s) => s.trim())
+  // Strip the leading "and " from the last item (was the "..., and W." shape).
+  if (parts.length > 1) {
+    const last = parts[parts.length - 1]
+    const stripped = last.replace(/^and[ \t]+/i, '')
+    if (stripped !== last) parts[parts.length - 1] = stripped
+  }
+  if (parts.length < 3 || parts.length > 8) return null
+  // Length filter — any item too short = almost certainly a false split
+  // ("a valid, transferable licence" naively splits into "a valid" + rest).
+  if (parts.some((p) => p.length < 15 || p.length > 200)) return null
+  // Reject if any item contains punctuation that suggests it's a sub-clause
+  // rather than a list item (colon / semicolon / long bracketed clause).
+  if (parts.some((p) => /[:;]|\([^)]{20,}\)/.test(p))) return null
+
+  // Strip trailing punct from prefix so we add exactly one `:` on our own.
+  const cleanPrefix = prefix.trimEnd().replace(/[.:;]+$/, '')
+  const bullets = parts.map((p) => `- ${p}`).join('\n')
+  return `${cleanPrefix}:\n\n${bullets}`
+}
+
+function convertProseListsToBullets(text: string): { text: string; fixes: string[] } {
+  const fixes: string[] = []
+  const faqRanges = findFaqRanges(text)
+
+  // Pass A: explicit colon-list.
+  let out = text.replace(COLON_LIST_RE, (match, prefix: string, items: string, offset: number) => {
+    if (isInRanges(offset, faqRanges)) return match
+    const bulletised = tryBulletiseItems(prefix, items)
+    if (!bulletised) return match
+    const parts = bulletised.split('\n').filter((l) => l.startsWith('- ')).length
+    fixes.push(`converted prose list to bullets (${parts} items, colon-list)`)
+    return bulletised
+  })
+
+  // Pass B: verb-list (no colon, verb marks the boundary).
+  // Re-computed FAQ ranges — pass A may have changed offsets by inserting
+  // bullets. Cheap to recompute; keeps FAQ guard correct.
+  const faqRangesB = findFaqRanges(out)
+  out = out.replace(VERB_LIST_RE, (match, prefix: string, items: string, offset: number) => {
+    if (isInRanges(offset, faqRangesB)) return match
+    const bulletised = tryBulletiseItems(prefix, items)
+    if (!bulletised) return match
+    const parts = bulletised.split('\n').filter((l) => l.startsWith('- ')).length
+    fixes.push(`converted prose list to bullets (${parts} items, verb-list)`)
+    return bulletised
+  })
+
+  return { text: out, fixes }
+}
+
+// ---------------------------------------------------------------------------
 // PASS 3 — cap primary keyword count
 // ---------------------------------------------------------------------------
 const HEADING_SYNONYMS = [
@@ -640,14 +743,21 @@ export function postProcessPage(
 
   // Order matters:
   // 1. Link normalisation first — changes word count via dropped link markup.
-  // 2. Metadata header injection — uses final word count of cleaned body.
-  // 3. Keyword cap LAST — counts the full final document (including any
+  // 2. Prose→bullets conversion next — runs on link-stable text so it can
+  //    reliably skip items containing markdown links, and its whitespace
+  //    changes are reflected in the metadata word count below.
+  // 3. Metadata header injection — uses final word count of cleaned body.
+  // 4. Keyword cap LAST — counts the full final document (including any
   //    primary-keyword occurrences picked up by the metadata header), so
   //    the MAX limit is honoured on the document the user actually sees.
 
   const linkPass = enforceExactLinks(out, brief.internalLinks ?? [])
   out = linkPass.text
   fixes.push(...linkPass.fixes)
+
+  const bulletPass = convertProseListsToBullets(out)
+  out = bulletPass.text
+  fixes.push(...bulletPass.fixes)
 
   const metaPass = ensureMetadataHeader(out, brief)
   out = metaPass.text

@@ -547,6 +547,39 @@ ALL bullet list items must start with a capital letter.
 All items within one list must follow the same grammatical structure
 (all noun phrases OR all verb phrases — never mixed in the same list).
 
+### Prose lists of 3+ items → ALWAYS markdown bullets
+Any enumeration of 3+ items MUST be rendered as a markdown bullet list — NEVER
+as a comma-separated prose list. This is a hard rule, not stylistic preference.
+The post-processor will detect and rewrite prose lists after generation, but
+the model should get it right the first time so the output reads naturally.
+
+Trigger patterns that MUST become bullets:
+- Any sentence with a colon followed by 3+ comma-separated items:
+  "The most attractive fintech targets share a few consistent traits: X, Y, Z, and W."
+- Any sentence with a linking verb (are / include / cover / encompass / comprise /
+  consist of / such as) followed by 3+ items:
+  "The primary factors are X, Y, Z, W, and V."
+  "Buyers examine X, Y, Z, and W."
+- Any sentence enumerating requirements, criteria, factors, drivers, traits, aspects,
+  features, characteristics, or components with ≥3 items.
+
+WRONG (prose list — auto-flagged, rewritten by post-processor):
+> The key drivers are licence quality and transferability, revenue predictability,
+> client base diversity, technology ownership, and the strength of the compliance
+> function.
+
+RIGHT (bullet list — passes review):
+> The key drivers are:
+>
+> - Licence quality and transferability
+> - Revenue predictability
+> - Client base diversity
+> - Technology ownership
+> - The strength of the compliance function
+
+Two-item pairs may stay as inline prose ("licensing and compliance"). Three or
+more items = bullets. No exceptions inside the body.
+
 ### Keyword insertion must not break meaning (coherence)
 Meaning always wins over keyword placement. NEVER force two keywords into a
 comparison or list structure if they aren't genuinely alternatives.
@@ -940,6 +973,7 @@ HARD GATES (any miss = output fails — re-write before returning):
 - [ ] GATE F — At least one paragraph naming a global analogue (country + local name + local regulator + scope difference)?
 - [ ] GATE G — Every anchor string from the brief is present as visible link text in the output?
 - [ ] GATE H — Zero \`[anchor](url)\` markdown links anywhere between an FAQ / Q&A / Frequently Asked Questions H2/H3 heading and the next heading. If you find one — MOVE it into a body H2 above the FAQ.
+- [ ] GATE I — Zero prose enumerations of 3+ items in the body. Any sentence with a colon or linking verb (are / include / cover / such as) followed by 3+ comma-separated items MUST be reformatted as a markdown bullet list. Two-item pairs may remain inline.
 
 SECONDARY CHECKS:
 - [ ] Primary keyword in H1?
