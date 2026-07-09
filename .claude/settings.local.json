@@ -76,11 +76,13 @@
       "Bash(awk 'NR>=815 && NR<=830' /Users/andriykrechkivsky/Downloads/n5deal_export_v3/lib/prompts/page-system-v3.ts)",
       "Bash(git mv *)",
       "Bash(mkdir -p /Users/andriykrechkivsky/Downloads/n5deal_export_v3/app/api/glossary/\\\\[id\\\\])",
-      "Bash(chmod +x /Users/andriykrechkivsky/Downloads/n5deal_export_v3/scripts/setup-vm.sh /Users/andriykrechkivsky/Downloads/n5deal_export_v3/scripts/deploy.sh /Users/andriykrechkivsky/Downloads/n5deal_export_v3/scripts/deploy-vault.sh)"
+      "Bash(chmod +x /Users/andriykrechkivsky/Downloads/n5deal_export_v3/scripts/setup-vm.sh /Users/andriykrechkivsky/Downloads/n5deal_export_v3/scripts/deploy.sh /Users/andriykrechkivsky/Downloads/n5deal_export_v3/scripts/deploy-vault.sh)",
+      "Bash(mkdir -p /Users/andriykrechkivsky/Downloads/n5deal_export_v3/app/\\\\\\(app\\\\\\)/reports/2026-07-plan)"
     ],
     "additionalDirectories": [
       "/Users/andriykrechkivsky/Downloads/n5deal_export_v3/app/(app)/content/[id]",
-      "/Users/andriykrechkivsky/Downloads/n5deal_export_v3/app/api/glossary"
+      "/Users/andriykrechkivsky/Downloads/n5deal_export_v3/app/api/glossary",
+      "/Users/andriykrechkivsky/Downloads/n5deal_export_v3/app/(app)/reports"
     ]
   }
 }
