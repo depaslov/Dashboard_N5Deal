@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { ArrowLeft, Target } from 'lucide-react'
+import { SeedButton } from './seed-button'
 
 export const dynamic = 'force-dynamic'
 export const metadata = {
@@ -41,7 +42,7 @@ export default function JulyPlanPage() {
           Період: 1 – 31 липня 2026 · 66 запланованих матеріалів + 3 платних розміщення
         </p>
 
-        <div className="rounded-lg border-l-4 border-primary bg-muted/30 p-4">
+        <div className="rounded-lg border-l-4 border-primary bg-muted/30 p-4 mb-4">
           <div className="flex items-start gap-3">
             <Target className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
             <div className="text-sm leading-relaxed">
@@ -52,6 +53,8 @@ export default function JulyPlanPage() {
             </div>
           </div>
         </div>
+
+        <SeedButton />
       </section>
 
       {/* ── Місячні цілі по каналах ──────────────────────────────────────── */}
