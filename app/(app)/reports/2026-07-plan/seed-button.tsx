@@ -17,9 +17,11 @@ import { toast } from 'sonner'
 export function SeedButton() {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
-  const [result, setResult] = useState<{ seeded: number; byType: Record<string, number> } | null>(
-    null,
-  )
+  const [result, setResult] = useState<{
+    seeded: number
+    byType: Record<string, number>
+    boards?: { tasks: number; linkbuilding: number }
+  } | null>(null)
 
   async function seed(force: boolean) {
     setBusy(true)
@@ -39,7 +41,11 @@ export function SeedButton() {
         }
         return
       }
-      setResult({ seeded: data?.seeded ?? 0, byType: data?.byType ?? {} })
+      setResult({
+        seeded: data?.seeded ?? 0,
+        byType: data?.byType ?? {},
+        boards: data?.boards,
+      })
       toast.success(`Seeded ${data?.seeded ?? 0} items into LinkBuilding + Tasks`)
       router.refresh()
     } catch (e) {
@@ -91,25 +97,32 @@ export function SeedButton() {
       </div>
 
       {result ? (
-        <div className="mt-3 pt-3 border-t text-xs">
-          <div className="font-medium mb-1">Створено {result.seeded} items:</div>
+        <div className="mt-3 pt-3 border-t text-xs space-y-2">
+          <div className="font-medium">Створено {result.seeded} items:</div>
+          {result.boards ? (
+            <div className="flex flex-wrap gap-3">
+              <a
+                href="/marketing/tasks"
+                className="rounded-md border bg-background px-3 py-1.5 hover:border-primary transition-colors"
+              >
+                <span className="text-muted-foreground">Tasks:</span>{' '}
+                <strong>{result.boards.tasks}</strong> items →
+              </a>
+              <a
+                href="/marketing/linkbuilding"
+                className="rounded-md border bg-background px-3 py-1.5 hover:border-primary transition-colors"
+              >
+                <span className="text-muted-foreground">LinkBuilding:</span>{' '}
+                <strong>{result.boards.linkbuilding}</strong> items →
+              </a>
+            </div>
+          ) : null}
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground">
             {Object.entries(result.byType).map(([type, count]) => (
               <span key={type}>
                 <strong className="text-foreground">{count}</strong> × {type}
               </span>
             ))}
-          </div>
-          <div className="mt-2 text-muted-foreground">
-            Перевірити на{' '}
-            <a href="/marketing/linkbuilding" className="text-primary underline">
-              LinkBuilding
-            </a>{' '}
-            і{' '}
-            <a href="/marketing/tasks" className="text-primary underline">
-              Tasks
-            </a>{' '}
-            вкладках.
           </div>
         </div>
       ) : null}
