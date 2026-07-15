@@ -170,6 +170,30 @@ This H3 must contain at least one paragraph naming an equivalent authorisation i
 
 Missing either of these two subsections = output rejected.`)
 
+  // ── BLOCK 4b: FAQ section. The H2 outline (BLOCK 7) comes from the brief and
+  // never lists an FAQ, so the model had nothing telling it to write one — the
+  // section came out missing every time even though GATE H / the post-processor
+  // both assume it exists. Bold-prose questions (not H3) are load-bearing:
+  // findFaqRanges() in page-postprocess closes the FAQ block at the next H2/H3,
+  // so heading-per-question would split the block and defeat the link guard.
+  lines.push(`# MANDATORY FAQ SECTION (never optional)
+
+Every page MUST include a frequently-asked-questions H2, placed AFTER the last
+content H2 and BEFORE the closing / next-step section.
+
+Rules:
+- The heading must literally contain "Frequently Asked Questions" (or "FAQ").
+- 4–6 Q&A pairs, each genuinely about ${primaryTerm} — no filler questions.
+- Each question is BOLD PROSE on its own line: \`**What does a ${primaryTerm} cost to maintain?**\`
+- Each answer is a normal paragraph directly beneath its question (2–4 sentences).
+- NEVER use an H3 (or any heading) for a question. The site closes the FAQ block
+  at the next heading — a heading per question splits the block and breaks the page.
+- NO internal links (\`[anchor](url)\`) anywhere inside this section — the FAQ
+  renders as a popup, so links there are invisible and get stripped (GATE H).
+- Keep grammatical person consistent within each pair (question "I" → answer "you").
+
+Missing the FAQ section = output rejected.`)
+
   // ── BLOCK 5: Opening sentence template
   lines.push(`# OPENING SENTENCE TEMPLATE (first sentence after H1)
 
@@ -210,6 +234,10 @@ FORBIDDEN openings (auto-reject):
 ${struct}
 
 If a subtopic is listed, it MUST be covered (as a paragraph or H3 inside that H2). Skipping a listed subtopic = output rejected.
+
+This outline describes the BODY sections only. It does NOT replace the mandatory
+FAQ section — append the frequently-asked-questions H2 after the last body H2
+above (before any closing / next-step section), even though it is not listed here.
 
 Remember the keyword cap: only ONE of these H2 may contain the primary keyword. All others must rephrase.`)
   }
@@ -789,6 +817,12 @@ Required elements on every page (in this order):
 ### H3 — compliance standards
 ### H3 — post-licensing requirements
 
+## H2 — frequently asked questions  ← MANDATORY (GATE J). Rephrase to NOT contain primary keyword.
+[4–6 Q&A pairs. Each question is BOLD PROSE on its own line — \`**Question text?**\` —
+ followed by its answer paragraph. NEVER use H3 (or any heading) for a question:
+ the site closes the FAQ block at the next heading, so an H3 question would break
+ the block apart. NO internal links anywhere inside this section — see GATE H.]
+
 ## H2 — what is the next step  (rephrase to NOT contain primary keyword)
 [Closing paragraph — 2–3 sentences, platform as information provider,
  decisions rest with the founder. Final internal link as CTA here.]
@@ -805,7 +839,10 @@ PRIMARY KEYWORD IN HEADINGS — recap of GATE C.1:
 Deviate from this flow ONLY if the user prompt explicitly provides a
 different H2 outline — in that case, follow the user prompt's headings exactly,
 but the "what it doesn't cover" + "global analogue" subsections STILL MUST
-appear somewhere on the page (as H3 inside the most relevant H2).
+appear somewhere on the page (as H3 inside the most relevant H2), and the
+frequently-asked-questions H2 STILL MUST be appended (after the brief's last
+body H2, before the closing / next-step section). A brief that lists its own
+H2 outline does NOT remove the FAQ requirement — the FAQ is never optional.
 
 ---
 
@@ -974,6 +1011,7 @@ HARD GATES (any miss = output fails — re-write before returning):
 - [ ] GATE G — Every anchor string from the brief is present as visible link text in the output?
 - [ ] GATE H — Zero \`[anchor](url)\` markdown links anywhere between an FAQ / Q&A / Frequently Asked Questions H2/H3 heading and the next heading. If you find one — MOVE it into a body H2 above the FAQ.
 - [ ] GATE I — Zero prose enumerations of 3+ items in the body. Any sentence with a colon or linking verb (are / include / cover / such as) followed by 3+ comma-separated items MUST be reformatted as a markdown bullet list. Two-item pairs may remain inline.
+- [ ] GATE J — An FAQ H2 is present (heading contains "Frequently Asked Questions" / "FAQ" / "Q&A" / "Common Questions"), with 4–6 Q&A pairs, each question in \`**bold prose**\` (NOT a heading), each answer a paragraph below it? Missing FAQ = output fails.
 
 SECONDARY CHECKS:
 - [ ] Primary keyword in H1?
