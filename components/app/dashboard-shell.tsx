@@ -24,6 +24,7 @@ import {
   Building,
   BookOpen,
   FileText,
+  ListChecks,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -41,14 +42,29 @@ interface Project {
   name: string
   companyName: string
   memberRole?: string
+  brandBadge?: string | null
+  brandColor?: string | null
 }
 
 interface Props {
   user: { id: string; name: string; email: string }
-  currentProject: { id: string; name: string; companyName: string }
+  currentProject: { id: string; name: string; companyName: string; brandBadge?: string | null; brandColor?: string | null }
   projects: Project[]
   children: React.ReactNode
 }
+
+// Falls back to the first two initials of the name when a project has no
+// explicit brandBadge set (e.g. projects created via the "Create project" button).
+function badgeFor(p: { brandBadge?: string | null; name?: string; companyName?: string }): string {
+  if (p.brandBadge) return p.brandBadge
+  const src = (p.companyName || p.name || '').trim()
+  if (!src) return '—'
+  const words = src.split(/\s+/)
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase()
+  return src.slice(0, 2).toUpperCase()
+}
+
+const BANKSTORE_PROJECT_ID = 'seed-project-bankstore'
 
 const NAV_ITEMS = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -65,11 +81,58 @@ const NAV_ITEMS = [
   { label: 'Settings', href: '/settings', icon: Settings },
 ]
 
+// BankStore AI gets a trimmed nav: instead of the full Marketing OS it exposes
+// only the Tasks and Link Building boards directly.
+const BANKSTORE_NAV = [
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { label: 'ICP Management', href: '/icps', icon: Users },
+  { label: 'Content Studio', href: '/content', icon: Sparkles },
+  { label: 'Platforms', href: '/platforms', icon: Layers },
+  { label: 'Internal Links', href: '/internal-links', icon: Link2 },
+  { label: 'Tags', href: '/tags', icon: TagIcon },
+  { label: 'Red Flags', href: '/red-flags', icon: ShieldAlert },
+  { label: 'Glossary', href: '/glossary', icon: BookOpen },
+  { label: 'Reports', href: '/reports', icon: FileText },
+  { label: 'Company', href: '/company', icon: Building },
+  { label: 'Tasks', href: '/marketing/tasks', icon: ListChecks },
+  { label: 'Link Building', href: '/marketing/linkbuilding', icon: Link2 },
+  { label: 'Settings', href: '/settings', icon: Settings },
+]
+
 export function DashboardShell({ user, currentProject, projects, children }: Props) {
   const pathname = usePathname() ?? ''
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [creatingProject, setCreatingProject] = useState(false)
+  const [switchingTo, setSwitchingTo] = useState<string | null>(null)
+
+  // Accent colour + logo badge for the currently-selected project. Setting the
+  // --primary CSS variable on the shell root re-skins every bg-primary element.
+  const brandColor = currentProject?.brandColor ?? undefined
+  const brandBadge = badgeFor(currentProject ?? {})
+  const brandStyle = brandColor ? ({ ['--primary' as any]: brandColor } as React.CSSProperties) : undefined
+  const navItems = currentProject?.id === BANKSTORE_PROJECT_ID ? BANKSTORE_NAV : NAV_ITEMS
+
+  const handleSwitchProject = async (projectId: string) => {
+    if (projectId === currentProject?.id) return
+    setSwitchingTo(projectId)
+    try {
+      const res = await fetch('/api/projects/switch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        toast.error(data?.error ?? 'Could not switch project')
+        return
+      }
+      // Full reload so every server component + API re-reads the new project.
+      window.location.reload()
+    } finally {
+      setSwitchingTo(null)
+    }
+  }
 
   const handleCreateProject = async () => {
     const name = window.prompt('Project name?')
@@ -95,14 +158,14 @@ export function DashboardShell({ user, currentProject, projects, children }: Pro
   }
 
   const SidebarBody = (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col" style={brandStyle}>
       {/* Logo */}
       <div className="flex h-16 items-center px-6 border-b border-border">
         <Link href="/dashboard" className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center bg-primary text-primary-foreground font-display font-bold text-sm">
-            N5
+            {brandBadge}
           </div>
-          <span className="font-display font-semibold text-lg tracking-tight">N5Deal</span>
+          <span className="font-display font-semibold text-lg tracking-tight">{currentProject?.name ?? 'Workspace'}</span>
         </Link>
       </div>
 
@@ -132,12 +195,29 @@ export function DashboardShell({ user, currentProject, projects, children }: Pro
           <DropdownMenuContent align="start" className="w-64">
             <DropdownMenuLabel>Your projects</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {(projects ?? []).map((p) => (
-              <DropdownMenuItem key={p.id} className="flex-col items-start">
-                <span className="text-sm font-medium">{p?.name}</span>
-                <span className="text-[11px] text-muted-foreground">{p?.companyName}</span>
-              </DropdownMenuItem>
-            ))}
+            {(projects ?? []).map((p) => {
+              const active = p.id === currentProject?.id
+              return (
+                <DropdownMenuItem
+                  key={p.id}
+                  onClick={() => handleSwitchProject(p.id)}
+                  disabled={switchingTo === p.id}
+                  className="flex items-center gap-2"
+                >
+                  <div
+                    className="flex h-6 w-6 items-center justify-center text-primary-foreground text-[10px] font-bold shrink-0"
+                    style={{ backgroundColor: p.brandColor ? `hsl(${p.brandColor})` : 'hsl(var(--primary))' }}
+                  >
+                    {badgeFor(p)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium truncate">{p?.name}</span>
+                    <span className="block text-[11px] text-muted-foreground truncate">{p?.companyName}</span>
+                  </div>
+                  {active && <span className="text-[10px] text-primary font-semibold shrink-0">current</span>}
+                </DropdownMenuItem>
+              )
+            })}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleCreateProject} disabled={creatingProject}>
               <Plus className="h-4 w-4 mr-2" /> Create project
@@ -148,7 +228,7 @@ export function DashboardShell({ user, currentProject, projects, children }: Pro
 
       {/* Nav */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const active = pathname === item.href || pathname?.startsWith(item.href + '/')
           return (
             <Link
@@ -240,11 +320,11 @@ export function DashboardShell({ user, currentProject, projects, children }: Pro
           >
             <Menu className="h-5 w-5" />
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" style={brandStyle}>
             <div className="flex h-7 w-7 items-center justify-center bg-primary text-primary-foreground font-display font-bold text-xs">
-              N5
+              {brandBadge}
             </div>
-            <span className="font-display font-semibold tracking-tight">N5Deal</span>
+            <span className="font-display font-semibold tracking-tight">{currentProject?.name ?? 'Workspace'}</span>
           </div>
           <div className="w-9" />
         </div>

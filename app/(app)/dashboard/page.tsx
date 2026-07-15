@@ -2,8 +2,9 @@ import Link from 'next/link'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { getOrCreateCurrentProject } from '@/lib/project'
+import { getOrCreateCurrentProject, getUserProjects } from '@/lib/project'
 import { PageHeader } from '@/components/app/page-header'
+import { PlatformSwitcher } from '@/components/app/platform-switcher'
 import { StatCard } from '@/components/app/stat-card'
 import { Button } from '@/components/ui/button'
 import {
@@ -32,6 +33,7 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
   const userId = session?.user?.id as string
   const project = await getOrCreateCurrentProject(userId)
+  const projects = await getUserProjects(userId)
 
   const [contentCount, recentContents, socialPostsCount, redFlagsCount] = await Promise.all([
     prisma.generatedContent.count({ where: { projectId: project.id } }),
@@ -64,6 +66,18 @@ export default async function DashboardPage() {
             </Button>
           </>
         }
+      />
+
+      {/* Platform selector */}
+      <PlatformSwitcher
+        currentId={project.id}
+        platforms={projects.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          companyName: p.companyName,
+          brandBadge: p.brandBadge ?? null,
+          brandColor: p.brandColor ?? null,
+        }))}
       />
 
       {/* Stats */}

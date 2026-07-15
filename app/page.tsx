@@ -2,8 +2,8 @@ import Link from 'next/link'
 import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
-import { Button } from '@/components/ui/button'
-import { ArrowRight, Sparkles, Users, FileText, LayoutDashboard, ShieldCheck } from 'lucide-react'
+import { PlatformLanding } from '@/components/marketing/platform-landing'
+import { Users, FileText, LayoutDashboard, ShieldCheck } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,56 +15,8 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-40 w-full border-b border-border bg-background/80 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-6">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center bg-primary text-primary-foreground font-display font-bold text-sm">
-              N5
-            </div>
-            <span className="font-display font-semibold text-lg tracking-tight">N5Deal</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/login">Sign in</Link>
-            </Button>
-            <Button asChild size="sm">
-              <Link href="/signup">Get started</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Hero */}
-      <section className="relative gradient-hero">
-        <div className="mx-auto max-w-[1200px] px-6 pt-20 pb-16">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 bg-secondary px-3 py-1 text-xs font-medium text-muted-foreground mb-6">
-              <Sparkles className="h-3.5 w-3.5" />
-              AI-powered marketing brain
-            </div>
-            <h1 className="font-display text-5xl md:text-6xl font-bold tracking-tight leading-[1.05]">
-              The centralized <span className="text-accent">AI brain</span> for
-              ICP-driven content at scale.
-            </h1>
-            <p className="mt-6 text-lg text-muted-foreground max-w-2xl leading-relaxed">
-              Manage ideal customer profiles, generate structured content briefs
-              across LinkedIn, articles, catalogs and Telegram, and collaborate
-              with your marketing team — all in one clean workspace.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Button asChild size="lg">
-                <Link href="/signup" className="gap-2">
-                  Start building <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-              <Button asChild size="lg" variant="outline">
-                <Link href="/login">Sign in to dashboard</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Header + hero with platform selector (re-skins per platform) */}
+      <PlatformLanding />
 
       {/* Features grid */}
       <section className="border-t border-border bg-secondary/40">

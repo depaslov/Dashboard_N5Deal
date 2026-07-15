@@ -74,6 +74,12 @@ model Project {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // Branding — drives the sidebar logo badge, workspace name and accent colour
+  // so switching projects re-skins the whole dashboard. brandColor is an HSL
+  // triple (e.g. "222 47% 15%") matching the --primary token in globals.css.
+  brandBadge  String?
+  brandColor  String?
+
   owner         User              @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   members       ProjectMember[]
   icps          ICP[]

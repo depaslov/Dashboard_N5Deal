@@ -41,11 +41,11 @@ export default function JuneReportPage() {
           <div className="flex items-start gap-3">
             <Star className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
             <div className="text-sm leading-relaxed">
-              <strong>Головне за місяць:</strong> написано 36 нових сторінок — базова M&amp;A / Deal
-              Rooms серія (15) + розширення на fintech licensing, cross-border deal mechanics і
-              regulatory topics (21). Розміщено 7 профілів, 7 Reddit-відповідей (Reddit-акаунт після
-              цього перманентно забанили) і 4 Medium публікації як WEB 2.0 (закрилось 1 липня, не
-              добрали 3 з планових 7 — <strong>усі статті вже готові, залишилось лише опублікувати</strong>),
+              <strong>Головне за місяць:</strong> написано 13 нових статей у блог (fintech licensing,
+              M&amp;A advisory, regulatory) + 6 текстів на WEB 2.0 / Medium. Розміщено 7 профілів,
+              7 Reddit-відповідей (Reddit-акаунт після
+              цього перманентно забанили) і 6 Medium публікацій як WEB 2.0 (закрилось 1 липня, не
+              добрали 1 з планових 7 — <strong>останній текст готовий, залишилось опублікувати</strong>),
               і <strong>нарешті закупились першими платними outreach-розміщеннями</strong> через{' '}
               <a
                 href="https://prnews.io/sites/208157-luckysevenprnewsio.html"
@@ -90,9 +90,9 @@ export default function JuneReportPage() {
                 <td className={td}>WEB 2.0</td>
                 <td className={td}>5</td>
                 <td className={td}>
-                  <strong>4</strong> (Medium публікації, закрито 1 липня; статті готові, чекають на публікацію)
+                  <strong>6</strong> (Medium публікації, закрито 1 липня; недобраний 1 чекає на публікацію)
                 </td>
-                <td className={td}>7+ (в т.ч. carry-over 3, тексти на руках)</td>
+                <td className={td}>7+ (в т.ч. carry-over 1, текст на руках)</td>
               </tr>
               <tr>
                 <td className={td}>Crowd-відповіді</td>
@@ -106,7 +106,7 @@ export default function JuneReportPage() {
                 <td className={td}>Нові тексти для блогу</td>
                 <td className={td}>20+</td>
                 <td className={td}>
-                  <strong>36</strong> (15 M&amp;A / Deal Rooms + 21 licensing / fintech)
+                  <strong>13</strong> (fintech licensing / M&amp;A advisory / regulatory)
                 </td>
                 <td className={td}>25+</td>
               </tr>
@@ -131,99 +131,120 @@ export default function JuneReportPage() {
         </div>
       </section>
 
-      {/* ── Написані сторінки ─────────────────────────────────────────────── */}
+      {/* ── Органічний трафік (GA4) ───────────────────────────────────────── */}
       <section className="mb-10">
-        <h2 className="text-xl font-bold mb-3">Написані сторінки (Content Studio)</h2>
+        <h2 className="text-xl font-bold mb-3">Органічний трафік — Google Search (GA4)</h2>
         <p className="text-sm text-muted-foreground mb-4">
-          36 статей за місяць. Дві серії: (1) базова M&amp;A / Deal Rooms — 15 текстів під запуск
-          основного pillar-контенту, (2) розширення на fintech licensing, cross-border deal
-          mechanics і regulatory topics — 21 текст. Формати: Guides, Checklists, How-to, Listicles,
-          Comparisons, FAQ, Explainers, Industry. Усі за ТЗ і compliance (Red Flags / 256 термінів),
-          довжина 700–1&nbsp;200 слів, 3–5 внутрішніх посилань на статтю.
+          Дані за червень 2026 з Google Analytics 4 (органічний пошук Google). Загалом{' '}
+          <strong>81 клік</strong> і <strong>14&nbsp;995 показів</strong> (CTR 0.54%), середня позиція{' '}
+          <strong>14.01</strong>, <strong>26 активних користувачів</strong> і <strong>90 engaged
+          sessions</strong> (engagement rate 60%). Трафік розподілений по <strong>429</strong> лендингах —
+          нижче топ-10 за кліками.
         </p>
 
-        <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mb-2">
-          Серія 1: M&amp;A / Deal Rooms (KD 10–30)
-        </h3>
-        <div className="overflow-x-auto mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          {[
+            ['Organic clicks', '81'],
+            ['Impressions', '14 995'],
+            ['CTR', '0.54%'],
+            ['Сер. позиція', '14.01'],
+            ['Active users', '26'],
+            ['Engaged sessions', '90'],
+            ['Engagement rate', '60%'],
+            ['Лендингів у видачі', '429'],
+          ].map(([label, val]) => (
+            <div key={label} className="border rounded-md p-3">
+              <div className="text-lg font-bold">{val}</div>
+              <div className="text-xs text-muted-foreground">{label}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
               <tr>
                 <th className={th}>#</th>
-                <th className={th}>Тема статті</th>
-                <th className={th}>Тип</th>
-                <th className={th}>KD</th>
+                <th className={th}>Сторінка</th>
+                <th className={th}>Кліки</th>
+                <th className={th}>Покази</th>
+                <th className={th}>CTR</th>
+                <th className={th}>Сер. позиція</th>
+                <th className={th}>Users</th>
+                <th className={th}>Engaged</th>
+                <th className={th}>Eng. rate</th>
               </tr>
             </thead>
             <tbody>
               {[
-                ['1', 'What Is an M&A Deal Room?', 'Guide', '12'],
-                ['2', 'M&A Due Diligence Checklist for Buyers', 'Checklist', '18'],
-                ['3', 'How to Set Up a Virtual Data Room for M&A', 'How-to', '15'],
-                ['4', 'M&A Deal Pipeline Management Best Practices', 'Guide', '22'],
-                ['5', 'Top 10 Mistakes in M&A Document Management', 'Listicle', '14'],
-                ['6', 'Buyer vs Seller Permissions in Deal Rooms', 'Explainer', '10'],
-                ['7', 'How to Track Deal Progress in M&A Platforms', 'How-to', '20'],
-                ['8', 'Top 7 Tools for M&A Workflow Automation', 'Listicle', '25'],
-                ['9', 'Virtual Data Room vs Cloud Storage: What\'s the Difference', 'Comparison', '18'],
-                ['10', 'M&A Integration Planning: Step-by-Step Guide', 'Guide', '28'],
-                ['11', 'How Banks Use Deal Platforms for M&A Advisory', 'Industry', '30'],
-                ['12', 'Top 10 M&A Deal Sourcing Tips for 2026', 'Listicle', '22'],
-                ['13', 'Deal Room vs Traditional M&A Process: A Comparison', 'Comparison', '20'],
-                ['14', 'FAQ: Everything About M&A Deal Rooms', 'FAQ', '12'],
-                ['15', 'Best Practices for Securing M&A Documents', 'Guide', '26'],
-              ].map(([n, title, type, kd]) => (
+                ['1', '/', '41', '593', '6.91%', '6.06', '13', '38', '73.08%'],
+                ['2', '/articles/155-psp-licensing-key-requirements-and-challenges-for-2026', '3', '1 178', '0.25%', '9.70', '0', '0', '0%'],
+                ['3', '/market-news/232-tbc-uzbekistan-launches-fully-digital-payroll-feature-for-smes', '3', '114', '2.63%', '9.79', '1', '1', '100%'],
+                ['4', '/events/gitex-global-2026-global-technology-ai-and-startup-exhibition', '2', '466', '0.43%', '10.42', '2', '2', '100%'],
+                ['5', '/events/web-summit-2026-global-technology-and-startup-conference', '2', '565', '0.35%', '10.25', '1', '0', '0%'],
+                ['6', '/incorporation-license/crypto/crypto-cayman-islands-virtual-asset-service-provider-license', '2', '47', '4.26%', '10.36', '1', '1', '100%'],
+                ['7', '/partner', '2', '174', '1.15%', '5.44', '2', '1', '50%'],
+                ['8', '/all-listing/433-crypto-poland', '1', '3', '33.33%', '10.67', '0', '0', '0%'],
+                ['9', '/all-listing/467-payment-australia', '1', '3', '33.33%', '6.67', '0', '0', '0%'],
+                ['10', '/all-listing/471-emi-malta', '1', '17', '5.88%', '35.06', '0', '0', '0%'],
+              ].map(([n, page, clicks, impr, ctr, pos, users, eng, rate]) => (
                 <tr key={n}>
                   <td className={td}>{n}</td>
-                  <td className={td}>{title}</td>
-                  <td className={td}>{type}</td>
-                  <td className={td}>{kd}</td>
+                  <td className={`${td} text-xs break-all`}>{page}</td>
+                  <td className={td}>{clicks}</td>
+                  <td className={td}>{impr}</td>
+                  <td className={td}>{ctr}</td>
+                  <td className={td}>{pos}</td>
+                  <td className={td}>{users}</td>
+                  <td className={td}>{eng}</td>
+                  <td className={td}>{rate}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        <p className="text-xs text-muted-foreground mt-2">
+          Джерело: GA4 — Organic Google Search, вимір «Landing page + query string». Показано 10 із 429 рядків.
+        </p>
+      </section>
 
-        <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mb-2">
-          Серія 2: Fintech licensing, deal mechanics, regulatory
-        </h3>
+      {/* ── Написані сторінки ─────────────────────────────────────────────── */}
+      <section className="mb-10">
+        <h2 className="text-xl font-bold mb-3">Написані сторінки (Content Studio)</h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          13 статей за місяць для блогу — фокус на fintech licensing, M&amp;A advisory та regulatory.
+          Формати: Guides, Comparisons, How-to, Checklists, Explainers. Усі за ТЗ і compliance
+          (Red Flags / 256 термінів), довжина 700–1&nbsp;200 слів, 3–5 внутрішніх посилань на статтю.
+          Окремо — 6 текстів на WEB 2.0 / Medium (див. секцію Link Building нижче).
+        </p>
+
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
               <tr>
                 <th className={th}>#</th>
                 <th className={th}>Тема статті</th>
-                <th className={th}>Тип</th>
               </tr>
             </thead>
             <tbody>
               {[
-                ['16', 'FCA vs CBI: Which UK or Irish License Is Worth More in M&A', 'Comparison'],
-                ['17', 'MSB License in Canada: The Underrated Gateway to North American Payments', 'Guide'],
-                ['18', 'PI License in the UK Post-Brexit: What\'s Changed and What It Costs Now', 'Explainer'],
-                ['19', 'VASP Registration vs Full Crypto License: What\'s the Difference', 'Comparison'],
-                ['20', 'Passporting in the EU After MiCA: What Still Works and What Doesn\'t', 'Explainer'],
-                ['21', 'The Hidden Costs of Maintaining a Fintech License', 'Guide'],
-                ['22', 'Distressed Fintech Assets: How to Buy Low Without Buying Trouble', 'How-to'],
-                ['23', 'How to Value a Fintech License in M&A: The Metrics That Matter', 'How-to'],
-                ['24', 'Earn-outs in Fintech M&A: When They Work and When They Destroy Deals', 'Explainer'],
-                ['25', 'The 90-Day Pre-Sale Checklist for Fintech Founders', 'Checklist'],
-                ['26', 'How Regulatory Fines Affect Fintech Valuations (And How to Recover)', 'Guide'],
-                ['27', 'Cross-Border M&A: How to Structure a Deal Between EU and Gulf Entities', 'How-to'],
-                ['28', 'RWA Tokenisation in the UAE: A Practical Guide for Asset Issuers', 'Guide'],
-                ['29', 'Crypto Adoption in the Gulf: ADGM, DIFC, and VARA Compared', 'Comparison'],
-                ['30', 'Hong Kong vs Singapore: Which Asian Hub Wins for Fintech M&A', 'Comparison'],
-                ['31', 'The Netherlands as EU Fintech Hub: DNB Licensing', 'Guide'],
-                ['32', 'AI-Powered KYC: How Automation Is Changing the Value of Compliance-Heavy Fintechs', 'Industry'],
-                ['33', 'The Real Cost of a Data Breach for a Licensed Fintech', 'Explainer'],
-                ['34', 'The Anatomy of a Failed Fintech Deal: 5 Real Reasons Transactions Collapse', 'Listicle'],
-                ['35', 'What Buyers Actually Read in a Fintech Information Memorandum', 'Explainer'],
-                ['36', 'How Long Does a Fintech M&A Deal Actually Take? A Realistic Timeline', 'Guide'],
-              ].map(([n, title, type]) => (
+                ['1', 'Switzerland\'s Fintech License: Why a Swiss FINMA Asset Commands a Premium'],
+                ['2', 'Estonia After the Crypto Purge: What\'s Left Worth Buying?'],
+                ['3', 'The Hidden Costs of Maintaining a Fintech License'],
+                ['4', 'How Regulatory Fines Affect Fintech Valuations (And How to Recover)'],
+                ['5', 'What Buyers Actually Read in a Fintech Information Memorandum'],
+                ['6', 'The Real Cost of a Data Breach for a Licensed Fintech'],
+                ['7', 'Hong Kong vs Singapore: Which Asian Hub Wins for Fintech M&A in 2026'],
+                ['8', 'Crypto Adoption in the Gulf: ADGM, DIFC, and VARA Compared'],
+                ['9', 'RWA Tokenisation in the UAE: A Practical Guide for Asset Issuers'],
+                ['10', 'The 90-Day Pre-Sale Checklist for Fintech Founders'],
+                ['11', 'Distressed Fintech Assets: How to Buy Low Without Buying Trouble'],
+                ['12', 'Earn-outs in Fintech M&A: When They Work and When They Destroy Deals'],
+                ['13', 'How to Value a Fintech License in M&A: The Metrics That Actually Matter'],
+              ].map(([n, title]) => (
                 <tr key={n}>
                   <td className={td}>{n}</td>
                   <td className={td}>{title}</td>
-                  <td className={td}>{type}</td>
                 </tr>
               ))}
             </tbody>
@@ -236,8 +257,8 @@ export default function JuneReportPage() {
         <h2 className="text-xl font-bold mb-3">Link Building — червень 2026</h2>
         <p className="text-sm text-muted-foreground mb-4">
           За червень розміщено 7 Profile-беклінків (досягнено планових 7) і 7 Reddit-відповідей —
-          після чого Reddit-акаунт перманентно забанили. WEB 2.0 закрито 1 липня — 4 публікаціями
-          на Medium (не добрали 3 з планових 7). Важливо: <strong>усі статті для WEB 2.0 і майбутніх
+          після чого Reddit-акаунт перманентно забанили. WEB 2.0 закрито 1 липня — 6 публікаціями
+          на Medium (не добрали 1 з планових 7). Важливо: <strong>усі статті для WEB 2.0 і майбутніх
           articles-розміщень вже готові — залишилось тільки опублікувати</strong>. Перша закупка
           платних outreach-розміщень пройшла через{' '}
           <a
@@ -273,12 +294,12 @@ export default function JuneReportPage() {
               <tr>
                 <td className={td}>WEB 2.0</td>
                 <td className={td}>
-                  <strong>4 (Medium)</strong>
+                  <strong>6 (Medium)</strong>
                 </td>
                 <td className={td}>7</td>
                 <td className={td}>
-                  Закрито 1 липня 4 публікаціями на Medium (DR 94). Не добрали 3 — <strong>тексти
-                  вже готові</strong>, залишилось опублікувати; carry-over у липень
+                  Закрито 1 липня 6 публікаціями на Medium (DR 94). Не добрали 1 — <strong>текст
+                  вже готовий</strong>, залишилось опублікувати; carry-over у липень
                 </td>
               </tr>
               <tr className="bg-destructive/5">
@@ -377,7 +398,7 @@ export default function JuneReportPage() {
                 </tr>
               ))}
 
-              {/* ── WEB 2.0 — 4 Medium publications, закрито 1 липня ─ */}
+              {/* ── WEB 2.0 — 6 Medium publications, закрито 1 липня ─ */}
               <tr>
                 <td className={td}>15</td>
                 <td className={td}>medium.com</td>
@@ -446,10 +467,44 @@ export default function JuneReportPage() {
                   </a>
                 </td>
               </tr>
+              <tr>
+                <td className={td}>19</td>
+                <td className={td}>medium.com</td>
+                <td className={td}>WEB 2.0</td>
+                <td className={td}>94</td>
+                <td className={td}>N5 Deal, fintech platform</td>
+                <td className={td}>
+                  <a
+                    href="https://medium.com/@smm_32132/build-vs-buy-vs-partner-the-decision-framework-every-fintech-ceo-gets-wrong-aa9ff172747d"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-primary text-xs break-all"
+                  >
+                    build-vs-buy-vs-partner…
+                  </a>
+                </td>
+              </tr>
+              <tr>
+                <td className={td}>20</td>
+                <td className={td}>medium.com</td>
+                <td className={td}>WEB 2.0</td>
+                <td className={td}>94</td>
+                <td className={td}>N5 Deal, fintech platform</td>
+                <td className={td}>
+                  <a
+                    href="https://medium.com/@smm_32132/the-first-time-fintech-acquirers-playbook-avoiding-the-5-most-expensive-mistakes-226bd25873b9"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-primary text-xs break-all"
+                  >
+                    the-first-time-fintech-acquirers-playbook…
+                  </a>
+                </td>
+              </tr>
 
               {/* ── Paid outreach — PRNews.io / Lucky Seven ─────────── */}
               <tr className="bg-primary/5">
-                <td className={td}>19</td>
+                <td className={td}>21</td>
                 <td className={td}>luckysevenprnewsio (PRNews.io)</td>
                 <td className={td}>
                   <strong>Paid</strong>
@@ -473,8 +528,8 @@ export default function JuneReportPage() {
         <p className="text-xs text-muted-foreground mb-4">
           Profile-беклінки (#1-7) — 7 профілів, планова квота закрита. Crowd-пости (#8-14) —
           Reddit-акаунт після 7 відповідей перманентно забанили; конкретні URL постів у LB task
-          board. Medium-публікації (#15-18) закрили WEB 2.0 напрямок 1 липня (не добрали 3 з планових
-          7 — <strong>тексти вже готові, залишилось опублікувати</strong>). Платне розміщення (#19) —
+          board. Medium-публікації (#15-20) закрили WEB 2.0 напрямок 1 липня (6 з планових 7 —
+          недобраний 1 переноситься на липень). Платне розміщення (#21) —
           перша закупка через PRNews.io / Lucky Seven.
         </p>
 
@@ -492,8 +547,8 @@ export default function JuneReportPage() {
               новий з warmup або переходити на Quora / niche forums
             </li>
             <li>
-              WEB 2.0 закрито 4 Medium-публікаціями (не 7 як планувалось) — недобрані 3 переносяться
-              на липень. <strong>Усі тексти вже готові — залишилось тільки опублікувати</strong>
+              WEB 2.0 закрито 6 Medium-публікаціями (з планових 7) — недобраний 1 переноситься
+              на липень. <strong>Тексти вже готові — залишилось опублікувати останній</strong>
             </li>
             <li>
               <strong>Перша платна закупка</strong> (PRNews.io / Lucky Seven) — новий тип каналу
@@ -668,9 +723,9 @@ export default function JuneReportPage() {
             <tbody>
               <tr>
                 <td className={td}>WEB 2.0 (carry-over)</td>
-                <td className={td}>Закрити недобрані 3 (з планових 7)</td>
+                <td className={td}>Закрити недобраний 1 (з планових 7)</td>
                 <td className={tdMuted}>
-                  4 закрилось Medium-ом 1 липня; 3 переносяться на липневу квоту
+                  6 закрилось Medium-ом 1 липня; 1 переноситься на липневу квоту
                 </td>
               </tr>
               <tr>
@@ -724,7 +779,7 @@ export default function JuneReportPage() {
             {
               title: 'Content Studio — 25+ статей за липень',
               items: [
-                'Опублікувати вже готові статті що ще не залиті: 3 недобрані WEB 2.0 + черга articles на майбутні розміщення (тексти на руках)',
+                'Опублікувати вже готові статті що ще не залиті: 1 недобраний WEB 2.0 + черга articles на майбутні розміщення (тексти на руках)',
                 'Продовження серії 2 (licensing / regulatory): MiCA deep-dive, EMI-vs-PI детальніше, capital requirements по юрисдикціях',
                 'Нова серія 3: case studies / anatomy of successful deals — реальні кейси фінтех M&A з відкритих джерел',
                 'Топікал: Q2 2026 fintech M&A trends (recap за квартал з даними)',
@@ -736,7 +791,7 @@ export default function JuneReportPage() {
             {
               title: 'Link Building — тактика',
               items: [
-                'W1: закрити 3 WEB 2.0 що перенеслись з червня — тексти вже готові, тільки публікація',
+                'W1: закрити 1 WEB 2.0 що перенісся з червня — текст вже готовий, тільки публікація',
                 'W1-2: crowd recovery — новий Reddit акаунт з warmup або перехід на Quora / niche forums (без bulk-постингу з одного акаунта)',
                 'W2-3: profile push — 10+ на нових DR-донорах (червень закрив планові 7, у липні розширюємо)',
                 'W3-4: paid outreach — 2-4 розміщення через PRNews.io (Lucky Seven продовжити + тест 1-2 інших сайтів з їхньої панелі)',
@@ -779,7 +834,7 @@ export default function JuneReportPage() {
               items: [
                 'Deploy на Hostinger — перший раз, ризик edge cases (env vars, permissions, Prisma runtime)',
                 'Crowd recovery — якщо новий Reddit акаунт теж забанять, треба Quora / niche forums як backup',
-                '25 статей у липні — pace той самий що в червні (36); тримати темп треба чітко',
+                '25 статей у липні — темп майже вдвічі вищий за червень (13 у блог); тримати треба чітко',
                 'PRNews.io — треба перевірити наявність outreach бюджету на 4 розміщення',
                 'Обсідіан vault sync — залежить від rsync через SSH; треба SSH-ключі готові для deploy user',
               ],
@@ -819,7 +874,7 @@ export default function JuneReportPage() {
                   <br />
                   1–7 лип
                 </td>
-                <td className={td}>Закрити 3 WEB 2.0 з червня (недобір). Почати crowd recovery (setup нового акаунта)</td>
+                <td className={td}>Закрити 1 WEB 2.0 з червня (недобір). Почати crowd recovery (setup нового акаунта)</td>
                 <td className={td}>6–7 статей: продовження серії 2 (MiCA / EMI / PSP)</td>
                 <td className={td}>Provision Hostinger VPS + setup-vm.sh</td>
               </tr>
@@ -873,7 +928,7 @@ export default function JuneReportPage() {
             <li className="flex items-start gap-2">
               <span className="text-primary font-bold">✓</span>
               <span>
-                <strong>30+ беклінків розміщено</strong> (3 WEB 2.0 carry-over + 10+ profiles + 10+
+                <strong>30+ беклінків розміщено</strong> (1 WEB 2.0 carry-over + 10+ profiles + 10+
                 crowd + 2-4 paid + 1-2 guest)
               </span>
             </li>

@@ -30,12 +30,16 @@ export default async function AppLayout({
         id: currentProject.id,
         name: currentProject.name,
         companyName: currentProject.companyName,
+        brandBadge: (currentProject as any).brandBadge ?? null,
+        brandColor: (currentProject as any).brandColor ?? null,
       }}
       projects={projects.map((p: any) => ({
         id: p.id,
         name: p.name,
         companyName: p.companyName,
         memberRole: p.memberRole,
+        brandBadge: p.brandBadge ?? null,
+        brandColor: p.brandColor ?? null,
       }))}
     >
       {children}
