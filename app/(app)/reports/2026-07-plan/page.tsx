@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ArrowLeft, Target } from 'lucide-react'
 import { SeedButton } from './seed-button'
+import { ReportExportButton } from '@/components/app/report-export-button'
 
 export const dynamic = 'force-dynamic'
 export const metadata = {
@@ -27,14 +28,18 @@ const tdCenter = 'px-3 py-2 text-sm border border-gray-300 align-top text-center
 export default function JulyPlanPage() {
   return (
     <div className="max-w-[1100px] mx-auto pb-24">
-      <Link
-        href="/reports"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Всі звіти
-      </Link>
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <Link
+          href="/reports"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Всі звіти
+        </Link>
+        <ReportExportButton title="N5Deal — План на липень 2026" targetId="report-export-root" />
+      </div>
 
+      <div id="report-export-root">
       {/* ── Заголовок + огляд ────────────────────────────────────────────── */}
       <section className="mb-10">
         <h1 className="text-3xl font-bold mb-2">N5Deal — План на липень 2026</h1>
@@ -575,6 +580,7 @@ export default function JulyPlanPage() {
           .
         </p>
       </section>
+      </div>
     </div>
   )
 }

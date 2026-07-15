@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { ArrowLeft, Star } from 'lucide-react'
+import { ReportExportButton } from '@/components/app/report-export-button'
 
 export const dynamic = 'force-dynamic'
 export const metadata = {
@@ -22,14 +23,18 @@ const tdMuted = 'px-3 py-2 text-sm border border-gray-300 align-top text-muted-f
 export default function JuneReportPage() {
   return (
     <div className="max-w-[1100px] mx-auto pb-24">
-      <Link
-        href="/reports"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Всі звіти
-      </Link>
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <Link
+          href="/reports"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Всі звіти
+        </Link>
+        <ReportExportButton title="N5Deal — Звіт за червень 2026" targetId="report-export-root" />
+      </div>
 
+      <div id="report-export-root">
       {/* ── Огляд ─────────────────────────────────────────────────────────── */}
       <section className="mb-10">
         <h1 className="text-3xl font-bold mb-2">N5Deal — Звіт за червень 2026</h1>
@@ -979,6 +984,7 @@ export default function JuneReportPage() {
           дашборда.
         </p>
       </section>
+      </div>
     </div>
   )
 }
