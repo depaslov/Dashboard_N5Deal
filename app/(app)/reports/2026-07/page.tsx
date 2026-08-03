@@ -46,14 +46,14 @@ export default function JulyReportPage() {
             <div className="flex items-start gap-3">
               <Star className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
               <div className="text-sm leading-relaxed">
-                <strong>Головне за місяць:</strong> опубліковано 8 нових статей у блог (buyer-focused
-                M&amp;A / fintech licensing) + 4 матеріали на Medium (WEB 2.0). Різкий ріст SEO-профілю:{' '}
-                <strong>Domain Rating 6 → 11</strong> (+5), беклінків <strong>+201</strong> (607 усього),
-                реферальних доменів <strong>+179</strong> (455 усього). Органічний трафік{' '}
-                <strong>+28</strong> (65, value $51), органічних ключів <strong>+5</strong> (8).
-                Уперше з&apos;явились <strong>AI-згадки</strong>: Google AI Mode (2) і Perplexity (1).
-                Органічні кліки в GA4 <strong>81 → 184</strong> (+127%), покази{' '}
-                <strong>15k → 51,6k</strong>.
+                <strong>Головне за місяць:</strong> опубліковано <strong>8 статей у блог</strong>{' '}
+                (buyer-focused M&amp;A / fintech licensing) + <strong>4 матеріали на Medium</strong> (WEB 2.0).
+                Різкий ріст лінк-профілю: <strong>Domain Rating 6 → 11</strong> (+5), беклінків{' '}
+                <strong>+201</strong> (607 усього), реферальних доменів <strong>+179</strong> (455 усього).
+                Уперше <strong>з&apos;явилась органіка</strong>: 65 візитів (Ahrefs), 8 органічних ключів,
+                value $51 — <em>минулого місяця органічного трафіку не було, тож це перша поява, а не
+                «ріст» (ймовірно баг Ahrefs у попередніх даних)</em>. У GA4 за місяць 184 кліки /
+                51 648 показів. Уперше <strong>AI-згадки</strong>: Google AI Mode (2) і Perplexity (1).
               </div>
             </div>
           </div>
@@ -79,29 +79,31 @@ export default function JulyReportPage() {
                   ['Domain Rating (DR)', '6', '11', '+5'],
                   ['Беклінки', '406', '607', '+201'],
                   ['Реферальні домени', '276', '455', '+179'],
-                  ['Органічні ключі', '3', '8', '+5'],
-                  ['Органічний трафік (Ahrefs, міс.)', '37', '65', '+28'],
-                  ['Traffic value', '$41', '$51', '+10'],
-                  ['Органічні кліки (GA4)', '81', '184', '+103'],
-                  ['Покази (GA4)', '14 995', '51 648', '+36 653'],
+                  ['Органічні ключі', '—', '8', 'вперше'],
+                  ['Органічний трафік (Ahrefs)', '—', '65', 'вперше'],
+                  ['Traffic value', '—', '$51', 'вперше'],
                   ['AI-згадки (AI Mode + Perplexity)', '0', '3', '+3'],
-                ].map(([k, jun, jul, d]) => (
-                  <tr key={k}>
-                    <td className={td}>{k}</td>
-                    <td className={tdMuted}>{jun}</td>
-                    <td className={td}><strong>{jul}</strong></td>
-                    <td className={td}>
-                      <span className={d.startsWith('+') ? up : ''}>{d}</span>
-                    </td>
-                  </tr>
-                ))}
+                ].map(([k, jun, jul, d]) => {
+                  const pos = d.startsWith('+') || d === 'вперше'
+                  return (
+                    <tr key={k}>
+                      <td className={td}>{k}</td>
+                      <td className={tdMuted}>{jun}</td>
+                      <td className={td}><strong>{jul}</strong></td>
+                      <td className={td}>
+                        <span className={pos ? up : ''}>{d}</span>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            «Червень» для SEO-метрик = поточне значення мінус місячний приріст Ahrefs. Контентні
-            показники — фактичні за звітами. GA4 і Ahrefs вимірюють різні речі (кліки Search Console
-            vs оцінка органічних візитів), тому наведені окремо.
+            Органічний трафік і ключі позначені «вперше»: минулого місяця органіки не було зовсім —
+            вона з&apos;явилась лише цього місяця. Місячні «дельти» Ahrefs для органіки не показані як
+            «ріст», бо базового періоду фактично не існує (ймовірно баг Ahrefs у попередніх даних).
+            DR / беклінки / реф. домени — реальний результат лінкбілдингу.
           </p>
         </section>
 
@@ -129,8 +131,8 @@ export default function JulyReportPage() {
                   ['Ahrefs Rank (AR)', '15 533 503', '▲ 10 490 821', 'Глобальна позиція домену'],
                   ['Беклінки', '607', '+201', 'All-time: 702'],
                   ['Реферальні домени', '455', '+179', 'All-time: 464'],
-                  ['Органічні ключі', '8', '+5', 'Top-3: 0 (ще попереду)'],
-                  ['Органічний трафік', '65', '+28', 'Traffic value $51 (+10)'],
+                  ['Органічні ключі', '8', 'вперше', 'Top-3: 0 (ще попереду)'],
+                  ['Органічний трафік', '65', 'вперше', 'Traffic value $51; минулого місяця органіки не було'],
                   ['Платний трафік / ключі / Ads', '0', '—', 'Платний канал не використовувався'],
                 ].map(([m, v, d, c]) => (
                   <tr key={m}>
@@ -176,8 +178,9 @@ export default function JulyReportPage() {
             </table>
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            ОАЕ — домінантний ринок (56.9%), що збігається з фокусом контенту на Gulf / MENA
-            (ADGM, DIFC, VARA, Bitcoin MENA). росія тягне 5 ключів при малому трафіку.
+            Ця органіка з&apos;явилась уперше цього місяця (минулого — нуль). ОАЕ — домінантний ринок
+            (56.9%), що збігається з фокусом контенту на Gulf / MENA (ADGM, DIFC, VARA, Bitcoin MENA).
+            росія тягне 5 ключів при малому трафіку.
           </p>
         </section>
 
@@ -225,9 +228,10 @@ export default function JulyReportPage() {
         <section className="mb-10">
           <h2 className="text-xl font-bold mb-3">Органічний трафік — Google Search (GA4)</h2>
           <p className="text-sm text-muted-foreground mb-4">
-            Дані за липень 2026 (Organic Google Search). Сильний ріст проти червня: кліки{' '}
-            <strong>81 → 184</strong> (+127%), покази <strong>14 995 → 51 648</strong> (×3.4). Середня
-            позиція 20.18 (є куди рости — багато сторінок на 2–3 сторінці видачі).
+            Дані за липень 2026 (Organic Google Search): <strong>184 кліки</strong>,{' '}
+            <strong>51 648 показів</strong>, CTR 0.36%, середня позиція 20.18 (є куди рости — багато
+            сторінок на 2–3 сторінці видачі). Це фактично перший місяць з органічними даними, тож
+            коректного порівняння з попереднім періодом немає.
           </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
@@ -296,82 +300,29 @@ export default function JulyReportPage() {
           </p>
         </section>
 
-        {/* ── Написані сторінки ─────────────────────────────────────────────── */}
+        {/* ── Обсяг публікацій + лінкбілдинг ─────────────────────────────────── */}
         <section className="mb-10">
-          <h2 className="text-xl font-bold mb-3">Написані сторінки (Content Studio)</h2>
+          <h2 className="text-xl font-bold mb-3">Обсяг публікацій</h2>
           <p className="text-sm text-muted-foreground mb-4">
-            8 статей за місяць для блогу — фокус змістився на <strong>buyer-side M&amp;A</strong>
-            (як купувати ліцензований фінтех, як не переплатити, які питання ставити) + порівняння
-            юрисдикцій (Austria FMA, Liechtenstein, Switzerland FINMA, EU vs UK). Окремо — 4 тексти на
-            WEB 2.0 / Medium (нижче).
+            Фокус контенту — buyer-side M&amp;A (як купувати ліцензований фінтех, оцінка активів,
+            due diligence) та порівняння юрисдикцій. Конкретні теми — у Content Studio / контент-плані.
           </p>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr>
-                  <th className={th}>#</th>
-                  <th className={th}>Тема статті</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  ['1', 'The Distressed Seller\'s Dilemma: Sell Fast or Sell Right?'],
-                  ['2', 'The 7 Questions Every Buyer Should Ask Before Acquiring a Licensed Fintech'],
-                  ['3', 'The First-Time Fintech Acquirer\'s Playbook: Avoiding the 5 Most Expensive Mistakes'],
-                  ['4', 'EU vs UK License After Brexit: Which One Should a Buyer Acquire First'],
-                  ['5', 'Why Austria\'s FMA License Is the Quiet Alternative to Germany'],
-                  ['6', 'Why Liechtenstein\'s Blockchain Act Still Matters in 2026'],
-                  ['7', 'The Buyer\'s Guide to Spotting an Overpriced Fintech Asset'],
-                  ['8', 'Switzerland\'s Fintech License: Why a Swiss FINMA Asset Commands a Premium'],
-                ].map(([n, title]) => (
-                  <tr key={n}>
-                    <td className={td}>{n}</td>
-                    <td className={td}>{title}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              ['8', 'статей у блог'],
+              ['4', 'публікації WEB 2.0 (Medium)'],
+              ['—', 'Profiles (посилання буде додано)'],
+              ['—', 'ще WEB 2.0 (посилання буде додано)'],
+            ].map(([val, label]) => (
+              <div key={label} className="border rounded-md p-4">
+                <div className="text-3xl font-bold">{val}</div>
+                <div className="text-xs text-muted-foreground mt-1">{label}</div>
+              </div>
+            ))}
           </div>
-        </section>
-
-        {/* ── WEB 2.0 / Medium ──────────────────────────────────────────────── */}
-        <section className="mb-10">
-          <h2 className="text-xl font-bold mb-3">WEB 2.0 — Medium</h2>
-          <p className="text-sm text-muted-foreground mb-4">
-            4 публікації на Medium (DR 94) як частина лінкбілдинг-міксу.
-          </p>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr>
-                  <th className={th}>#</th>
-                  <th className={th}>Тема</th>
-                  <th className={th}>Посилання</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  ['1', 'The Netherlands as EU Fintech Hub: Why a DNB License Is Worth More in M&A', 'https://medium.com/@smm_32132/the-netherlands-as-eu-fintech-hub-why-a-dnb-license-is-worth-more-in-m-a-8b5d4178150d'],
-                  ['2', 'Build vs Buy vs Partner: The Decision Framework Every Fintech CEO Gets Wrong', 'https://medium.com/@smm_32132/build-vs-buy-vs-partner-the-decision-framework-every-fintech-ceo-gets-wrong-aa9ff172747d'],
-                  ['3', 'The Anatomy of a Failed Fintech Deal: 5 Real Reasons Transactions Collapse', 'https://medium.com/@smm_32132/the-anatomy-of-a-failed-fintech-deal-5-real-reasons-transactions-collapse-63b27e071b90'],
-                  ['4', 'AI-Powered KYC: How Automation Is Changing the Value of Compliance-Heavy Fintechs', 'https://medium.com/@smm_32132/ai-powered-kyc-how-automation-is-changing-the-value-of-compliance-heavy-fintechs-cb3c0d0315e0'],
-                ].map(([n, title, url]) => (
-                  <tr key={n}>
-                    <td className={td}>{n}</td>
-                    <td className={td}>{title}</td>
-                    <td className={td}>
-                      <a href={url} target="_blank" rel="noopener noreferrer" className="underline hover:text-primary text-xs break-all">
-                        {url.replace('https://medium.com/@smm_32132/', '').slice(0, 42)}…
-                      </a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            Примітка: ці 4 Medium-матеріали перетинаються зі списком за червень — уточнити, чи це нові
-            публікації липня, чи ті самі (для коректного підрахунку WEB 2.0 за місяць).
+          <p className="text-xs text-muted-foreground mt-3">
+            Посилання на <strong>Profiles</strong> і <strong>WEB 2.0</strong> будуть додані згодом —
+            щойно надішлеш, впишу їх у таблицю з донорами / DR (як у червневому звіті).
           </p>
         </section>
       </div>
