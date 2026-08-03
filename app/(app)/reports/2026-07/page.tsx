@@ -368,10 +368,6 @@ export default function JulyReportPage() {
               </div>
             ))}
           </div>
-          <p className="text-xs text-muted-foreground mt-3">
-            Посилання на <strong>Profiles</strong> і <strong>WEB 2.0</strong> будуть додані згодом —
-            щойно надішлеш, впишу їх у таблицю з донорами / DR (як у червневому звіті).
-          </p>
         </section>
       </div>
     </div>
