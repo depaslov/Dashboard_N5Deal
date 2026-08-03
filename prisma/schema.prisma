@@ -105,8 +105,33 @@ model Project {
   companyInfoSections CompanyInfoSection[]
   contentFolders    ContentFolder[]
   correctionMemos   CorrectionMemo[]
+  operationalReports OperationalReport[]
 
   @@index([ownerId])
+}
+
+// =============================================================================
+// Operational monthly reports (the /reports module). Editable rich documents
+// stored as HTML — replaces the previously hardcoded per-month .tsx pages so
+// they can be created and edited from the dashboard UI.
+// =============================================================================
+model OperationalReport {
+  id          String   @id @default(cuid())
+  projectId   String
+  slug        String   // URL segment, e.g. "2026-07"
+  title       String
+  periodLabel String   // "Липень 2026"
+  subtitle    String?  @db.Text // shown on the reports index card
+  kind        String   @default("recap") // "recap" | "plan"
+  bodyHtml    String   @db.Text
+  sortKey     String   @default("") // ordering, e.g. "2026-07" (desc)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, slug])
+  @@index([projectId, sortKey])
 }
 
 // =============================================================================

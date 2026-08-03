@@ -6,6 +6,11 @@ const config: Config = {
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
     './app/**/*.{js,ts,jsx,tsx,mdx}',
+    // Migrated operational reports are stored as HTML (rendered via
+    // dangerouslySetInnerHTML), so scan their utility classes here — otherwise
+    // Tailwind purges classes that appear only inside the report bodies
+    // (amber/red action callouts, table colours, grids, etc.).
+    './scripts/report-seeds/**/*.html',
   ],
   theme: {
     extend: {

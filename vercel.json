@@ -1,4 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "prisma generate && prisma db push --skip-generate && next build && (npx tsx scripts/seed-bankstore.ts || echo '[build] bankstore seed skipped — non-fatal')"
+  "buildCommand": "prisma generate && prisma db push --skip-generate && next build && (npx tsx scripts/seed-bankstore.ts || echo '[build] bankstore seed skipped — non-fatal') && (npx tsx scripts/seed-reports.ts || echo '[build] reports seed skipped — non-fatal')"
 }
