@@ -20,6 +20,15 @@ const MONTHLY_REPORTS: Array<{
   kind: 'plan' | 'recap'
 }> = [
   {
+    slug: '2026-07',
+    title: 'N5Deal — Звіт за липень 2026',
+    subtitle:
+      '8 статей у блог (buyer-side M&A / licensing) + 4 Medium. SEO-стрибок: DR 6→11, +201 беклінк, +179 реф. доменів, органіка 65 (+28). Перші AI-згадки (AI Mode 2, Perplexity 1). GA4: кліки 81→184.',
+    period: 'Липень 2026',
+    href: '/reports/2026-07',
+    kind: 'recap',
+  },
+  {
     slug: '2026-07-plan',
     title: 'N5Deal — План на липень 2026',
     subtitle:
