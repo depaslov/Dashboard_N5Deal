@@ -9,7 +9,7 @@ export const metadata = {
 
 // ────────────────────────────────────────────────────────────────────────────
 // N5Deal — місячний операційний звіт (ретроспектива) за липень 2026.
-// Джерела даних: список опублікованих матеріалів (8 статей блогу + 4 Medium),
+// Джерела даних: список опублікованих матеріалів (10 статей блогу + 8 WEB 2.0 + 8 Profiles),
 // Ahrefs overview (backlinks / DR / organic / AI responses), Ahrefs traffic by
 // location, GA4 (Organic Google Search, landing page + query string).
 // Стиль дзеркалить червневий звіт (reports/2026-06).
@@ -46,8 +46,9 @@ export default function JulyReportPage() {
             <div className="flex items-start gap-3">
               <Star className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
               <div className="text-sm leading-relaxed">
-                <strong>Головне за місяць:</strong> опубліковано <strong>8 статей у блог</strong>{' '}
-                (buyer-focused M&amp;A / fintech licensing) + <strong>4 матеріали на Medium</strong> (WEB 2.0).
+                <strong>Головне за місяць:</strong> опубліковано <strong>10 статей у блог</strong>{' '}
+                (buyer-focused M&amp;A / fintech licensing) + <strong>8 WEB 2.0</strong> і{' '}
+                <strong>8 Profiles</strong> (лінкбілдинг).
                 Різкий ріст лінк-профілю: <strong>Domain Rating 6 → 11</strong> (+5), беклінків{' '}
                 <strong>+201</strong> (607 усього), реферальних доменів <strong>+179</strong> (455 усього).
                 Уперше <strong>з&apos;явилась органіка</strong>: 65 візитів (Ahrefs), 8 органічних ключів,
@@ -74,8 +75,9 @@ export default function JulyReportPage() {
               </thead>
               <tbody>
                 {[
-                  ['Статті в блог', '13', '8', '−5'],
-                  ['Medium (WEB 2.0)', '6', '4', '−2'],
+                  ['Статті в блог', '13', '10', '−3'],
+                  ['WEB 2.0 (Medium)', '6', '8', '+2'],
+                  ['Profiles (лінкбілдинг)', '7', '8', '+1'],
                   ['Domain Rating (DR)', '6', '11', '+5'],
                   ['Беклінки', '406', '607', '+201'],
                   ['Реферальні домени', '276', '455', '+179'],
@@ -307,12 +309,11 @@ export default function JulyReportPage() {
             Фокус контенту — buyer-side M&amp;A (як купувати ліцензований фінтех, оцінка активів,
             due diligence) та порівняння юрисдикцій. Конкретні теми — у Content Studio / контент-плані.
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             {[
-              ['8', 'статей у блог'],
-              ['4', 'публікації WEB 2.0 (Medium)'],
-              ['—', 'Profiles (посилання буде додано)'],
-              ['—', 'ще WEB 2.0 (посилання буде додано)'],
+              ['10', 'статей у блог'],
+              ['8', 'публікації WEB 2.0'],
+              ['8', 'Profiles'],
             ].map(([val, label]) => (
               <div key={label} className="border rounded-md p-4">
                 <div className="text-3xl font-bold">{val}</div>
