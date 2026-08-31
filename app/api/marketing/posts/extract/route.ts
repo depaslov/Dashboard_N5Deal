@@ -40,10 +40,12 @@ function sanitizeHtml(raw: string): string {
 async function pdfToText(dataUrl: string): Promise<string> {
   const base64 = dataUrl.replace(/^data:application\/pdf;base64,/, '')
   const buf = Buffer.from(base64, 'base64')
-  const mod: any = await import('pdf-parse')
-  const pdfParse = mod.default ?? mod
-  const result = await pdfParse(buf)
-  return String(result?.text ?? '').trim()
+  // unpdf = serverless-safe pdf.js build (same as lib/document-processor.ts).
+  // pdf-parse's pdf.js needs the browser-only DOMMatrix and throws in Node.
+  const { extractText, getDocumentProxy } = await import('unpdf')
+  const pdf = await getDocumentProxy(new Uint8Array(buf))
+  const { text } = await extractText(pdf, { mergePages: true })
+  return String(text ?? '').trim()
 }
 
 const SYSTEM_PROMPT = `You extract a structured social-media content calendar from an operator-authored plan (HTML / markdown / text / PDF). Output a JSON array of posts in the EXACT shape the dashboard's bulk-import endpoint accepts. Output ONLY valid JSON, no commentary.`
@@ -143,7 +145,7 @@ export async function POST(req: Request) {
   try {
     if (parsed.data.kind === 'pdf') {
       sourceText = await pdfToText(parsed.data.dataUrl)
-      sourceLabel = 'PDF (text extracted via pdf-parse)'
+      sourceLabel = 'PDF (text extracted via unpdf)'
       if (!sourceText || sourceText.length < 20) {
         return NextResponse.json({ error: 'Could not extract text from PDF.' }, { status: 400 })
       }

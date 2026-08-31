@@ -101,12 +101,13 @@ function sanitizeHtml(raw: string): string {
 async function pdfToText(dataUrl: string): Promise<string> {
   const base64 = dataUrl.replace(/^data:application\/pdf;base64,/, '')
   const buf = Buffer.from(base64, 'base64')
-  // pdf-parse v2 is shipped as ESM; dynamic import keeps this route compatible
-  // with the rest of the codebase which is CommonJS-style.
-  const mod: any = await import('pdf-parse')
-  const pdfParse = mod.default ?? mod
-  const result = await pdfParse(buf)
-  return String(result?.text ?? '').trim()
+  // unpdf ships a serverless-safe pdf.js build (same extractor as
+  // lib/document-processor.ts). pdf-parse's bundled pdf.js needs the
+  // browser-only DOMMatrix global and throws "DOMMatrix is not defined" in Node.
+  const { extractText, getDocumentProxy } = await import('unpdf')
+  const pdf = await getDocumentProxy(new Uint8Array(buf))
+  const { text } = await extractText(pdf, { mergePages: true })
+  return String(text ?? '').trim()
 }
 
 export async function POST(req: Request) {
@@ -137,7 +138,7 @@ export async function POST(req: Request) {
   try {
     if (parsed.data.kind === 'pdf') {
       sourceText = await pdfToText(parsed.data.dataUrl)
-      sourceLabel = 'PDF text extracted via pdf-parse'
+      sourceLabel = 'PDF text extracted via unpdf'
       if (!sourceText || sourceText.length < 20) {
         return NextResponse.json({ error: 'Could not extract text from PDF.' }, { status: 400 })
       }

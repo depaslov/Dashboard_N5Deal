@@ -40,10 +40,14 @@ function sanitizeHtml(raw: string): string {
 async function pdfToText(dataUrl: string): Promise<string> {
   const base64 = dataUrl.replace(/^data:application\/pdf;base64,/, '')
   const buf = Buffer.from(base64, 'base64')
-  const mod: any = await import('pdf-parse')
-  const pdfParse = mod.default ?? mod
-  const result = await pdfParse(buf)
-  return String(result?.text ?? '').trim()
+  // Use unpdf (serverless-safe pdf.js build) — the same extractor as
+  // lib/document-processor.ts. pdf-parse bundles a pdf.js that relies on the
+  // browser-only DOMMatrix global and throws "DOMMatrix is not defined" in the
+  // Node server runtime.
+  const { extractText, getDocumentProxy } = await import('unpdf')
+  const pdf = await getDocumentProxy(new Uint8Array(buf))
+  const { text } = await extractText(pdf, { mergePages: true })
+  return String(text ?? '').trim()
 }
 
 const SYSTEM_PROMPT = `You are a structured-data extractor for an N5Deal marketing strategy module. The user pastes a strategy document (HTML / markdown / text). You compare it against the CURRENT strategy JSON the dashboard already has stored and return ONLY the pieces that are MISSING from the current strategy. Never propose anything that already exists at the same key. Output strict valid JSON with no commentary.`
@@ -130,7 +134,7 @@ export async function POST(req: Request) {
   try {
     if (parsed.data.kind === 'pdf') {
       sourceText = await pdfToText(parsed.data.dataUrl)
-      sourceLabel = 'PDF (text extracted via pdf-parse)'
+      sourceLabel = 'PDF (text extracted via unpdf)'
       if (!sourceText || sourceText.length < 20) {
         return NextResponse.json({ error: 'Could not extract text from PDF.' }, { status: 400 })
       }
