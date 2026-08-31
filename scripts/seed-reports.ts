@@ -20,6 +20,15 @@ const REPORTS: Array<{
   sortKey: string
 }> = [
   {
+    slug: '2026-08-social',
+    title: 'N5Deal — Social Performance, August 2026',
+    periodLabel: 'Серпень 2026',
+    subtitle:
+      'Соціальні мережі, серпень (baseline). Рекорд охоплення — 291 369 показів, але 95% дали профілі фаундерів, а 81% — три пости. Профіль із найменшим охопленням найкраще конвертує. Founder-cards, top-контент, X vs Instagram, висновки й рішення на вересень.',
+    kind: 'recap',
+    sortKey: '2026-08-1',
+  },
+  {
     slug: '2026-09-plan',
     title: 'N5Deal — September 2026 Content and Task Plan',
     periodLabel: 'Вересень 2026 (план)',

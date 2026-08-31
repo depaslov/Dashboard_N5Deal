@@ -1,0 +1,529 @@
+<section class="mb-6">
+  <iframe title="N5Deal — Social Performance, August 2026" style="width:100%;border:0;min-height:2600px;background:#FDFDFD" onload="var f=this;function r(){try{var d=f.contentWindow.document;f.style.height=(Math.max(d.documentElement.scrollHeight,d.body.scrollHeight)+30)+'px'}catch(e){}}r();setTimeout(r,300);setTimeout(r,1200);setTimeout(r,2800);" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;title&gt;N5Deal — Social Performance, August 2026&lt;/title&gt;
+&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;
+&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+&lt;link href=&quot;https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+&lt;style&gt;
+:root{
+  --ink:#002146; --blue:#3177FF; --paper:#FDFDFD; --tint:#E9F3FF;
+  --error:#FF2D46; --success:#008932;
+  --ink-70:rgba(0,33,70,.70); --ink-52:rgba(0,33,70,.52); --ink-38:rgba(0,33,70,.38);
+  --rule:rgba(0,33,70,.13); --rule-soft:rgba(0,33,70,.07);
+  --blue-12:rgba(49,119,255,.12); --blue-20:rgba(49,119,255,.20);
+  --max:1180px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,Roboto,Helvetica,Arial,sans-serif;
+  font-size:15px; line-height:1.55; font-feature-settings:&quot;tnum&quot; 0;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 32px}
+@media(max-width:640px){.wrap{padding:0 18px}}
+
+/* ---------- type ---------- */
+.kicker{
+  font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--blue);
+}
+.kicker.muted{color:var(--ink-38)}
+h1{font-size:clamp(30px,4.6vw,48px);line-height:1.06;letter-spacing:-.022em;font-weight:600;margin:14px 0 0}
+h2{font-size:clamp(21px,2.6vw,27px);line-height:1.15;letter-spacing:-.018em;font-weight:600;margin:0}
+h3{font-size:16px;letter-spacing:-.006em;font-weight:600;margin:0}
+.serif{font-family:Newsreader,Georgia,&quot;Times New Roman&quot;,serif;font-weight:400}
+.lede{font-family:Newsreader,Georgia,serif;font-size:clamp(17px,2vw,21px);line-height:1.5;color:var(--ink-70);max-width:64ch;margin:18px 0 0}
+.small{font-size:13px;line-height:1.5;color:var(--ink-52)}
+.tiny{font-size:11.5px;line-height:1.45;color:var(--ink-38)}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:&quot;tnum&quot; 1}
+
+/* ---------- header ---------- */
+header{border-bottom:1px solid var(--ink);padding:52px 0 26px;margin-bottom:0}
+.hmeta{display:flex;flex-wrap:wrap;gap:10px 26px;align-items:baseline;margin-top:26px}
+.hmeta span{font-size:12px;color:var(--ink-52);letter-spacing:.01em}
+.hmeta b{font-weight:600;color:var(--ink)}
+
+/* ---------- section ---------- */
+section{padding:54px 0;border-bottom:1px solid var(--rule)}
+.sechead{display:flex;align-items:baseline;gap:16px;margin-bottom:8px}
+.secnum{font-family:Newsreader,serif;font-size:13px;color:var(--blue);letter-spacing:.06em;padding-top:4px}
+.secsub{color:var(--ink-52);font-size:14px;max-width:70ch;margin:10px 0 30px}
+
+/* ---------- stat tiles ---------- */
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--rule);border:1px solid var(--rule)}
+@media(max-width:900px){.tiles{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:460px){.tiles{grid-template-columns:1fr}}
+.tile{background:var(--paper);padding:22px 20px 20px}
+.tile .lab{font-size:10.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-38)}
+.tile .val{font-size:34px;line-height:1.05;letter-spacing:-.03em;font-weight:600;margin-top:12px}
+.tile .val em{font-style:normal;font-size:16px;font-weight:500;color:var(--ink-52);letter-spacing:0;margin-left:3px}
+.tile .note{font-size:12.5px;color:var(--ink-52);margin-top:9px;line-height:1.45}
+
+/* ---------- chart ---------- */
+.chart{margin-top:8px}
+.row{display:grid;grid-template-columns:150px 1fr auto;gap:14px;align-items:center;padding:7px 0}
+@media(max-width:560px){.row{grid-template-columns:110px 1fr auto;gap:9px}}
+.row .nm{font-size:13px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .nm i{font-style:normal;display:block;font-size:11px;color:var(--ink-38);font-weight:400}
+.track{height:20px;background:var(--rule-soft);position:relative;border-radius:2px}
+.bar{height:20px;background:var(--blue);border-radius:0 4px 4px 0;transition:background .15s;position:relative}
+.bar.paid{background:var(--blue-20);box-shadow:inset 0 0 0 1px var(--blue-20)}
+.row:hover .bar{background:var(--ink)}
+.row:hover .bar.paid{background:var(--blue-12)}
+.row .v{font-size:13px;font-weight:600;text-align:right;min-width:74px}
+.legend{display:flex;gap:20px;margin-top:16px;font-size:12px;color:var(--ink-52);align-items:center}
+.swatch{width:11px;height:11px;display:inline-block;margin-right:7px;vertical-align:-1px;border-radius:2px}
+
+/* concentration bar */
+.conc{display:flex;gap:2px;margin-top:18px;height:38px}
+.conc div{display:flex;align-items:center;padding:0 12px;font-size:12px;font-weight:600;color:#fff;border-radius:2px;white-space:nowrap;overflow:hidden}
+.conc .a{background:var(--ink)}
+.conc .b{background:var(--tint);color:var(--ink-70)}
+
+/* ---------- cards ---------- */
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:6px}
+@media(max-width:900px){.cards{grid-template-columns:1fr}}
+.card{border:1px solid var(--rule);border-top:2px solid var(--ink);padding:22px 20px;background:var(--paper)}
+.card.accent{border-top-color:var(--blue)}
+.card .who{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:2px}
+.badge{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:3px 7px;border-radius:3px;background:var(--tint);color:var(--blue);white-space:nowrap}
+.badge.grey{background:var(--rule-soft);color:var(--ink-52)}
+.card .role{font-size:12px;color:var(--ink-38);margin-bottom:16px}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--rule-soft);font-size:13px}
+.kv:last-of-type{border-bottom:0}
+.kv span{color:var(--ink-52)}
+.kv b{font-weight:600;white-space:nowrap}
+.up{color:var(--success)}.down{color:var(--error)}
+.card .verdict{margin-top:16px;padding-top:14px;border-top:1px solid var(--rule);font-size:12.5px;line-height:1.5;color:var(--ink-70)}
+.card .verdict b{color:var(--ink)}
+
+/* ---------- table ---------- */
+.tablewrap{overflow-x:auto;margin-top:6px;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;min-width:720px;font-size:13.5px}
+th{text-align:left;font-size:10.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-38);padding:0 14px 10px 0;border-bottom:1px solid var(--ink);white-space:nowrap}
+td{padding:14px 14px 14px 0;border-bottom:1px solid var(--rule-soft);vertical-align:top}
+th:last-child,td:last-child{padding-right:0}
+td.n{font-weight:600;white-space:nowrap;text-align:right}
+th.n{text-align:right;padding-right:0}
+tr:hover td{background:rgba(233,243,255,.45)}
+.mine{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--blue);margin-right:7px;vertical-align:1px}
+
+/* ---------- findings ---------- */
+.finds{counter-reset:f}
+.find{display:grid;grid-template-columns:44px 1fr;gap:18px;padding:22px 0;border-bottom:1px solid var(--rule-soft)}
+.find:last-child{border-bottom:0}
+.find::before{
+  counter-increment:f;content:counter(f,decimal-leading-zero);
+  font-family:Newsreader,serif;font-size:22px;color:var(--blue);line-height:1.1;
+}
+.find h3{margin-bottom:6px}
+.find p{margin:0;color:var(--ink-70);font-size:14px;max-width:74ch}
+.find p + p{margin-top:8px}
+
+/* ---------- decisions ---------- */
+.dec{border:1px solid var(--rule);background:var(--tint);padding:26px 24px;margin-top:6px}
+.dec ol{margin:0;padding-left:20px}
+.dec li{margin-bottom:14px;font-size:14px;line-height:1.55}
+.dec li:last-child{margin-bottom:0}
+.dec li b{font-weight:600}
+.owner{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);margin-left:6px}
+
+/* ---------- ops note ---------- */
+.ops{border-left:2px solid var(--blue);padding:2px 0 2px 14px;margin:18px 0;font-size:13px;color:var(--ink-70);background:transparent}
+.ops b{font-weight:600;color:var(--ink);letter-spacing:.02em}
+
+/* ---------- dormant ---------- */
+.dormant{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.pill{font-size:12px;padding:6px 12px;border:1px solid var(--rule);border-radius:100px;color:var(--ink-52)}
+
+footer{padding:40px 0 60px;display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;align-items:baseline}
+footer a{color:var(--blue);text-decoration:none;font-weight:500}
+@media print{
+  body{font-size:12px}
+  section{page-break-inside:avoid;padding:28px 0}
+  .card,.find,.dec{page-break-inside:avoid}
+}
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+
+&lt;div class=&quot;wrap&quot;&gt;
+
+  &lt;header&gt;
+    &lt;div class=&quot;kicker&quot;&gt;N5Deal · Monthly social performance&lt;/div&gt;
+    &lt;h1&gt;August 2026&lt;/h1&gt;
+    &lt;p class=&quot;lede&quot;&gt;Reach was the highest on record and almost none of it belonged to the company. Three founder profiles produced 95% of LinkedIn impressions, and three individual posts produced 81% of that. The profile with the least reach converted followers best. This is the baseline month — figures are recorded here so September has something to be measured against.&lt;/p&gt;
+    &lt;div class=&quot;hmeta&quot;&gt;
+      &lt;span&gt;Prepared by &lt;b&gt;Alina&lt;/b&gt;, Marketing Manager&lt;/span&gt;
+      &lt;span&gt;Compiled &lt;b&gt;31 August 2026&lt;/b&gt;&lt;/span&gt;
+      &lt;span&gt;Accounts covered &lt;b&gt;7&lt;/b&gt;&lt;/span&gt;
+      &lt;span&gt;Comparison &lt;b&gt;baseline — no month-on-month deltas&lt;/b&gt;&lt;/span&gt;
+    &lt;/div&gt;
+  &lt;/header&gt;
+
+  &lt;!-- 1. AT A GLANCE --&gt;
+  &lt;section&gt;
+    &lt;div class=&quot;sechead&quot;&gt;&lt;span class=&quot;secnum&quot;&gt;01&lt;/span&gt;&lt;h2&gt;The month at a glance&lt;/h2&gt;&lt;/div&gt;
+    &lt;p class=&quot;secsub&quot;&gt;Totals across every active account. Export windows differ by platform — see method note at the foot of the page — so these are directional totals, not a like-for-like consolidation.&lt;/p&gt;
+    &lt;div class=&quot;tiles&quot; id=&quot;tiles&quot;&gt;&lt;/div&gt;
+    &lt;div class=&quot;ops&quot;&gt;&lt;b&gt;Ops note ·&lt;/b&gt; ~30% of all impressions this month were paid: 6,622 sponsored on the company page and roughly 80,000 behind a single promoted post on Egor's profile. &lt;b&gt;Verify exact ad impressions and spend&lt;/b&gt; before this figure goes to the founders.&lt;/div&gt;
+  &lt;/section&gt;
+
+  &lt;!-- 2. REACH BY ACCOUNT --&gt;
+  &lt;section&gt;
+    &lt;div class=&quot;sechead&quot;&gt;&lt;span class=&quot;secnum&quot;&gt;02&lt;/span&gt;&lt;h2&gt;Where the reach actually came from&lt;/h2&gt;&lt;/div&gt;
+    &lt;p class=&quot;secsub&quot;&gt;Impressions per account. The company page — the asset the business owns — sits fourth, behind all three founder profiles.&lt;/p&gt;
+    &lt;div class=&quot;chart&quot; id=&quot;chart&quot;&gt;&lt;/div&gt;
+    &lt;div class=&quot;legend&quot;&gt;
+      &lt;span&gt;&lt;i class=&quot;swatch&quot; style=&quot;background:var(--blue)&quot;&gt;&lt;/i&gt;Organic&lt;/span&gt;
+      &lt;span&gt;&lt;i class=&quot;swatch&quot; style=&quot;background:var(--blue-20)&quot;&gt;&lt;/i&gt;Paid / promoted&lt;/span&gt;
+    &lt;/div&gt;
+
+    &lt;h3 style=&quot;margin-top:38px&quot;&gt;Concentration: three posts carried the month&lt;/h3&gt;
+    &lt;p class=&quot;small&quot; style=&quot;margin-top:6px;max-width:70ch&quot;&gt;Of 276,040 founder impressions, 223,819 came from three posts — Denys's sanctions post (111K), Ihor's USDT/Revolut post (32.8K) and Egor's promoted post (~80K).&lt;/p&gt;
+    &lt;div class=&quot;conc&quot;&gt;
+      &lt;div class=&quot;a&quot; style=&quot;flex:81.1&quot;&gt;3 posts · 81%&lt;/div&gt;
+      &lt;div class=&quot;b&quot; style=&quot;flex:18.9&quot;&gt;All other posts · 19%&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;ops&quot;&gt;&lt;b&gt;Risk ·&lt;/b&gt; A month built on three posts is not a repeatable system. If any one of them had not landed, August reads as a decline, not a record.&lt;/div&gt;
+  &lt;/section&gt;
+
+  &lt;!-- 3. FOUNDERS --&gt;
+  &lt;section&gt;
+    &lt;div class=&quot;sechead&quot;&gt;&lt;span class=&quot;secnum&quot;&gt;03&lt;/span&gt;&lt;h2&gt;Founder profiles&lt;/h2&gt;&lt;/div&gt;
+    &lt;p class=&quot;secsub&quot;&gt;LinkedIn, 28 days to 31 August. These three profiles are the distribution engine — company pages do not grow organically at this stage, so reach is routed through people.&lt;/p&gt;
+    &lt;div class=&quot;cards&quot; id=&quot;founders&quot;&gt;&lt;/div&gt;
+
+    &lt;h3 style=&quot;margin-top:40px&quot;&gt;Audience growth does not track reach&lt;/h3&gt;
+    &lt;p class=&quot;small&quot; style=&quot;margin-top:6px;max-width:74ch&quot;&gt;The clearest pattern in the data — and it runs backwards. Ihor had the weakest month by reach and the strongest by conversion: 264 followers on 44.8K impressions, 5.9 per thousand. Denys converted at 2.5, Egor at 1.5 — and Egor's 128 came from small-reach organic posts, not from the ~80K promoted post that landed in the final days. Instagram lost followers on 1,814 views.&lt;/p&gt;
+    &lt;div class=&quot;tablewrap&quot; style=&quot;margin-top:18px&quot;&gt;
+      &lt;table style=&quot;min-width:520px&quot;&gt;
+        &lt;thead&gt;&lt;tr&gt;&lt;th&gt;Profile&lt;/th&gt;&lt;th class=&quot;n&quot;&gt;Impressions&lt;/th&gt;&lt;th class=&quot;n&quot;&gt;Followers gained&lt;/th&gt;&lt;th class=&quot;n&quot;&gt;Per 1,000 impressions&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+        &lt;tbody&gt;
+          &lt;tr&gt;&lt;td&gt;Ihor Vlasov&lt;/td&gt;&lt;td class=&quot;n&quot;&gt;44,864&lt;/td&gt;&lt;td class=&quot;n&quot;&gt;+264&lt;/td&gt;&lt;td class=&quot;n&quot;&gt;5.9&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;Denys Bets&lt;/td&gt;&lt;td class=&quot;n&quot;&gt;144,143&lt;/td&gt;&lt;td class=&quot;n&quot;&gt;+356&lt;/td&gt;&lt;td class=&quot;n&quot;&gt;2.5&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;Egor Podkolzin&lt;/td&gt;&lt;td class=&quot;n&quot;&gt;87,033&lt;/td&gt;&lt;td class=&quot;n&quot;&gt;+128&lt;/td&gt;&lt;td class=&quot;n&quot;&gt;1.5&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;N5Deal · Instagram&lt;/td&gt;&lt;td class=&quot;n&quot;&gt;1,814&lt;/td&gt;&lt;td class=&quot;n&quot;&gt;−10&lt;/td&gt;&lt;td class=&quot;n&quot;&gt;—&lt;/td&gt;&lt;/tr&gt;
+        &lt;/tbody&gt;
+      &lt;/table&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;ops&quot;&gt;&lt;b&gt;Do not conclude yet ·&lt;/b&gt; Egor's promoted post has had two days to work. Judging paid on this month's follower number would be premature — &lt;b&gt;re-measure at 30 days in the September report&lt;/b&gt; before drawing any conclusion about paid on founder profiles.&lt;/div&gt;
+  &lt;/section&gt;
+
+  &lt;!-- 4. BRAND CHANNELS --&gt;
+  &lt;section&gt;
+    &lt;div class=&quot;sechead&quot;&gt;&lt;span class=&quot;secnum&quot;&gt;04&lt;/span&gt;&lt;h2&gt;N5Deal brand channels&lt;/h2&gt;&lt;/div&gt;
+    &lt;p class=&quot;secsub&quot;&gt;The owned accounts. LinkedIn carries the audience quality; X and Instagram are not currently returning the effort put into them.&lt;/p&gt;
+    &lt;div class=&quot;cards&quot; id=&quot;brand&quot;&gt;&lt;/div&gt;
+
+    &lt;h3 style=&quot;margin-top:40px&quot;&gt;X: listings versus commentary&lt;/h3&gt;
+    &lt;p class=&quot;small&quot; style=&quot;margin-top:6px;max-width:74ch&quot;&gt;18 posts produced 942 impressions, zero link clicks and zero new followers across the month. Splitting them by type shows the format problem clearly.&lt;/p&gt;
+    &lt;div class=&quot;tablewrap&quot; style=&quot;margin-top:16px&quot;&gt;
+      &lt;table style=&quot;min-width:520px&quot;&gt;
+        &lt;thead&gt;&lt;tr&gt;&lt;th&gt;Post type&lt;/th&gt;&lt;th class=&quot;n&quot;&gt;Posts&lt;/th&gt;&lt;th class=&quot;n&quot;&gt;Impressions&lt;/th&gt;&lt;th class=&quot;n&quot;&gt;Avg / post&lt;/th&gt;&lt;th class=&quot;n&quot;&gt;Engagements&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+        &lt;tbody&gt;
+          &lt;tr&gt;&lt;td&gt;Editorial / market commentary&lt;/td&gt;&lt;td class=&quot;n&quot;&gt;11&lt;/td&gt;&lt;td class=&quot;n&quot;&gt;727&lt;/td&gt;&lt;td class=&quot;n&quot;&gt;66&lt;/td&gt;&lt;td class=&quot;n&quot;&gt;30&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;Licence listings (&quot;FOR SALE&quot;)&lt;/td&gt;&lt;td class=&quot;n&quot;&gt;7&lt;/td&gt;&lt;td class=&quot;n&quot;&gt;215&lt;/td&gt;&lt;td class=&quot;n&quot;&gt;31&lt;/td&gt;&lt;td class=&quot;n&quot;&gt;10&lt;/td&gt;&lt;/tr&gt;
+        &lt;/tbody&gt;
+      &lt;/table&gt;
+    &lt;/div&gt;
+    &lt;p class=&quot;small&quot; style=&quot;margin-top:12px&quot;&gt;Commentary earns roughly twice the reach of a listing on the same account. Listings are inventory posts on a channel with no buying audience yet.&lt;/p&gt;
+
+    &lt;h3 style=&quot;margin-top:36px&quot;&gt;Not worked this month&lt;/h3&gt;
+    &lt;p class=&quot;small&quot; style=&quot;margin-top:6px&quot;&gt;Deliberate, not neglected — recorded so the absence is visible in the trend line.&lt;/p&gt;
+    &lt;div class=&quot;dormant&quot;&gt;
+      &lt;span class=&quot;pill&quot;&gt;Telegram — no reporting pulled&lt;/span&gt;
+      &lt;span class=&quot;pill&quot;&gt;Threads — analytics locked below 100 followers&lt;/span&gt;
+      &lt;span class=&quot;pill&quot;&gt;YouTube — dormant&lt;/span&gt;
+      &lt;span class=&quot;pill&quot;&gt;TikTok — launches October on SF footage&lt;/span&gt;
+    &lt;/div&gt;
+  &lt;/section&gt;
+
+  &lt;!-- 5. TOP CONTENT --&gt;
+  &lt;section&gt;
+    &lt;div class=&quot;sechead&quot;&gt;&lt;span class=&quot;secnum&quot;&gt;05&lt;/span&gt;&lt;h2&gt;Top content of the month&lt;/h2&gt;&lt;/div&gt;
+    &lt;p class=&quot;secsub&quot;&gt;Ranked by impressions across every account. &lt;span class=&quot;mine&quot;&gt;&lt;/span&gt; marks a post produced by N5Deal marketing.&lt;/p&gt;
+    &lt;div class=&quot;tablewrap&quot;&gt;&lt;table id=&quot;top&quot;&gt;&lt;/table&gt;&lt;/div&gt;
+    &lt;div class=&quot;ops&quot;&gt;&lt;b&gt;Attribution ·&lt;/b&gt; On Ihor's profile, one post produced 32,819 of 44,864 impressions — 73% of his entire month. The remaining 12,045 were spread across all other posts on that profile over 28 days, including seven published in the final week alone. Every post on the founder profiles that cleared 1,000 impressions this month came out of N5Deal marketing.&lt;/div&gt;
+  &lt;/section&gt;
+
+  &lt;!-- 6. WHAT THE DATA SAYS --&gt;
+  &lt;section&gt;
+    &lt;div class=&quot;sechead&quot;&gt;&lt;span class=&quot;secnum&quot;&gt;06&lt;/span&gt;&lt;h2&gt;What the data says&lt;/h2&gt;&lt;/div&gt;
+    &lt;div class=&quot;finds&quot; id=&quot;finds&quot;&gt;&lt;/div&gt;
+  &lt;/section&gt;
+
+  &lt;!-- 7. DECISIONS --&gt;
+  &lt;section&gt;
+    &lt;div class=&quot;sechead&quot;&gt;&lt;span class=&quot;secnum&quot;&gt;07&lt;/span&gt;&lt;h2&gt;Decisions for September&lt;/h2&gt;&lt;/div&gt;
+    &lt;p class=&quot;secsub&quot;&gt;Six calls that follow directly from the August numbers. Owners named where the decision is not marketing's to make.&lt;/p&gt;
+    &lt;div class=&quot;dec&quot;&gt;&lt;ol id=&quot;dec&quot;&gt;&lt;/ol&gt;&lt;/div&gt;
+  &lt;/section&gt;
+
+  &lt;!-- METHOD --&gt;
+  &lt;section style=&quot;border-bottom:0&quot;&gt;
+    &lt;div class=&quot;sechead&quot;&gt;&lt;span class=&quot;secnum&quot;&gt;08&lt;/span&gt;&lt;h2 class=&quot;serif&quot; style=&quot;font-weight:400&quot;&gt;Method &amp;amp; caveats&lt;/h2&gt;&lt;/div&gt;
+    &lt;div style=&quot;max-width:74ch&quot;&gt;
+      &lt;p class=&quot;small&quot;&gt;&lt;b style=&quot;color:var(--ink)&quot;&gt;Export windows differ by platform.&lt;/b&gt; LinkedIn company page 31 Jul – 29 Aug · LinkedIn newsletter 2 – 31 Aug · X 4 – 31 Aug · Instagram 30 days to 29 Aug · founder profiles 28 days to 31 Aug. Cross-platform totals are therefore directional. Standardise on a calendar month from September where the platform allows it.&lt;/p&gt;
+      &lt;p class=&quot;small&quot;&gt;&lt;b style=&quot;color:var(--ink)&quot;&gt;Newsletter impressions are held separate&lt;/b&gt; from company-page impressions to avoid double counting; they are not included in the headline total.&lt;/p&gt;
+      &lt;p class=&quot;small&quot;&gt;&lt;b style=&quot;color:var(--ink)&quot;&gt;Egor's paid impressions (~80,000) are an estimate&lt;/b&gt; derived from the final-week spike on the profile, not from an ad-platform export. Replace with the exact figure.&lt;/p&gt;
+      &lt;p class=&quot;small&quot;&gt;&lt;b style=&quot;color:var(--ink)&quot;&gt;No month-on-month deltas.&lt;/b&gt; August is the baseline. Platform-reported percentages (e.g. &quot;+347% vs prior 28 days&quot;) are quoted as exported and refer to rolling windows, not calendar months.&lt;/p&gt;
+      &lt;p class=&quot;small&quot;&gt;&lt;b style=&quot;color:var(--ink)&quot;&gt;Instagram &quot;views&quot; and LinkedIn &quot;impressions&quot;&lt;/b&gt; are not the same metric and are not summed as equivalents beyond the headline directional total.&lt;/p&gt;
+    &lt;/div&gt;
+  &lt;/section&gt;
+
+  &lt;footer&gt;
+    &lt;span class=&quot;tiny&quot;&gt;N5Deal · Social performance · August 2026 · Prepared by Alina&lt;/span&gt;
+    &lt;a href=&quot;https://n5deal.com&quot;&gt;n5deal.com&lt;/a&gt;
+  &lt;/footer&gt;
+
+&lt;/div&gt;
+
+&lt;script&gt;
+/* ============================================================
+   ALL REPORT DATA LIVES HERE.
+   ============================================================ */
+const REPORT = {
+
+  tiles: [
+    { lab:&quot;Total impressions&quot;, val:&quot;291,369&quot;,
+      note:&quot;Across 6 active accounts. ~30% paid.&quot; },
+    { lab:&quot;Founder share of reach&quot;, val:&quot;95&quot;, unit:&quot;%&quot;,
+      note:&quot;276,040 of 288,613 LinkedIn impressions.&quot; },
+    { lab:&quot;Total engagements&quot;, val:&quot;2,242&quot;,
+      note:&quot;Reactions, comments, reposts, saves, sends.&quot; },
+    { lab:&quot;Net follower change&quot;, val:&quot;+738&quot;,
+      note:&quot;Denys +356 · Ihor +264 · Egor +128 · Instagram −10.&quot; }
+  ],
+
+  chart: [
+    { nm:&quot;Denys Bets&quot;,  sub:&quot;LinkedIn · personal&quot;, v:144143, paid:0 },
+    { nm:&quot;Egor Podkolzin&quot;, sub:&quot;LinkedIn · personal&quot;, v:87033, paid:80000 },
+    { nm:&quot;Ihor Vlasov&quot;, sub:&quot;LinkedIn · personal&quot;, v:44864, paid:0 },
+    { nm:&quot;N5Deal&quot;,      sub:&quot;LinkedIn · company&quot;,  v:12573, paid:6622 },
+    { nm:&quot;N5Deal&quot;,      sub:&quot;Instagram&quot;,           v:1814,  paid:0 },
+    { nm:&quot;N5Deal&quot;,      sub:&quot;X / Twitter&quot;,         v:942,   paid:0 }
+  ],
+
+  founders: [
+    {
+      name:&quot;Denys Bets&quot;, role:&quot;Co-Founder · 28 days to 31 Aug&quot;,
+      badge:&quot;BankStore.ai&quot;, badgeGrey:true, accent:true,
+      kv:[
+        [&quot;Impressions&quot;,&quot;144,143&quot;,&quot;up&quot;,&quot;+347%&quot;],
+        [&quot;Members reached&quot;,&quot;89,096&quot;],
+        [&quot;Out-of-network&quot;,&quot;96%&quot;],
+        [&quot;Engagements&quot;,&quot;907&quot;],
+        [&quot;Saves / sends&quot;,&quot;82 / 30&quot;],
+        [&quot;Followers&quot;,&quot;5,427&quot;,&quot;up&quot;,&quot;+356&quot;],
+        [&quot;Profile viewers (90d)&quot;,&quot;772&quot;,&quot;up&quot;,&quot;+62%&quot;],
+        [&quot;Search appearances&quot;,&quot;123&quot;,&quot;up&quot;,&quot;+64%&quot;]
+      ],
+      verdict:&quot;&lt;b&gt;The month's engine.&lt;/b&gt; Highest reach, highest engagement quality (79 comments, 82 saves) and the only profile with meaningful organic follower growth. Audience is 31% financial services, 28% senior. Volume was front-loaded: the last week produced only 4,450 impressions.&quot;
+    },
+    {
+      name:&quot;Egor Podkolzin&quot;, role:&quot;Co-Founder · 28 days to 31 Aug&quot;,
+      badge:&quot;N5Deal&quot;,
+      kv:[
+        [&quot;Impressions&quot;,&quot;87,033&quot;,&quot;up&quot;,&quot;+1,496%&quot;],
+        [&quot;— of which promoted&quot;,&quot;~80,000&quot;],
+        [&quot;Members reached&quot;,&quot;67,591&quot;],
+        [&quot;Out-of-network&quot;,&quot;96%&quot;],
+        [&quot;Engagements&quot;,&quot;290&quot;],
+        [&quot;Followers&quot;,&quot;2,771&quot;,&quot;up&quot;,&quot;+128&quot;],
+        [&quot;Profile viewers (90d)&quot;,&quot;300&quot;,&quot;up&quot;,&quot;+29%&quot;],
+        [&quot;Search appearances&quot;,&quot;147&quot;]
+      ],
+      verdict:&quot;&lt;b&gt;Revival month, not a growth month.&lt;/b&gt; 81,109 of the 87,033 impressions landed in the final seven days behind one promoted post, whose purpose was to reactivate a dormant profile. The +128 followers came from small-reach organic posts, not from the promotion — which has had two days to work and cannot be judged yet.&quot;
+    },
+    {
+      name:&quot;Ihor Vlasov&quot;, role:&quot;Co-Founder · 28 days to 31 Aug&quot;,
+      badge:&quot;BankStore.ai&quot;, badgeGrey:true,
+      kv:[
+        [&quot;Impressions&quot;,&quot;44,864&quot;,&quot;down&quot;,&quot;−16%&quot;],
+        [&quot;— from one post&quot;,&quot;32,819&quot;,&quot;&quot;,&quot;73%&quot;],
+        [&quot;Members reached&quot;,&quot;26,459&quot;],
+        [&quot;Out-of-network&quot;,&quot;86%&quot;],
+        [&quot;Engagements&quot;,&quot;621&quot;],
+        [&quot;Followers&quot;,&quot;8,029&quot;,&quot;up&quot;,&quot;+264&quot;],
+        [&quot;Followers per 1k impr.&quot;,&quot;5.9&quot;,&quot;up&quot;,&quot;best of 3&quot;],
+        [&quot;Profile viewers (90d)&quot;,&quot;962&quot;,&quot;up&quot;,&quot;+64%&quot;],
+        [&quot;Search appearances&quot;,&quot;150&quot;]
+      ],
+      verdict:&quot;&lt;b&gt;Weakest reach, strongest conversion.&lt;/b&gt; Down 16% after roughly three weeks without an N5Deal-produced post, and one post in the final week produced 73% of the month's reach. Yet the profile added 264 followers on the lowest impression count of the three — 5.9 per 1,000 impressions, more than twice Denys's rate and four times Egor's. Posts from the other team on this profile ran at 500–600 impressions.&quot;
+    }
+  ],
+
+  brand: [
+    {
+      name:&quot;LinkedIn — company page&quot;, role:&quot;31 Jul – 29 Aug · 853 followers&quot;,
+      badge:&quot;Paid-assisted&quot;,
+      kv:[
+        [&quot;Impressions&quot;,&quot;12,573&quot;,&quot;up&quot;,&quot;+848%&quot;],
+        [&quot;— organic&quot;,&quot;5,951&quot;],
+        [&quot;— sponsored&quot;,&quot;6,622&quot;],
+        [&quot;Reactions&quot;,&quot;309&quot;,&quot;up&quot;,&quot;+341%&quot;],
+        [&quot;Comments&quot;,&quot;4&quot;,&quot;&quot;,&quot;0%&quot;],
+        [&quot;Reposts&quot;,&quot;6&quot;,&quot;up&quot;,&quot;+100%&quot;]
+      ],
+      verdict:&quot;&lt;b&gt;More than half the page's reach was bought.&lt;/b&gt; Organic 5,951 is the honest number, and 4 comments on 12,573 impressions says the page is seen but not talked to. Useful as a credibility anchor, not as a distribution channel.&quot;
+    },
+    {
+      name:&quot;LinkedIn — newsletter&quot;, role:&quot;\&quot;Global Licenses &amp;amp; Compliance\&quot; · 2 – 31 Aug&quot;,
+      badge:&quot;Best audience&quot;, accent:true,
+      kv:[
+        [&quot;Subscribers&quot;,&quot;211&quot;,&quot;up&quot;,&quot;+19&quot;],
+        [&quot;Impressions&quot;,&quot;4,260&quot;],
+        [&quot;Article views&quot;,&quot;471&quot;],
+        [&quot;View rate&quot;,&quot;11.1%&quot;],
+        [&quot;Engagements&quot;,&quot;123&quot;],
+        [&quot;CEO / Founder / Co-Founder&quot;,&quot;20%&quot;]
+      ],
+      verdict:&quot;&lt;b&gt;Smallest audience, highest quality.&lt;/b&gt; One in five subscribers is founder-level — the exact buyer profile. 211 people who opted in beats 853 page followers who did not. This is the asset to grow deliberately in September.&quot;
+    },
+    {
+      name:&quot;X / Twitter &amp;amp; Instagram&quot;, role:&quot;X: 4 – 31 Aug · IG: 30 days to 29 Aug&quot;,
+      badge:&quot;Underperforming&quot;, badgeGrey:true,
+      kv:[
+        [&quot;X — posts&quot;,&quot;18&quot;],
+        [&quot;X — impressions&quot;,&quot;942&quot;],
+        [&quot;X — link clicks&quot;,&quot;0&quot;,&quot;down&quot;],
+        [&quot;X — new followers&quot;,&quot;0&quot;,&quot;down&quot;],
+        [&quot;IG — views&quot;,&quot;1,814&quot;],
+        [&quot;IG — interactions&quot;,&quot;65&quot;],
+        [&quot;IG — net followers&quot;,&quot;−10&quot;,&quot;down&quot;],
+        [&quot;IG — non-follower views&quot;,&quot;70%&quot;]
+      ],
+      verdict:&quot;&lt;b&gt;Both channels are running at a loss of effort.&lt;/b&gt; 18 X posts produced fewer impressions than one founder post produces in an hour, with zero clicks and zero follows. Instagram lost followers. Neither justifies its current production cost without a change of format or a decision to park it.&quot;
+    }
+  ],
+
+  top: [
+    { post:&quot;A crypto firm just got sanctioned over $6B in illicit flows&quot;, acct:&quot;Denys Bets · LinkedIn&quot;, imp:&quot;111,000&quot;, eng:&quot;449&quot;, mine:true,
+      note:&quot;Copy by Incluence; visual concept Ihor; design N5Deal marketing&quot; },
+    { post:&quot;Promoted post (profile reactivation)&quot;, acct:&quot;Egor Podkolzin · LinkedIn&quot;, imp:&quot;~80,000&quot;, eng:&quot;—&quot;, mine:false,
+      note:&quot;Paid. Landed in the final days; conversion poor so far&quot; },
+    { post:&quot;The largest stablecoin in the world gets switched off inside Revolut on 31 August&quot;, acct:&quot;Ihor Vlasov · LinkedIn&quot;, imp:&quot;32,819&quot;, eng:&quot;88&quot;, mine:true,
+      note:&quot;73% of Ihor's entire month. MiCA/USDT angle, N5Deal-branded visual&quot; },
+    { post:&quot;BitGo is moving WBTC — $7.4bn — off LayerZero onto Chainlink's CCIP&quot;, acct:&quot;Denys Bets · LinkedIn&quot;, imp:&quot;16,000&quot;, eng:&quot;80&quot;, mine:true,
+      note:&quot;Fully produced by N5Deal marketing&quot; },
+    { post:&quot;Bunq is Europe's second-largest neobank — the OCC denied its US charter&quot;, acct:&quot;Denys Bets · LinkedIn&quot;, imp:&quot;8,000&quot;, eng:&quot;42&quot;, mine:true,
+      note:&quot;Fully produced by N5Deal marketing&quot; },
+    { post:&quot;Ripple's strategic investment in Notabene — RLUSD into B2B stablecoin rails&quot;, acct:&quot;Ihor Vlasov · LinkedIn&quot;, imp:&quot;3,000&quot;, eng:&quot;45&quot;, mine:true },
+    { post:&quot;Revolut Digital Assets Europe changed CEOs; USDT delisting begins&quot;, acct:&quot;N5Deal · X&quot;, imp:&quot;151&quot;, eng:&quot;4&quot;, mine:true,
+      note:&quot;Best-performing X post of the month&quot; }
+  ],
+
+  finds: [
+    { h:&quot;Reach is founder-owned, and two of the three founders are badged as another company.&quot;,
+      p:[&quot;Founder profiles produced 276,040 of 288,613 LinkedIn impressions — 95%. The company page contributed 4%.&quot;,
+         &quot;Denys and Ihor both carry &lt;b&gt;BankStore.ai&lt;/b&gt; in their headline; only Egor carries N5Deal. On the current split, roughly 189,000 impressions a month are building recognition for BankStore rather than N5Deal. This is a positioning decision, not a marketing one, and it needs a founder answer.&quot;] },
+    { h:&quot;Reach and audience growth have come apart — and the ranking inverts.&quot;,
+      p:[&quot;The profile with the &lt;b&gt;least&lt;/b&gt; reach converted best. Ihor: 264 followers on 44,864 impressions (5.9 per thousand). Denys: 356 on 144,143 (2.5). Egor: 128 on 87,033 (1.5). Instagram: −10 on 1,814 views.&quot;,
+         &quot;Impressions are therefore the wrong headline metric for this roster. A profile with an established, on-topic audience converts a small reach far better than a spike converts a large one — Ihor's 44.8K was worth more in audience terms than Egor's 87K, most of which was bought.&quot;,
+         &quot;&lt;b&gt;Ops note:&lt;/b&gt; make followers-per-1,000-impressions a standing column from September. It is the only number this month that separated real audience building from traffic.&quot;] },
+    { h:&quot;The month rests on three posts.&quot;,
+      p:[&quot;223,819 of 276,040 founder impressions — 81% — came from three posts. Remove the promoted one and two organic posts carry the month.&quot;,
+         &quot;This is a fragile base for a trend line. September's target should be raising the floor (median post performance), not chasing another spike.&quot;] },
+    { h:&quot;Every post above 1,000 impressions came from N5Deal marketing.&quot;,
+      p:[&quot;On Ihor's profile the contrast is measurable: 32,819 impressions on one produced post, against 500–600 per post from the other team publishing on the same profile in the same period.&quot;,
+         &quot;&lt;b&gt;Ops note:&lt;/b&gt; if this comparison goes to the founders as written, agree the framing with the other team first — the numbers are sound, the politics are not marketing's to manage alone.&quot;] },
+    { h:&quot;The newsletter is the most valuable audience on the roster and the least resourced.&quot;,
+      p:[&quot;211 subscribers, 20% of them CEO, Founder or Co-Founder, at an 11.1% view rate. That is a higher concentration of buyer-profile readers than any other channel, on the smallest list.&quot;,
+         &quot;It is also the only owned, portable audience in the stack — it does not sit behind someone's personal profile.&quot;] },
+    { h:&quot;X and Instagram are consuming production capacity and returning nothing.&quot;,
+      p:[&quot;X: 18 posts, 942 impressions, 0 clicks, 0 follows. Listings ran at 31 impressions each against 66 for commentary — the inventory format is being posted to an audience that does not exist yet on that channel.&quot;,
+         &quot;Instagram: net −10 followers, 70% of views from non-followers, reels at a third of static posts. Neither channel currently earns its slot in a 6–8 piece weekly ceiling.&quot;] }
+  ],
+
+  dec: [
+    { t:&quot;Settle the founder-profile branding question.&quot;, o:&quot;Founders&quot;,
+      d:&quot;Denys and Ihor are badged BankStore.ai while producing N5Deal content. Decide whether this is intentional dual-branding or an accident to correct. Everything else in the distribution strategy depends on the answer. &lt;b&gt;Needed by Fri 11 Sept.&lt;/b&gt;&quot; },
+    { t:&quot;Re-measure Egor's promoted post at 30 days.&quot;, o:&quot;Marketing&quot;,
+      d:&quot;It has had two days. Pull followers, profile views and inbound at 30 days before any conclusion is recorded about paid on founder profiles. Also pull the exact ad impressions and spend to replace the ~80,000 estimate.&quot; },
+    { t:&quot;Protect a fixed founder posting cadence.&quot;, o:&quot;Marketing + founders&quot;,
+      d:&quot;Ihor's −16% is a cadence failure, not a content failure. Lock a minimum of two N5Deal-produced posts per founder per week and treat the slot as non-negotiable — the data says the floor matters more than the ceiling.&quot; },
+    { t:&quot;Stop posting licence listings to X in their current form.&quot;, o:&quot;Marketing&quot;,
+      d:&quot;31 impressions per listing, zero clicks all month. Move inventory to Telegram and the founder profiles where the buying audience already reads, and keep X to editorial commentary while the account is rebuilt.&quot; },
+    { t:&quot;Make an explicit call on Instagram.&quot;, o:&quot;Marketing&quot;,
+      d:&quot;Negative follower growth on 1,814 views. Either resource it properly against the October SF footage plan, or park it formally and reallocate the hours. Drifting is the worst of the three options.&quot; },
+    { t:&quot;Grow the newsletter deliberately.&quot;, o:&quot;Marketing&quot;,
+      d:&quot;Highest buyer-profile concentration of any channel at 211 subscribers. Add a subscribe CTA to every founder post and to the site's report pages; set a September target and report against it.&quot; }
+  ]
+};
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+const $ = id =&gt; document.getElementById(id);
+
+/* tiles */
+$(&quot;tiles&quot;).innerHTML = REPORT.tiles.map(t =&gt; `
+  &lt;div class=&quot;tile&quot;&gt;
+    &lt;div class=&quot;lab&quot;&gt;${t.lab}&lt;/div&gt;
+    &lt;div class=&quot;val num&quot;&gt;${t.val}${t.unit?`&lt;em&gt;${t.unit}&lt;/em&gt;`:&quot;&quot;}&lt;/div&gt;
+    &lt;div class=&quot;note&quot;&gt;${t.note}&lt;/div&gt;
+  &lt;/div&gt;`).join(&quot;&quot;);
+
+/* chart */
+(() =&gt; {
+  const max = Math.max(...REPORT.chart.map(d =&gt; d.v));
+  $(&quot;chart&quot;).innerHTML = REPORT.chart.map(d =&gt; {
+    const w = d.v / max * 100;
+    const paidW = d.paid ? d.paid / d.v * 100 : 0;
+    const orgW = 100 - paidW;
+    return `&lt;div class=&quot;row&quot; title=&quot;${d.nm} — ${d.v.toLocaleString('en-GB')} impressions&quot;&gt;
+      &lt;div class=&quot;nm&quot;&gt;${d.nm}&lt;i&gt;${d.sub}&lt;/i&gt;&lt;/div&gt;
+      &lt;div class=&quot;track&quot;&gt;&lt;div style=&quot;display:flex;gap:2px;width:${w}%&quot;&gt;
+        ${orgW &gt; 0 ? `&lt;div class=&quot;bar&quot; style=&quot;flex:${orgW};border-radius:${paidW?0:'0 4px 4px 0'}&quot;&gt;&lt;/div&gt;` : &quot;&quot;}
+        ${paidW &gt; 0 ? `&lt;div class=&quot;bar paid&quot; style=&quot;flex:${paidW};border-radius:0 4px 4px 0&quot;&gt;&lt;/div&gt;` : &quot;&quot;}
+      &lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;v num&quot;&gt;${d.v.toLocaleString('en-GB')}&lt;/div&gt;
+    &lt;/div&gt;`;
+  }).join(&quot;&quot;);
+})();
+
+/* cards */
+function cards(list){
+  return list.map(c =&gt; `
+    &lt;div class=&quot;card${c.accent ? &quot; accent&quot; : &quot;&quot;}&quot;&gt;
+      &lt;div class=&quot;who&quot;&gt;&lt;h3&gt;${c.name}&lt;/h3&gt;${c.badge ? `&lt;span class=&quot;badge${c.badgeGrey ? &quot; grey&quot; : &quot;&quot;}&quot;&gt;${c.badge}&lt;/span&gt;` : &quot;&quot;}&lt;/div&gt;
+      &lt;div class=&quot;role&quot;&gt;${c.role}&lt;/div&gt;
+      ${c.kv.map(([k,v,dir,extra]) =&gt; `
+        &lt;div class=&quot;kv&quot;&gt;&lt;span&gt;${k}&lt;/span&gt;&lt;b class=&quot;num&quot;&gt;&lt;span class=&quot;${!extra &amp;&amp; dir ? dir : &quot;&quot;}&quot;&gt;${v}&lt;/span&gt;${extra ? ` &lt;span class=&quot;${dir||&quot;&quot;}&quot; style=&quot;font-weight:500&quot;&gt;${extra}&lt;/span&gt;` : &quot;&quot;}&lt;/b&gt;&lt;/div&gt;`).join(&quot;&quot;)}
+      &lt;div class=&quot;verdict&quot;&gt;${c.verdict}&lt;/div&gt;
+    &lt;/div&gt;`).join(&quot;&quot;);
+}
+$(&quot;founders&quot;).innerHTML = cards(REPORT.founders);
+$(&quot;brand&quot;).innerHTML = cards(REPORT.brand);
+
+/* top content table */
+$(&quot;top&quot;).innerHTML = `
+  &lt;thead&gt;&lt;tr&gt;&lt;th&gt;Post&lt;/th&gt;&lt;th&gt;Account&lt;/th&gt;&lt;th class=&quot;n&quot;&gt;Impressions&lt;/th&gt;&lt;th class=&quot;n&quot;&gt;Engagements&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+  &lt;tbody&gt;${REPORT.top.map(r =&gt; `
+    &lt;tr&gt;
+      &lt;td&gt;${r.mine ? '&lt;span class=&quot;mine&quot;&gt;&lt;/span&gt;' : ''}${r.post}${r.note ? `&lt;div class=&quot;tiny&quot; style=&quot;margin-top:5px&quot;&gt;${r.note}&lt;/div&gt;` : &quot;&quot;}&lt;/td&gt;
+      &lt;td style=&quot;color:var(--ink-52);white-space:nowrap&quot;&gt;${r.acct}&lt;/td&gt;
+      &lt;td class=&quot;n num&quot;&gt;${r.imp}&lt;/td&gt;
+      &lt;td class=&quot;n num&quot;&gt;${r.eng}&lt;/td&gt;
+    &lt;/tr&gt;`).join(&quot;&quot;)}&lt;/tbody&gt;`;
+
+/* findings */
+$(&quot;finds&quot;).innerHTML = REPORT.finds.map(f =&gt; `
+  &lt;div class=&quot;find&quot;&gt;&lt;div&gt;&lt;h3&gt;${f.h}&lt;/h3&gt;${f.p.map(p =&gt; `&lt;p&gt;${p}&lt;/p&gt;`).join(&quot;&quot;)}&lt;/div&gt;&lt;/div&gt;`).join(&quot;&quot;);
+
+/* decisions */
+$(&quot;dec&quot;).innerHTML = REPORT.dec.map(d =&gt; `
+  &lt;li&gt;&lt;b&gt;${d.t}&lt;/b&gt;&lt;span class=&quot;owner&quot;&gt;${d.o}&lt;/span&gt;&lt;br&gt;${d.d}&lt;/li&gt;`).join(&quot;&quot;);
+&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+</section>
