@@ -7,10 +7,14 @@ const prisma = new PrismaClient()
 const N5_ID = 'seed-project-n5deal'
 const SEED_DIR = path.resolve(process.cwd(), 'scripts/report-seeds')
 
-// Migration seed: moves the three previously-hardcoded operational reports into
-// the OperationalReport table so they become editable in the UI. Idempotent —
-// upsert with an empty `update`, so re-running (e.g. on every Vercel build)
-// NEVER overwrites edits made in the dashboard. It only creates what's missing.
+// Seeds the canonical operational reports (content authored in the repo as the
+// HTML files under scripts/report-seeds/). These are SYNCED from the repo: every
+// run re-writes their content from the seed files, so editing a report's source
+// here + deploying updates it in place (local and prod). Only the slugs listed
+// below are touched — reports created by the user via the dashboard's "New
+// report" button are NOT in this list and are never modified.
+// (If a canonical report should become hand-editable in the dashboard instead,
+// drop its entry from this array.)
 const REPORTS: Array<{
   slug: string
   title: string
@@ -21,10 +25,10 @@ const REPORTS: Array<{
 }> = [
   {
     slug: '2026-08-social',
-    title: 'N5Deal — Social Performance, August 2026',
+    title: 'N5Deal — Social & Search Performance, August 2026',
     periodLabel: 'Серпень 2026',
     subtitle:
-      'Соціальні мережі, серпень (baseline). Рекорд охоплення — 291 369 показів, але 95% дали профілі фаундерів, а 81% — три пости. Профіль із найменшим охопленням найкраще конвертує. Founder-cards, top-контент, X vs Instagram, висновки й рішення на вересень.',
+      'Соцмережі + SEO, серпень (baseline). Охоплення 291 369 показів (95% — фаундери, 81% — три пости). SEO: DR 13 (+2), беклінки 923 (+336), 13 органічних ключів (4 у топ-3), GA4 organic 162 кліки / 76k показів, AI-видимість 11 (AI Mode, Perplexity, AI Overviews). Founder-cards, top-контент, висновки й рішення.',
     kind: 'recap',
     sortKey: '2026-08-1',
   },
@@ -80,19 +84,18 @@ async function main() {
       continue
     }
     const bodyHtml = fs.readFileSync(file, 'utf8')
+    const fields = {
+      title: r.title,
+      periodLabel: r.periodLabel,
+      subtitle: r.subtitle,
+      kind: r.kind,
+      sortKey: r.sortKey,
+      bodyHtml,
+    }
     await prisma.operationalReport.upsert({
       where: { projectId_slug: { projectId: N5_ID, slug: r.slug } },
-      update: {}, // never clobber dashboard edits
-      create: {
-        projectId: N5_ID,
-        slug: r.slug,
-        title: r.title,
-        periodLabel: r.periodLabel,
-        subtitle: r.subtitle,
-        kind: r.kind,
-        sortKey: r.sortKey,
-        bodyHtml,
-      },
+      update: fields, // sync content from the repo on every run
+      create: { projectId: N5_ID, slug: r.slug, ...fields },
     })
     console.log(`seeded ${r.slug} (${bodyHtml.length} bytes)`)
   }
