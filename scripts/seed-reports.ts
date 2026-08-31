@@ -20,6 +20,15 @@ const REPORTS: Array<{
   sortKey: string
 }> = [
   {
+    slug: '2026-09-plan',
+    title: 'N5Deal — September 2026 Content and Task Plan',
+    periodLabel: 'Вересень 2026 (план)',
+    subtitle:
+      '31 матеріал / 38 розміщень за 5 тижнів. 4 core messages (M1–M4), календар по каналах (LinkedIn / IG / X / Newsletter / Listings), OKR-покриття, залежності з дедлайнами, жовтень — San Francisco, вимірювання та ризики.',
+    kind: 'plan',
+    sortKey: '2026-09-1',
+  },
+  {
     slug: '2026-07',
     title: 'N5Deal — Загальний звіт за липень 2026',
     periodLabel: 'Липень 2026',
