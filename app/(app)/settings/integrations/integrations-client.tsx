@@ -22,9 +22,10 @@ interface Props {
   role: string
   project: { id: string; name: string }
   connection: ConnectionValues
+  isUsingDefaults?: boolean
 }
 
-export function IntegrationsClient({ role, project, connection }: Props) {
+export function IntegrationsClient({ role, project, connection, isUsingDefaults }: Props) {
   const router = useRouter()
   const isAdmin = role === 'admin'
 
@@ -102,6 +103,19 @@ export function IntegrationsClient({ role, project, connection }: Props) {
 
   return (
     <div className="space-y-6">
+      {isUsingDefaults ? (
+        <div className="bg-sky-500/5 border border-sky-500/20 p-4 flex items-start gap-3 text-sm">
+          <CheckCircle2 className="h-4 w-4 mt-0.5 text-sky-700 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-sky-900">Using workspace defaults</p>
+            <p className="text-xs text-sky-800/80 mt-1">
+              This project has no custom integration targets yet, so Analytics shows data from the shared n5deal.com
+              setup out of the box. Change any field below to override per-project.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       {saEmail ? (
         <div className="bg-secondary/50 border border-border p-4 flex items-start gap-3 text-sm">
           <AlertCircle className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />

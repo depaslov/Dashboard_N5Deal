@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { getOrCreateCurrentProject } from '@/lib/project'
+import { getEffectiveConnection } from '@/lib/analytics/require-access'
 import { PageHeader } from '@/components/app/page-header'
 import { IntegrationsClient } from './integrations-client'
 
@@ -14,7 +15,7 @@ export default async function IntegrationsPage() {
 
   const [membership, connection] = await Promise.all([
     prisma.projectMember.findUnique({ where: { projectId_userId: { projectId: project.id, userId } } }),
-    prisma.analyticsConnection.findUnique({ where: { projectId: project.id } }),
+    getEffectiveConnection(project.id),
   ])
 
   return (
@@ -26,25 +27,15 @@ export default async function IntegrationsPage() {
       <IntegrationsClient
         role={membership?.role ?? 'member'}
         project={{ id: project.id, name: project.name }}
-        connection={
-          connection
-            ? {
-                ga4PropertyId: connection.ga4PropertyId ?? '',
-                gscSiteUrl: connection.gscSiteUrl ?? '',
-                ahrefsTarget: connection.ahrefsTarget ?? '',
-                ahrefsMode: connection.ahrefsMode ?? 'domain',
-                lastSyncedAt: connection.lastSyncedAt?.toISOString() ?? null,
-                lastSyncError: connection.lastSyncError ?? null,
-              }
-            : {
-                ga4PropertyId: '',
-                gscSiteUrl: '',
-                ahrefsTarget: '',
-                ahrefsMode: 'domain',
-                lastSyncedAt: null,
-                lastSyncError: null,
-              }
-        }
+        connection={{
+          ga4PropertyId: connection.ga4PropertyId ?? '',
+          gscSiteUrl: connection.gscSiteUrl ?? '',
+          ahrefsTarget: connection.ahrefsTarget ?? '',
+          ahrefsMode: connection.ahrefsMode ?? 'domain',
+          lastSyncedAt: connection.lastSyncedAt?.toISOString() ?? null,
+          lastSyncError: connection.lastSyncError ?? null,
+        }}
+        isUsingDefaults={connection.isDefault}
       />
     </div>
   )
