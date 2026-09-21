@@ -107,7 +107,44 @@ model Project {
   correctionMemos   CorrectionMemo[]
   operationalReports OperationalReport[]
 
+  analyticsConnection AnalyticsConnection?
+  analyticsSnapshots  AnalyticsSnapshot[]
+
   @@index([ownerId])
+}
+
+// Per-project analytics configuration (targets for GA4/GSC/Ahrefs).
+// Credentials themselves live in env vars, not the DB.
+model AnalyticsConnection {
+  id             String    @id @default(cuid())
+  projectId      String    @unique
+  ga4PropertyId  String?
+  gscSiteUrl     String?
+  ahrefsTarget   String?
+  ahrefsMode     String    @default("domain")
+  lastSyncedAt   DateTime?
+  lastSyncError  String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+// Daily snapshot of core metrics per (project, provider).
+model AnalyticsSnapshot {
+  id        String   @id @default(cuid())
+  projectId String
+  provider  String
+  date      DateTime @db.Date
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, provider, date])
+  @@index([projectId, provider])
+  @@index([date])
 }
 
 // =============================================================================

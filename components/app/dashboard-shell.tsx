@@ -25,6 +25,7 @@ import {
   BookOpen,
   FileText,
   ListChecks,
+  BarChart3,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -76,6 +77,7 @@ const NAV_ITEMS = [
   { label: 'Red Flags', href: '/red-flags', icon: ShieldAlert },
   { label: 'Glossary', href: '/glossary', icon: BookOpen },
   { label: 'Reports', href: '/reports', icon: FileText },
+  { label: 'Analytics', href: '/analytics', icon: BarChart3 },
   { label: 'Company', href: '/company', icon: Building },
   { label: 'Marketing OS', href: '/marketing', icon: Megaphone },
   { label: 'Settings', href: '/settings', icon: Settings },
@@ -93,6 +95,7 @@ const BANKSTORE_NAV = [
   { label: 'Red Flags', href: '/red-flags', icon: ShieldAlert },
   { label: 'Glossary', href: '/glossary', icon: BookOpen },
   { label: 'Reports', href: '/reports', icon: FileText },
+  { label: 'Analytics', href: '/analytics', icon: BarChart3 },
   { label: 'Company', href: '/company', icon: Building },
   { label: 'Tasks', href: '/marketing/tasks', icon: ListChecks },
   { label: 'Link Building', href: '/marketing/linkbuilding', icon: Link2 },
