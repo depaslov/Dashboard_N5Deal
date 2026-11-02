@@ -115,7 +115,7 @@
         <tr><td class="px-3 py-2 text-sm border border-gray-300 align-top">Organic Search</td><td class="px-3 py-2 text-sm border border-gray-300 align-top text-right">262</td><td class="px-3 py-2 text-sm border border-gray-300 align-top text-right">238</td><td class="px-3 py-2 text-sm border border-gray-300 align-top text-right text-red-700">−9,2%</td><td class="px-3 py-2 text-sm border border-gray-300 align-top text-muted-foreground">При +190% показів — трафік просів. Collapse CTR в чистому вигляді</td></tr>
         <tr><td class="px-3 py-2 text-sm border border-gray-300 align-top">Referral</td><td class="px-3 py-2 text-sm border border-gray-300 align-top text-right">220</td><td class="px-3 py-2 text-sm border border-gray-300 align-top text-right">160</td><td class="px-3 py-2 text-sm border border-gray-300 align-top text-right text-red-700">−27,3%</td><td class="px-3 py-2 text-sm border border-gray-300 align-top text-muted-foreground">Серпневий wire-PR догорає. Нові беклінки не компенсують</td></tr>
         <tr><td class="px-3 py-2 text-sm border border-gray-300 align-top">Organic Social</td><td class="px-3 py-2 text-sm border border-gray-300 align-top text-right">32</td><td class="px-3 py-2 text-sm border border-gray-300 align-top text-right">34</td><td class="px-3 py-2 text-sm border border-gray-300 align-top text-right text-green-700">+6,3%</td><td class="px-3 py-2 text-sm border border-gray-300 align-top text-muted-foreground">LinkedIn фаундерів тримає базу</td></tr>
-        <tr><td class="px-3 py-2 text-sm border border-gray-300 align-top">AI Assistant</td><td class="px-3 py-2 text-sm border border-gray-300 align-top text-right">31</td><td class="px-3 py-2 text-sm border border-gray-300 align-top text-right">17</td><td class="px-3 py-2 text-sm border border-gray-300 align-top text-right text-red-700">−45,2%</td><td class="px-3 py-2 text-sm border border-gray-300 align-top text-muted-foreground">ChatGPT / Perplexity / Copilot цитують рідше — конкретні кроки GEO розписані нижче окремою секцією</td></tr>
+        <tr><td class="px-3 py-2 text-sm border border-gray-300 align-top">AI Assistant</td><td class="px-3 py-2 text-sm border border-gray-300 align-top text-right">31</td><td class="px-3 py-2 text-sm border border-gray-300 align-top text-right">17</td><td class="px-3 py-2 text-sm border border-gray-300 align-top text-right text-red-700">−45,2%</td><td class="px-3 py-2 text-sm border border-gray-300 align-top text-muted-foreground">ChatGPT / Perplexity / Copilot цитують рідше</td></tr>
       </tbody>
     </table>
   </div>
@@ -240,115 +240,6 @@
   </ul>
 </section>
 
-<section class="mb-10">
-  <h2 class="text-xl font-bold mb-3">GEO: як повернути цитування в ChatGPT / Perplexity / AI Overviews</h2>
-  <p class="text-sm text-muted-foreground mb-3 leading-relaxed">AI Assistant як канал у GA4 просів на −45% (31 → 17 сесій). Для AI-пошуку ранжування працює по-іншому, ніж для Google: не "ось сторінка в SERP", а "ось пасаж із сайту, вплетений у відповідь, з посиланням-джерелом". Щоб повернутися в ці відповіді, треба зробити 10 конкретних речей — нижче з очікуваним ефектом і терміном.</p>
-
-  <h3 class="font-bold mb-2">Крок 1 · Виміряти, де ми зараз</h3>
-  <ul class="text-sm space-y-2 leading-relaxed list-disc list-inside marker:text-muted-foreground mb-4">
-    <li>Прогнати <strong>15 цільових запитів</strong> у ChatGPT, Perplexity, Google AI Mode, AI Overviews, Gemini, Copilot — зафіксувати, чи згадують N5Deal / n5deal.com і в якому контексті. Запити: "best crypto licence to buy 2026", "ready-made MSO Hong Kong", "where to buy EMI licence", "fintech M&amp;A marketplace", "Lithuania EMI for sale" тощо</li>
-    <li>Використати два інструменти, які вже є у стеку: <strong>SE Ranking AI Visibility</strong> (єдиний, що покриває всі 5 платформ в одному запиті) і <strong>Profound</strong> (time-series citation rate у ChatGPT і Perplexity)</li>
-    <li>Записати baseline у таблицю: <em>запит → платформа → цитують (Y/N) → у якому context → яке посилання</em>. Повертатися до цієї таблиці щотижня</li>
-    <li><strong>Термін:</strong> тиждень 1 листопада. <strong>Хто:</strong> я. <strong>Що треба від команди:</strong> нічого, це baseline</li>
-  </ul>
-
-  <h3 class="font-bold mb-2">Крок 2 · Відкрити сайт для AI-крауерів <span class="inline-block px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest bg-green-100 dark:bg-green-900 text-green-900 dark:text-green-100 ml-1 align-middle">частково є</span></h3>
-  <p class="text-sm text-muted-foreground mb-2 leading-relaxed">Перевірено на проді: AI-боти <strong>не заблоковані</strong> — у <code>robots.txt</code> правило <code>User-agent: *</code> → <code>Allow: /</code> застосовується до всіх, кого не описано окремо (<code>GPTBot</code>, <code>PerplexityBot</code>, <code>ClaudeBot</code>, <code>Google-Extended</code>, <code>Applebot-Extended</code>, <code>CCBot</code>).</p>
-  <ul class="text-sm space-y-2 leading-relaxed list-disc list-inside marker:text-muted-foreground mb-4">
-    <li><strong>Що залишилось:</strong> додати для них окремі групи, щоб UTM-правила з <code>*</code> не блокували їм параметризовані URL (так само, як окрема група є для <code>Googlebot</code>)</li>
-    <li>Приклад: <code>User-agent: GPTBot</code> → <code>Allow: /</code> + <code>Disallow: /admin/</code> + <code>Disallow: /api/</code> (без UTM-правил)</li>
-    <li><strong>Термін:</strong> 20 хв. <strong>Хто:</strong> я (напишу зміни у <code>robots.txt</code>), розробник (деплой)</li>
-  </ul>
-
-  <h3 class="font-bold mb-2">Крок 3 · <code>/llms.txt</code> і <code>/llms-full.txt</code> <span class="inline-block px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest bg-green-100 dark:bg-green-900 text-green-900 dark:text-green-100 ml-1 align-middle">частково є</span></h3>
-  <ul class="text-sm space-y-2 leading-relaxed list-disc list-inside marker:text-muted-foreground mb-4">
-    <li><code>/llms.txt</code> — <strong>є на проді</strong> (200). Структура правильна: короткий опис N5Deal, головні сторінки з посиланнями, цілі, типи користувачів, trademark, disclaimer</li>
-    <li><code>/llms-full.txt</code> — <strong>немає</strong> (404). Це вичавка всього контенту сайту у Markdown без навігації й JS, яку AI-моделі індексують як "чистий дата-дамп"</li>
-    <li><strong>Що залишилось:</strong> згенерувати <code>/llms-full.txt</code> з усіх опублікованих URL (articles, licence-сторінки, glossary) у flat-Markdown + додати посилання на нього з <code>/llms.txt</code></li>
-    <li><strong>Термін:</strong> 2 дні на генератор + 1 година на деплой. <strong>Хто:</strong> я + розробник</li>
-  </ul>
-
-  <h3 class="font-bold mb-2">Крок 4 · Структурувати контент під passage-level цитування</h3>
-  <p class="text-sm text-muted-foreground mb-2 leading-relaxed">AI-моделі цитують <strong>пасажі</strong>, не сторінки. Їм потрібен "фрагмент із чіткою відповіддю, який можна вклеїти у відповідь користувачу". Що це означає конкретно:</p>
-  <ul class="text-sm space-y-2 leading-relaxed list-disc list-inside marker:text-muted-foreground mb-4">
-    <li>Кожен H2 на ліцензійній сторінці — одне чітке питання/факт. Наприклад: <code>How long does it take to get a Lithuania EMI licence?</code>, <code>What is the share capital for Hong Kong MSO?</code></li>
-    <li>Перше речення під H2 — пряма відповідь (TLDR-формат): <em>"A Lithuania EMI licence takes 6–9 months and requires €350,000 share capital."</em> Деталі — далі</li>
-    <li>Факти з цифрами, датами, джерелами в кожному параграфі. AI-моделі довіряють атрибутованим фактам</li>
-    <li>Переписати 20 найважливіших licence-сторінок за цим правилом — <strong>це вже частково робиться</strong> в межах рефакторингу шаблону (жовтень)</li>
-    <li><strong>Термін:</strong> 20 сторінок × 2 год = 40 годин, тобто 2 тижні. <strong>Хто:</strong> я</li>
-  </ul>
-
-  <h3 class="font-bold mb-2">Крок 5 · Schema.org <span class="inline-block px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest bg-green-100 dark:bg-green-900 text-green-900 dark:text-green-100 ml-1 align-middle">база є</span></h3>
-  <p class="text-sm text-muted-foreground mb-2 leading-relaxed">Перевірив на проді, що вже стоїть:</p>
-  <ul class="text-sm space-y-1 leading-relaxed list-disc list-inside marker:text-muted-foreground mb-3">
-    <li><strong>Головна:</strong> <code>Organization</code>, <code>FAQPage</code>, <code>Question</code>, <code>Answer</code>, <code>WebSite</code>, <code>ContactPoint</code>, <code>ImageObject</code> ✓</li>
-    <li><strong>/incorporation-license:</strong> <code>BreadcrumbList</code>, <code>ItemList</code>, <code>ListItem</code> ✓</li>
-  </ul>
-  <p class="text-sm text-muted-foreground mb-2 leading-relaxed"><strong>Що залишилось:</strong></p>
-  <ul class="text-sm space-y-2 leading-relaxed list-disc list-inside marker:text-muted-foreground mb-4">
-    <li><strong>FAQPage на кожну licence-сторінку</strong> — зараз FAQ є тільки на головній. Треба винести в шаблон licence-page, щоб кожна з ~197 сторінок віддавала структурований FAQ (питання специфічні для цієї ліцензії, не загальний N5Deal FAQ)</li>
-    <li><strong>HowTo schema</strong> для гайдів у статтях ("how to buy an MSO licence in Hong Kong", "how to transfer EMI licence") — наразі в статтях його немає. AI Overviews відтворює HowTo майже дослівно</li>
-    <li><strong>Organization <code>sameAs</code></strong> — перевірити, чи в існуючій Organization-розмітці на головній є <code>sameAs</code> з посиланнями на Wikidata, Crunchbase, LinkedIn, X. Якщо ні — додати (це створює "граф сутності" для AI-моделей)</li>
-    <li><strong>Product / Offer schema на лістинги</strong> — AI-моделі люблять <code>Product</code> + <code>Offer</code> з ціною, валютою, availability. Для кожного лістингу можна зробити мінімальний Product-markup</li>
-    <li><strong>Термін:</strong> 3–5 днів. <strong>Хто:</strong> я (напишу JSON-LD шаблони), розробник (встроїти у licence-page і listing-page templates)</li>
-  </ul>
-
-  <h3 class="font-bold mb-2">Крок 6 · Wikidata + Wikipedia</h3>
-  <ul class="text-sm space-y-2 leading-relaxed list-disc list-inside marker:text-muted-foreground mb-4">
-    <li>Для AI-моделей <strong>Wikidata — головний trust-anchor</strong>: якщо у них немає сутності "N5Deal" з перевіреними зв'язками (sameAs на LinkedIn / Crunchbase / Twitter), вони не впевнені, що ми "справжня компанія"</li>
-    <li>У вересневому плані був пункт "Wikidata item live" — перевірити статус і доповнити зв'язками: ідентифікатори Crunchbase, LinkedIn ID, GitHub (якщо є), сайт, логотип, засновники</li>
-    <li>Wikipedia — складніше (потрібне "нотабельне" джерело). Відкладаємо до того, як вийде data-driven PR з KYF data</li>
-    <li><strong>Термін:</strong> Wikidata — 2 дні, Wikipedia — на пізніше. <strong>Хто:</strong> я</li>
-  </ul>
-
-  <h3 class="font-bold mb-2">Крок 7 · Entity-building через mentions</h3>
-  <ul class="text-sm space-y-2 leading-relaxed list-disc list-inside marker:text-muted-foreground mb-4">
-    <li>AI-моделі "вчаться" з Common Crawl і живих SERP. Чим частіше "N5Deal" з'являється на високоавторитетних сайтах (Finextra, FintechNews, Reuters, Bloomberg), тим імовірніше модель видасть нас у відповіді</li>
-    <li>Прив'язано до "+/−" таблиці по лінкбілдингу — data-driven PR і founder commentary працюють одночасно на DR і на AI-цитування</li>
-    <li>KYF data як публічний data-set — найкращий "AI-magnet": цифра яку модель може процитувати як факт з атрибуцією N5Deal</li>
-  </ul>
-
-  <h3 class="font-bold mb-2">Крок 8 · Comparison / alternatives / "best of" сторінки</h3>
-  <ul class="text-sm space-y-2 leading-relaxed list-disc list-inside marker:text-muted-foreground mb-4">
-    <li>AI-моделі обожнюють listicle / comparison формат — бо з нього легко збирати "ось три варіанти, ось як вони відрізняються"</li>
-    <li>У нас вже є <code>/compare/n5deal-vs-zitadelle</code> (у GA4 — топ-10 за показами в жовтні). Треба зробити 5–10 схожих:
-      <ul class="ml-6 mt-1 space-y-0.5 list-[circle] list-inside">
-        <li><em>N5Deal vs Flippa for fintech licence M&amp;A</em></li>
-        <li><em>N5Deal vs Eternity Law</em></li>
-        <li><em>N5Deal vs Tetra Capital</em></li>
-        <li><em>Alternatives to BizBuySell for licensed fintech companies</em></li>
-        <li><em>Best M&amp;A platforms for fintech 2026 (comparison)</em></li>
-      </ul>
-    </li>
-    <li>Шаблон є в скілі <code>seo-competitor-pages</code> — я цим скілом користуюся</li>
-    <li><strong>Термін:</strong> 5 сторінок × 3 год = 2 тижні. <strong>Хто:</strong> я</li>
-  </ul>
-
-  <h3 class="font-bold mb-2">Крок 9 · "People Also Ask" → FAQ</h3>
-  <ul class="text-sm space-y-2 leading-relaxed list-disc list-inside marker:text-muted-foreground mb-4">
-    <li>Для кожного з 15 цільових запитів зібрати блок "People Also Ask" із SERP (через DataForSEO) — це готові питання, які користувачі ставлять і AI-моделі очікують побачити відповіді</li>
-    <li>Додати ці питання у FAQ-блоки відповідних licence-сторінок із прямими відповідями-реченнями</li>
-    <li><strong>Термін:</strong> тиждень. <strong>Хто:</strong> я</li>
-  </ul>
-
-  <h3 class="font-bold mb-2">Крок 10 · Fresh dates / update signals</h3>
-  <ul class="text-sm space-y-2 leading-relaxed list-disc list-inside marker:text-muted-foreground mb-4">
-    <li>На верх кожної важливої сторінки — <code>"Last updated: November 2026"</code>. AI-моделі перевіряють актуальність і віддають перевагу свіжому контенту</li>
-    <li>Додати <code>dateModified</code> у schema. Виправити baseline у sitemap: нагадаю, у жовтневому аудиті було видно, що майже всі licence-сторінки мають однакову <code>lastmod</code> 2026-06-12 — це сигнал "сайт не оновлюється"</li>
-    <li>Запровадити процес: будь-яка правка контенту = оновлення <code>dateModified</code> у frontmatter</li>
-    <li><strong>Термін:</strong> 1 день налаштування + процес. <strong>Хто:</strong> я + розробник на 1 годину</li>
-  </ul>
-
-  <h3 class="font-bold mb-2">Вимірювання результату</h3>
-  <ul class="text-sm space-y-2 leading-relaxed list-disc list-inside marker:text-muted-foreground mb-4">
-    <li><strong>Щотижня:</strong> прогнати ті самі 15 запитів у ChatGPT / Perplexity / AI Overviews / Gemini / Copilot. Фіксувати citation rate (% запитів, де N5Deal в відповіді)</li>
-    <li><strong>Щомісячно:</strong> дивитись у GA4 канал "AI Assistant" + referrer-патерни (<code>chat.openai.com</code>, <code>perplexity.ai</code>, <code>copilot.microsoft.com</code>)</li>
-    <li><strong>Профаунд</strong> дає time-series графік citation rate — вийде побачити тренд через 4–6 тижнів</li>
-    <li><strong>Baseline зараз:</strong> 17 сесій за жовтень. <strong>Ціль Q1 2027:</strong> 100+ сесій/міс через AI Assistant</li>
-  </ul>
-
-  <div class="rounded-md border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-950/20 px-3 py-2.5 text-sm leading-relaxed">Загальний термін на всі 10 кроків — <strong>5–6 тижнів</strong>. Критичний шлях: кроки 1–3 (вимір, robots, llms.txt) можна зробити за 2 тижні з мінімальною допомогою розробника. Кроки 4, 5, 8 (контент і schema) — я зроблю паралельно до рефакторингу licence-сторінок, бо це фактично той самий робочий блок.</div>
-</section>
 
 <section class="mb-10">
   <h2 class="text-xl font-bold mb-3">Усі запити з позицією у топ-20 (жовтень)</h2>
