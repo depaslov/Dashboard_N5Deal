@@ -149,7 +149,7 @@ async function main() {
   console.log('\n============ GA4 TOP CHANNELS OCT ============')
   for (const c of ga4Oct.topChannels.slice(0, 10)) {
     const sepRow = ga4Sep.topChannels.find((x) => x.key === c.key)
-    console.log(`${String(c.key).padEnd(28)} | sessions=${c.sessions} users=${c.totalUsers} (sep sessions=${sepRow?.sessions ?? 0})`)
+    console.log(`${String(c.key).padEnd(28)} | sessions=${c.sessions} (sep sessions=${sepRow?.sessions ?? 0})`)
   }
 
   console.log('\n============ SITEMAPS ============')
