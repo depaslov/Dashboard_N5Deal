@@ -252,19 +252,20 @@
     <li><strong>Термін:</strong> тиждень 1 листопада. <strong>Хто:</strong> я. <strong>Що треба від команди:</strong> нічого, це baseline</li>
   </ul>
 
-  <h3 class="font-bold mb-2">Крок 2 · Відкрити сайт для AI-крауерів</h3>
+  <h3 class="font-bold mb-2">Крок 2 · Відкрити сайт для AI-крауерів <span class="inline-block px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest bg-green-100 dark:bg-green-900 text-green-900 dark:text-green-100 ml-1 align-middle">частково є</span></h3>
+  <p class="text-sm text-muted-foreground mb-2 leading-relaxed">Перевірено на проді: AI-боти <strong>не заблоковані</strong> — у <code>robots.txt</code> правило <code>User-agent: *</code> → <code>Allow: /</code> застосовується до всіх, кого не описано окремо (<code>GPTBot</code>, <code>PerplexityBot</code>, <code>ClaudeBot</code>, <code>Google-Extended</code>, <code>Applebot-Extended</code>, <code>CCBot</code>).</p>
   <ul class="text-sm space-y-2 leading-relaxed list-disc list-inside marker:text-muted-foreground mb-4">
-    <li>Перевірити <code>robots.txt</code> — переконатися, що <strong>не заблоковані</strong>: <code>GPTBot</code> (OpenAI), <code>PerplexityBot</code>, <code>ClaudeBot</code> (Anthropic), <code>Google-Extended</code> (AI Overviews / Gemini), <code>Applebot-Extended</code> (Apple Intelligence), <code>CCBot</code> (Common Crawl, звідки тренуються базові моделі)</li>
-    <li>Жовтневий аудит GSC показав: окрема група Googlebot у robots.txt перекриває зірочку. Треба продублювати правило для AI-ботів — щоб UTM-правила не блокували їм рендер</li>
-    <li><strong>Термін:</strong> 1–2 дні. <strong>Хто:</strong> я + розробник на 20 хв (деплой)</li>
+    <li><strong>Що залишилось:</strong> додати для них окремі групи, щоб UTM-правила з <code>*</code> не блокували їм параметризовані URL (так само, як окрема група є для <code>Googlebot</code>)</li>
+    <li>Приклад: <code>User-agent: GPTBot</code> → <code>Allow: /</code> + <code>Disallow: /admin/</code> + <code>Disallow: /api/</code> (без UTM-правил)</li>
+    <li><strong>Термін:</strong> 20 хв. <strong>Хто:</strong> я (напишу зміни у <code>robots.txt</code>), розробник (деплой)</li>
   </ul>
 
-  <h3 class="font-bold mb-2">Крок 3 · Створити <code>/llms.txt</code> і <code>/llms-full.txt</code></h3>
+  <h3 class="font-bold mb-2">Крок 3 · <code>/llms.txt</code> і <code>/llms-full.txt</code> <span class="inline-block px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest bg-green-100 dark:bg-green-900 text-green-900 dark:text-green-100 ml-1 align-middle">частково є</span></h3>
   <ul class="text-sm space-y-2 leading-relaxed list-disc list-inside marker:text-muted-foreground mb-4">
-    <li>Нова стандартна практика 2026: AI-краулери читають <code>/llms.txt</code> у корені сайту як "інструкцію як мене розуміти". Формат — markdown, 1 файл</li>
-    <li>Наш <code>/llms.txt</code> повинен містити: короткий опис N5Deal (1 абзац), головні розділи сайту з посиланнями (/all-listing, /incorporation-license, /articles, /case-study, /partner), ключові факти (кількість лістингів, юрисдикції, типи ліцензій), посилання на <code>/llms-full.txt</code></li>
-    <li><code>/llms-full.txt</code> — вичавка всього контенту сайту у Markdown без навігації й JS. AI-моделі індексують його як "чистий дата-дамп"</li>
-    <li><strong>Термін:</strong> 3–5 днів. <strong>Хто:</strong> я (пишу), розробник (ендпойнт на 1 годину)</li>
+    <li><code>/llms.txt</code> — <strong>є на проді</strong> (200). Структура правильна: короткий опис N5Deal, головні сторінки з посиланнями, цілі, типи користувачів, trademark, disclaimer</li>
+    <li><code>/llms-full.txt</code> — <strong>немає</strong> (404). Це вичавка всього контенту сайту у Markdown без навігації й JS, яку AI-моделі індексують як "чистий дата-дамп"</li>
+    <li><strong>Що залишилось:</strong> згенерувати <code>/llms-full.txt</code> з усіх опублікованих URL (articles, licence-сторінки, glossary) у flat-Markdown + додати посилання на нього з <code>/llms.txt</code></li>
+    <li><strong>Термін:</strong> 2 дні на генератор + 1 година на деплой. <strong>Хто:</strong> я + розробник</li>
   </ul>
 
   <h3 class="font-bold mb-2">Крок 4 · Структурувати контент під passage-level цитування</h3>
@@ -277,13 +278,19 @@
     <li><strong>Термін:</strong> 20 сторінок × 2 год = 40 годин, тобто 2 тижні. <strong>Хто:</strong> я</li>
   </ul>
 
-  <h3 class="font-bold mb-2">Крок 5 · Schema.org — додати FAQ, HowTo, Organization</h3>
+  <h3 class="font-bold mb-2">Крок 5 · Schema.org <span class="inline-block px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest bg-green-100 dark:bg-green-900 text-green-900 dark:text-green-100 ml-1 align-middle">база є</span></h3>
+  <p class="text-sm text-muted-foreground mb-2 leading-relaxed">Перевірив на проді, що вже стоїть:</p>
+  <ul class="text-sm space-y-1 leading-relaxed list-disc list-inside marker:text-muted-foreground mb-3">
+    <li><strong>Головна:</strong> <code>Organization</code>, <code>FAQPage</code>, <code>Question</code>, <code>Answer</code>, <code>WebSite</code>, <code>ContactPoint</code>, <code>ImageObject</code> ✓</li>
+    <li><strong>/incorporation-license:</strong> <code>BreadcrumbList</code>, <code>ItemList</code>, <code>ListItem</code> ✓</li>
+  </ul>
+  <p class="text-sm text-muted-foreground mb-2 leading-relaxed"><strong>Що залишилось:</strong></p>
   <ul class="text-sm space-y-2 leading-relaxed list-disc list-inside marker:text-muted-foreground mb-4">
-    <li><strong>FAQPage schema</strong> на кожну licence-сторінку — AI-моделі непропорційно часто беруть відповіді з FAQ-формату (бо він вже структурований як "питання → відповідь")</li>
-    <li><strong>HowTo schema</strong> для гайдів ("how to buy an MSO licence in Hong Kong") — AI Overviews відтворює HowTo майже дослівно</li>
-    <li><strong>Organization schema з <code>sameAs</code></strong> — зв'язати n5deal.com із Wikidata, Crunchbase, LinkedIn, GitHub (якщо є), X. Це створює "граф сутності" N5Deal, який AI-моделі використовують як trust anchor</li>
-    <li><strong>BreadcrumbList</strong> — allows AI engines understand site hierarchy</li>
-    <li><strong>Термін:</strong> тиждень. <strong>Хто:</strong> я (напишу JSON-LD), розробник (встроїти в шаблони)</li>
+    <li><strong>FAQPage на кожну licence-сторінку</strong> — зараз FAQ є тільки на головній. Треба винести в шаблон licence-page, щоб кожна з ~197 сторінок віддавала структурований FAQ (питання специфічні для цієї ліцензії, не загальний N5Deal FAQ)</li>
+    <li><strong>HowTo schema</strong> для гайдів у статтях ("how to buy an MSO licence in Hong Kong", "how to transfer EMI licence") — наразі в статтях його немає. AI Overviews відтворює HowTo майже дослівно</li>
+    <li><strong>Organization <code>sameAs</code></strong> — перевірити, чи в існуючій Organization-розмітці на головній є <code>sameAs</code> з посиланнями на Wikidata, Crunchbase, LinkedIn, X. Якщо ні — додати (це створює "граф сутності" для AI-моделей)</li>
+    <li><strong>Product / Offer schema на лістинги</strong> — AI-моделі люблять <code>Product</code> + <code>Offer</code> з ціною, валютою, availability. Для кожного лістингу можна зробити мінімальний Product-markup</li>
+    <li><strong>Термін:</strong> 3–5 днів. <strong>Хто:</strong> я (напишу JSON-LD шаблони), розробник (встроїти у licence-page і listing-page templates)</li>
   </ul>
 
   <h3 class="font-bold mb-2">Крок 6 · Wikidata + Wikipedia</h3>
