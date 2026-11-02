@@ -7,7 +7,7 @@ import { getJwtClient } from '../lib/analytics/google-auth'
 const SITE = 'sc-domain:n5deal.com'
 const GA4_PROPERTY = '515703727'
 const SEP = { start: '2026-09-01', end: '2026-09-30' }
-const OCT = { start: '2026-10-01', end: '2026-10-30' }
+const OCT = { start: '2026-10-01', end: '2026-10-31' }
 
 function pct(curr: number, prev: number): string {
   if (!prev) return curr ? '+∞%' : '0%'

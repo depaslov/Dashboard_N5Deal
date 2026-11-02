@@ -28,7 +28,7 @@ const REPORTS: Array<{
     title: 'N5Deal — Звіт за жовтень 2026',
     periodLabel: 'Жовтень 2026',
     subtitle:
-      'Жовтень vs вересень: imp +190% (46k→134k), clicks −2,3% (264→258), CTR −66%, DR 14→8 (після випадання спам-беклінків), GA4 sessions 1 032→893 (−13,5%), 0 key events. Технічний борг (BAILOUT_TO_CLIENT_SIDE_RENDERING на /all-listing), архітектура лістингів (/all-listing/catalog live), воронка лідів навколо ремаркетингу + Clay, 15 статей, 131 переписаний глосарій, 5 licence SEO-текстів, KYF-прес-реліз.',
+      'Жовтень (01–31) vs вересень (01–30): imp +206% (46k→142k), clicks −0,8% (264→262), CTR −67,6%, DR 14→8 (після випадання спам-беклінків), GA4 sessions 1 032→898 (−13%), 0 key events. Технічний борг (BAILOUT_TO_CLIENT_SIDE_RENDERING на /all-listing), архітектура лістингів (/all-listing/catalog live), воронка лідів навколо ремаркетингу + Clay, 15 статей, 131 переписаний глосарій, 5 licence SEO-текстів, KYF-прес-реліз.',
     kind: 'recap',
     sortKey: '2026-10-0',
   },

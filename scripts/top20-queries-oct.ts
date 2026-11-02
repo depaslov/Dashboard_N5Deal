@@ -12,7 +12,7 @@ async function main() {
     siteUrl: SITE,
     requestBody: {
       startDate: '2026-10-01',
-      endDate: '2026-10-30',
+      endDate: '2026-10-31',
       dimensions: ['query'],
       rowLimit: 5000,
       dataState: 'final',
