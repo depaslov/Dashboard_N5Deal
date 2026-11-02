@@ -103,6 +103,7 @@ export function AnalyticsClient({ connection }: Props) {
       ) : (
         <>
           <HeroSection metrics={overview?.heroMetrics ?? []} />
+          <TopSearchQueriesPreview gsc={overview?.gsc} configured={connection.gscConfigured} />
           <DeepIndexationSection />
           <SeoIssuesSection issues={overview?.seoIssues ?? []} />
           <IndexationReportSection report={overview?.indexationReport ?? null} />
@@ -174,6 +175,156 @@ function HeroTile({ m }: { m: any }) {
       <p className="font-display text-3xl font-semibold tabular-nums leading-none">{display}</p>
       {m.hint ? <p className="text-[11px] text-muted-foreground mt-auto">{m.hint}</p> : null}
     </div>
+  )
+}
+
+/* ============================================================ */
+/* Top search queries preview — promoted above the fold          */
+/* ============================================================ */
+
+function TopSearchQueriesPreview({ gsc, configured }: { gsc: any; configured: boolean }) {
+  const [tab, setTab] = useState<'query' | 'page' | 'byPage'>('query')
+  const [sortKey, setSortKey] = useState<'impressions' | 'clicks' | 'ctr' | 'position'>('impressions')
+
+  if (!configured) return null
+  if (!gsc || gsc.__error) return null
+
+  const raw =
+    tab === 'query'
+      ? (gsc.topQueries ?? [])
+      : tab === 'page'
+      ? (gsc.topPages ?? [])
+      : (gsc.queriesByPage ?? [])
+
+  const sorted = [...raw].sort((a: any, b: any) => {
+    if (sortKey === 'position') return (a.position || 999) - (b.position || 999)
+    return (b[sortKey] ?? 0) - (a[sortKey] ?? 0)
+  })
+  const rows = sorted.slice(0, 15)
+
+  const posTone = (p: number) =>
+    p <= 3
+      ? 'text-emerald-700 font-semibold'
+      : p <= 10
+      ? 'text-emerald-600'
+      : p <= 20
+      ? 'text-amber-600'
+      : 'text-muted-foreground'
+
+  return (
+    <section className="bg-card border border-border shadow-sm">
+      <div className="px-6 py-4 border-b border-border flex items-center gap-3 flex-wrap">
+        <Search className="h-4 w-4 text-muted-foreground" />
+        <h2 className="font-display font-semibold text-lg tracking-tight">
+          Пошукові запити · Google Search Console
+        </h2>
+        <span className="text-xs text-muted-foreground">
+          Через які запити нас знаходять і на яких позиціях
+        </span>
+        <div className="ml-auto flex items-center gap-1 bg-secondary p-1 text-xs">
+          {[
+            { k: 'query', label: 'By query' },
+            { k: 'page', label: 'By page' },
+            { k: 'byPage', label: 'Query × page' },
+          ].map((t) => (
+            <button
+              key={t.k}
+              type="button"
+              onClick={() => setTab(t.k as any)}
+              className={
+                'px-2.5 py-1 transition-colors ' +
+                (tab === t.k ? 'bg-background shadow-sm font-medium' : 'text-muted-foreground hover:text-foreground')
+              }
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-secondary/40 text-[11px] uppercase tracking-widest text-muted-foreground">
+            <tr>
+              <th className="px-4 py-2 text-left font-semibold">
+                {tab === 'query' ? 'Query' : tab === 'page' ? 'Page' : 'Page'}
+              </th>
+              {tab === 'byPage' ? (
+                <th className="px-4 py-2 text-left font-semibold">Query</th>
+              ) : null}
+              <SortableTh label="Clicks" sortKey="clicks" current={sortKey} setSort={setSortKey} />
+              <SortableTh label="Impressions" sortKey="impressions" current={sortKey} setSort={setSortKey} />
+              <SortableTh label="CTR" sortKey="ctr" current={sortKey} setSort={setSortKey} />
+              <SortableTh label="Position" sortKey="position" current={sortKey} setSort={setSortKey} />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {rows.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={tab === 'byPage' ? 6 : 5}
+                  className="px-4 py-6 text-xs text-muted-foreground text-center"
+                >
+                  No data yet. GSC usually needs ~2 days to backfill.
+                </td>
+              </tr>
+            ) : (
+              rows.map((r: any, i: number) => (
+                <tr key={i} className="hover:bg-secondary/30">
+                  <td
+                    className="px-4 py-2 max-w-[380px] truncate"
+                    title={r.key}
+                  >
+                    {r.key}
+                  </td>
+                  {tab === 'byPage' ? (
+                    <td className="px-4 py-2 max-w-[280px] truncate" title={r.secondary}>
+                      {r.secondary}
+                    </td>
+                  ) : null}
+                  <td className="px-4 py-2 text-right tabular-nums">{Math.round(r.clicks).toLocaleString()}</td>
+                  <td className="px-4 py-2 text-right tabular-nums">{Math.round(r.impressions).toLocaleString()}</td>
+                  <td className="px-4 py-2 text-right tabular-nums">{((r.ctr ?? 0) * 100).toFixed(1)}%</td>
+                  <td className={`px-4 py-2 text-right tabular-nums ${posTone(r.position ?? 999)}`}>
+                    {r.position ? Number(r.position).toFixed(1) : '—'}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+      <div className="px-4 py-2 border-t border-border text-[11px] text-muted-foreground">
+        Top 15 · sorted by {sortKey}. Full list — see <span className="font-medium">Search Console</span> section below.
+      </div>
+    </section>
+  )
+}
+
+function SortableTh({
+  label,
+  sortKey,
+  current,
+  setSort,
+  align = 'right',
+}: {
+  label: string
+  sortKey: 'impressions' | 'clicks' | 'ctr' | 'position'
+  current: string
+  setSort: (k: any) => void
+  align?: 'left' | 'right'
+}) {
+  const active = current === sortKey
+  return (
+    <th className={`px-4 py-2 font-semibold ${align === 'right' ? 'text-right' : 'text-left'}`}>
+      <button
+        type="button"
+        onClick={() => setSort(sortKey)}
+        className={`hover:text-foreground ${active ? 'text-foreground' : ''}`}
+      >
+        {label}
+        {active ? ' ↓' : ''}
+      </button>
+    </th>
   )
 }
 

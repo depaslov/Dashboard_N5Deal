@@ -8,7 +8,7 @@ import { getJwtClient } from './google-auth'
 
 const SCOPE = 'https://www.googleapis.com/auth/webmasters.readonly'
 const BATCH_SIZE = 25          // URL Inspection API tolerates ~10 QPS easily
-const MAX_URLS_TO_INSPECT = 300 // stays well under 2k/day/property quota
+const MAX_URLS_TO_INSPECT = 900 // stays well under 2k/day/property quota
 
 export type CoverageBucket =
   | 'indexed_submitted'
